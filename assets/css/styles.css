@@ -1,0 +1,80 @@
+/* Importar la fuente Saira desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Saira', sans-serif;
+    background-color: #ffffff; /* Fondo blanco */
+    color: #663399; /* Texto principal en morado */
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    margin-top: 30px;
+}
+
+h2, h3 {
+    color: #663399; /* Morado para encabezados */
+}
+
+.nav-tabs .nav-link {
+    color: #663399; /* Color del texto de las pestañas */
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #663399; /* Fondo morado para la pestaña activa */
+    color: #ffffff; /* Texto blanco para la pestaña activa */
+}
+
+.table {
+    background-color: #ffffff; /* Fondo blanco para las tablas */
+    border-radius: 8px; /* Bordes redondeados */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* Sombra ligera */
+}
+
+.table th {
+    background-color: #663399; /* Fondo morado para los encabezados de la tabla */
+    color: white;
+}
+
+.table td {
+    vertical-align: middle; /* Alinear el texto en el medio */
+}
+
+.btn {
+    border-radius: 30px; /* Botones redondeados */
+    background-color: #9cc930; /* Color verde de fondo de los botones */
+    color: white; /* Color de texto de los botones */
+    border: none; /* Sin borde */
+    transition: background-color 0.3s; /* Transición suave */
+}
+
+.btn:hover {
+    background-color: #7aa725; /* Verde más oscuro al pasar el ratón */
+}
+
+.form-control {
+    border-radius: 5px;
+    border: 1px solid #663399; /* Bordes morados */
+}
+
+.btn-primary {
+    background-color: #9cc930; /* Color verde para botones principales */
+    border-color: #9cc930;
+}
+
+.btn-primary:hover {
+    background-color: #7aa725; /* Color verde más oscuro al pasar el ratón */
+    border-color: #7aa725;
+}
+
+footer {
+    background-color: #663399; /* Fondo morado */
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    font-size: 14px;
+}
