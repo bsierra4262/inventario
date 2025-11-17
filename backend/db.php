@@ -20,7 +20,7 @@ if (is_file($loggerPath)) {
     // Fallback para no romper si falta el logger
     if (!function_exists('log_event')) {
         function log_event($origin, $type, $msg, $tag = 'app') {
-            // Silencioso; podés registrar a error_log si querés:
+            // Silencioso; si querés, podés loguear a error_log:
             // error_log("[$origin][$type][$tag] $msg");
         }
     }
@@ -88,17 +88,21 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
             exit();
         }
 
-        $check = $conn->query("SHOW TABLES LIKE 'users'");
+        // En modo prefix la tabla real es t{N}_users, por eso usamos tn('users')
+        $usersTable = tn('users');
+        $safeTable  = $conn->real_escape_string($usersTable);
+        $check      = $conn->query("SHOW TABLES LIKE '{$safeTable}'");
+
         if (!$check) {
             log_event("db.php", "ERROR", "Error al verificar tablas: " . $conn->error, "bootstrap");
             throw new Exception("Error al verificar tablas: " . $conn->error);
         }
         if ($check->num_rows === 0) {
-            log_event("db.php", "ERROR", "Tabla `users` no encontrada en tenant", "bootstrap");
+            log_event("db.php", "ERROR", "Tabla `{$usersTable}` no encontrada en tenant", "bootstrap");
             header('Location: /install.php');
             exit();
         }
-        log_event("db.php", "APP", "Tabla `users` OK en tenant", "bootstrap");
+        log_event("db.php", "APP", "Tabla `{$usersTable}` OK en tenant", "bootstrap");
 
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
         $conn->set_charset("utf8mb4");
