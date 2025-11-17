@@ -1,80 +1,122 @@
 <?php
-// —– PHP: sesión + DB + consulta + $iconMap —–
-if (session_status() === PHP_SESSION_NONE) {
+declare(strict_types=1);
+
+// Sesión y conexión multiempresa
+if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-require_once __DIR__ . '/backend/db.php';
-require_once __DIR__ . '/logs/logger.php';
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+
+require_once __DIR__ . '/backend/db.php';          // $conn + tn() del tenant activo
+require_once __DIR__ . '/logs/logger.php';         // log_event()
+
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 try {
-    $current_file = basename($_SERVER['PHP_SELF']);
-    if ($current_file === 'index.php') {
-        if (!$conn->select_db($dbname)) {
-            throw new Exception('Base de datos no seleccionada. Redirigiendo a instalación...');
-        }
-        $check = $conn->query("SHOW TABLES LIKE 'users'");
-        if (!$check || $check->num_rows === 0) {
-            throw new Exception('No se encontraron tablas necesarias. Redirigiendo a instalación...');
-        }
-    }
-    if (!isset($_SESSION['user_id'])) {
+    // Aseguramos charset correcto (por si acaso)
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    $conn->set_charset('utf8mb4');
+
+    // Debe haber usuario logueado
+    if (empty($_SESSION['user_id'])) {
         header('Location: login.php');
         exit();
     }
-    $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->bind_param('i', $_SESSION['user_id']);
+
+    $user_id    = (int)$_SESSION['user_id'];
+    $usersTable = tn('users');      // respeta modo prefix / external
+
+    // Cargar usuario actual
+    $sqlUser = "SELECT * FROM `{$usersTable}` WHERE id = ?";
+    $stmt    = $conn->prepare($sqlUser);
+    $stmt->bind_param('i', $user_id);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();
-    if ($user['role']==='admin' && password_verify('admin', $user['password'])) {
-        echo "<script>alert('Por favor, cambia tu contraseña de administrador.'); window.location='change_password.php';</script>";
+    $stmt->close();
+
+    if (!$user) {
+        log_event("index.php", "ERROR", "Usuario ID {$user_id} no encontrado en {$usersTable}", "auth");
+        session_destroy();
+        header('Location: login.php');
         exit();
     }
-} catch (Exception $e) {
-    log_event("sistema","ERROR",$e->getMessage());
-    error_log($e->getMessage());
-    echo "<script>alert('".htmlspecialchars($e->getMessage(),ENT_QUOTES)."'); window.location='install.php';</script>";
+
+    // Si sigue teniendo pass "admin", forzar cambio de contraseña
+    if ($user['role'] === 'admin' && password_verify('admin', $user['password'])) {
+        echo "<script>
+                alert('Por favor, cambia tu contraseña de administrador.');
+                window.location='change_password.php';
+              </script>";
+        exit();
+    }
+
+    // -----------------------------
+    // Paginación e inventario
+    // -----------------------------
+    $sortable = [
+        'id'              => 'id',
+        'asignado_a'      => 'asignado_a',
+        'modelo'          => 'modelo',
+        'marca'           => 'marca',
+        'descripcion'     => 'descripcion',
+        'servis_tag'      => 'servis_tag',
+        'cantidad'        => 'cantidad',
+        'valor_usd'       => 'valor_usd',
+        'estado'          => 'estado',
+        'categoria'       => 'categoria',
+        'periodo_garantia'=> 'periodo_garantia',
+        'fecha_garantia'  => 'fecha_garantia',
+        'fecha_ingreso'   => 'fecha_ingreso',
+        // 'fecha_egreso' => 'fecha_egreso',
+        'ubicacion'       => 'ubicacion'
+    ];
+
+    $sort  = $_GET['sort']  ?? 'id';
+    $order = (isset($_GET['order']) && strtolower($_GET['order']) === 'desc') ? 'DESC' : 'ASC';
+    if (!isset($sortable[$sort])) {
+        $sort = 'id';
+    }
+    $sort_sql = $sortable[$sort];
+
+    // --- Paginación ---
+    $perPageOptions = [20, 50, 100];
+    $per_page = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $perPageOptions, true)
+        ? (int)$_GET['per_page']
+        : 20;
+    $page = (isset($_GET['page']) && (int)$_GET['page'] > 0) ? (int)$_GET['page'] : 1;
+
+    $productosTable = tn('productos');
+
+    // Total de productos (no archivados)
+    $countSql  = "SELECT COUNT(*) AS total FROM `{$productosTable}` WHERE archivado = 0";
+    $countRes  = $conn->query($countSql);
+    $totalRows = (int)($countRes->fetch_assoc()['total'] ?? 0);
+    $totalPages = max(1, (int)ceil($totalRows / $per_page));
+    $offset = ($page - 1) * $per_page;
+
+    // Consulta paginada
+    $listSql = "SELECT *, subcategoria 
+                FROM `{$productosTable}` 
+                WHERE archivado = 0 
+                ORDER BY {$sort_sql} {$order}
+                LIMIT {$per_page} OFFSET {$offset}";
+    $result = $conn->query($listSql);
+
+} catch (Throwable $e) {
+    // Cualquier error de DB se registra y se muestra mensaje genérico
+    log_event("sistema", "ERROR", "Error en index.php: " . $e->getMessage(), "app");
+    error_log("Error en index.php: " . $e->getMessage());
+    echo "<script>
+            alert('Error de base de datos. El administrador debe revisar el log.');
+            window.location='login.php';
+          </script>";
     exit();
 }
-// Ordenamiento seguro
-$sortable = [
-    'id'=>'id',
-    'asignado_a'=>'asignado_a',
-    'modelo'=>'modelo',
-    'marca'=>'marca',
-    'descripcion'=>'descripcion',
-    'servis_tag'=>'servis_tag',
-    'cantidad'=>'cantidad',
-    'valor_usd'=>'valor_usd',
-    'estado'=>'estado',
-    'categoria'=>'categoria',
-    'periodo_garantia'=>'periodo_garantia',
-    'fecha_garantia'=>'fecha_garantia',
-    'fecha_ingreso'=>'fecha_ingreso',
-   // 'fecha_egreso'=>'fecha_egreso',
-    'ubicacion'=>'ubicacion'
-];
-$sort = $_GET['sort'] ?? 'id';
-$order = (isset($_GET['order']) && strtolower($_GET['order']) === 'desc') ? 'DESC' : 'ASC';
-if (!isset($sortable[$sort])) $sort = 'id';
-$sort_sql = $sortable[$sort];
 
-// --- Paginación ---
-$perPageOptions = [20, 50, 100];
-$per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), $perPageOptions) ? intval($_GET['per_page']) : 20;
-$page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-
-// Total de productos
-$countRes = $conn->query("SELECT COUNT(*) as total FROM productos WHERE archivado=0");
-$totalRows = $countRes->fetch_assoc()['total'] ?? 0;
-$totalPages = max(1, ceil($totalRows / $per_page));
-$offset = ($page - 1) * $per_page;
-
-// Consulta paginada
-$result = $conn->query("SELECT *, subcategoria FROM productos WHERE archivado=0 ORDER BY $sort_sql $order LIMIT $per_page OFFSET $offset");
-
+// -----------------------------
+// Mapa de iconos por subcategoría
+// -----------------------------
 $iconMap = [
     //
     // Subcategorías Informática
