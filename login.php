@@ -120,7 +120,10 @@ if (isset($_GET['code']) && $_GET['code'] !== '') {
             // --- Cuenta local en el tenant ---
             if (!empty($_SESSION['user_id'])) {
                 // Ya hay sesión local: actualizo email placeholder si corresponde
-                $stmt = $conn->prepare("UPDATE users SET email = ? WHERE id = ? AND email = 'admin@inventario.local'");
+                $sql = "UPDATE " . tn('users') . " 
+                        SET email = ? 
+                        WHERE id = ? AND email = 'admin@inventario.local'";
+                $stmt = $conn->prepare($sql);
                 $stmt->bind_param('si', $correo, $_SESSION['user_id']);
                 $stmt->execute();
                 $stmt->close();
@@ -128,7 +131,8 @@ if (isset($_GET['code']) && $_GET['code'] !== '') {
                 log_event($correo, "LOGIN GOOGLE", "Correo real asociado a user_id existente.", 'auth');
             } else {
                 // Buscar por correo
-                $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+                $sql  = "SELECT id FROM " . tn('users') . " WHERE email = ?";
+                $stmt = $conn->prepare($sql);
                 $stmt->bind_param('s', $correo);
                 $stmt->execute();
                 $stmt->bind_result($user_id);
@@ -141,7 +145,9 @@ if (isset($_GET['code']) && $_GET['code'] !== '') {
                     // Crear nuevo usuario
                     $username  = explode('@', $correo)[0];
                     $rand_pass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-                    $stmt = $conn->prepare("INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'user')");
+                    $sql = "INSERT INTO " . tn('users') . " (username, password, email, role) 
+                            VALUES (?, ?, ?, 'user')";
+                    $stmt = $conn->prepare($sql);
                     $stmt->bind_param('sss', $username, $rand_pass, $correo);
                     $stmt->execute();
                     $_SESSION['user_id'] = (int)$stmt->insert_id;
@@ -151,9 +157,14 @@ if (isset($_GET['code']) && $_GET['code'] !== '') {
             }
 
             // Registrar dispositivo (si existe la tabla)
-            $has_ud = $conn->query("SHOW TABLES LIKE 'user_devices'");
-            if ($has_ud && $has_ud->num_rows > 0) {
-                $stmt = $conn->prepare("INSERT IGNORE INTO user_devices (user_id, google_email, device_hash) VALUES (?, ?, ?)");
+            $devicesTable = tn('user_devices');
+            $checkUD = $conn->query(
+                "SHOW TABLES LIKE '" . $conn->real_escape_string($devicesTable) . "'"
+            );
+            if ($checkUD && $checkUD->num_rows > 0) {
+                $sql  = "INSERT IGNORE INTO " . $devicesTable . " (user_id, google_email, device_hash) 
+                         VALUES (?, ?, ?)";
+                $stmt = $conn->prepare($sql);
                 $uid  = (int)$_SESSION['user_id'];
                 $stmt->bind_param('iss', $uid, $correo, $device_hash);
                 $stmt->execute();
@@ -204,8 +215,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         $password = (string)$_POST['password'];
 
         try {
-            // Esta parte antes podía lanzar excepción y devolver 500
-            $stmt = $conn->prepare("SELECT id, password, role, email FROM users WHERE username = ?");
+            // Consulta adaptada a tabla prefijada
+            $sql  = "SELECT id, password, role, email 
+                     FROM " . tn('users') . " 
+                     WHERE username = ?";
+            $stmt = $conn->prepare($sql);
             $stmt->bind_param('s', $username);
             $stmt->execute();
             $result = $stmt->get_result();
