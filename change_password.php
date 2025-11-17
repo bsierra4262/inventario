@@ -7,6 +7,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 // DB multiempresa + Logger
 // -----------------------------
 require_once __DIR__ . '/backend/db.php'; // obtiene $conn del tenant activo
+
 $loggerPath = __DIR__ . '/logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath; // log_event()
@@ -26,6 +27,9 @@ if (empty($_SESSION['user_id'])) {
 
 $user_id = (int)$_SESSION['user_id'];
 
+// Nombre real de la tabla de usuarios del tenant (t1_users, t2_users, users, etc.)
+$usersTable = tn('users');
+
 // -----------------------------
 // Cargar usuario actual (solo para auditoría o reforzar flujos)
 // -----------------------------
@@ -33,7 +37,7 @@ try {
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     $conn->set_charset('utf8mb4');
 
-    $sql_user = "SELECT id, username, email, password, role FROM users WHERE id = ?";
+    $sql_user = "SELECT id, username, email, password, role FROM `{$usersTable}` WHERE id = ?";
     $stmt_user = $conn->prepare($sql_user);
     $stmt_user->bind_param('i', $user_id);
     $stmt_user->execute();
@@ -89,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
-                $sql_update = "UPDATE users SET password = ? WHERE id = ?";
+                $sql_update = "UPDATE `{$usersTable}` SET password = ? WHERE id = ?";
                 $stmt_update = $conn->prepare($sql_update);
                 $stmt_update->bind_param('si', $hashed_password, $user_id);
                 $stmt_update->execute();
@@ -112,13 +116,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Limpiar sesión
                 $_SESSION = [];
-                unset($_SESSION['company_id'], $_SESSION['tenant'], $_SESSION['tenant_id'], $_SESSION['google_authenticated']);
+                unset(
+                    $_SESSION['company_id'],
+                    $_SESSION['tenant'],
+                    $_SESSION['tenant_id'],
+                    $_SESSION['google_authenticated']
+                );
                 if (ini_get("session.use_cookies")) {
                     setcookie(session_name(), '', [
-                        'expires' => time() - 42000,
-                        'path' => '/',
-                        'domain' => (str_contains($_SERVER['HTTP_HOST'] ?? '', '.') ? $_SERVER['HTTP_HOST'] : ''),
-                        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+                        'expires'  => time() - 42000,
+                        'path'     => '/',
+                        'domain'   => (str_contains($_SERVER['HTTP_HOST'] ?? '', '.') ? $_SERVER['HTTP_HOST'] : ''),
+                        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
                         'httponly' => true,
                         'samesite' => 'Lax'
                     ]);
