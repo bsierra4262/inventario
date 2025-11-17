@@ -77,28 +77,33 @@ $client->addScope([
 $client->setAccessType('offline');
 $client->setPrompt('select_account consent');
 
-// Si hay varias empresas y el usuario aún no eligió una, deshabilitamos el botón de Google hasta que la elija.
+// URL de autenticación Google
 $googleAuthUrl = $client->createAuthUrl();
 
 // --------------------------------------------------------------------
 // 4) PROCESO GOOGLE LOGIN
 // --------------------------------------------------------------------
-if (isset($_GET['code'])) {
+if (isset($_GET['code']) && $_GET['code'] !== '') {
     try {
         $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+
         if (!isset($token['error'])) {
+            // Token OK
             $_SESSION['access_token'] = $token;
             $client->setAccessToken($token);
 
-            $oauth2 = new Google_Service_Oauth2($client);
+            $oauth2   = new Google_Service_Oauth2($client);
             $userInfo = $oauth2->userinfo->get();
 
             $_SESSION['google_authenticated'] = true;
-            $_SESSION['user_email'] = $userInfo->email;
-            $_SESSION['user_name']  = $userInfo->name;
-            $_SESSION['user_picture'] = $userInfo->picture;
+            $_SESSION['user_email']    = $userInfo->email;
+            $_SESSION['user_name']     = $userInfo->name;
+            $_SESSION['user_picture']  = $userInfo->picture;
 
-            $device_hash = hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . ($_SERVER['REMOTE_ADDR'] ?? ''));
+            $device_hash = hash(
+                'sha256',
+                ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . ($_SERVER['REMOTE_ADDR'] ?? '')
+            );
             $correo = $userInfo->email;
 
             // Si no hay empresa elegida todavía (caso borde), intentamos fijar la 1ª
@@ -113,8 +118,8 @@ if (isset($_GET['code'])) {
             }
 
             // --- Cuenta local en el tenant ---
-            // Si ya hay sesión local, actualizar email placeholder
             if (!empty($_SESSION['user_id'])) {
+                // Ya hay sesión local: actualizo email placeholder si corresponde
                 $stmt = $conn->prepare("UPDATE users SET email = ? WHERE id = ? AND email = 'admin@inventario.local'");
                 $stmt->bind_param('si', $correo, $_SESSION['user_id']);
                 $stmt->execute();
@@ -149,7 +154,7 @@ if (isset($_GET['code'])) {
             $has_ud = $conn->query("SHOW TABLES LIKE 'user_devices'");
             if ($has_ud && $has_ud->num_rows > 0) {
                 $stmt = $conn->prepare("INSERT IGNORE INTO user_devices (user_id, google_email, device_hash) VALUES (?, ?, ?)");
-                $uid = (int)$_SESSION['user_id'];
+                $uid  = (int)$_SESSION['user_id'];
                 $stmt->bind_param('iss', $uid, $correo, $device_hash);
                 $stmt->execute();
                 $stmt->close();
@@ -160,19 +165,36 @@ if (isset($_GET['code'])) {
             exit();
 
         } else {
-            log_event("usuario_desconocido", "ERROR", "Error Google: " . ($token['error_description'] ?? 'sin descripción'), 'auth');
-            echo "<script>alert('Error de autenticación con Google.');</script>";
+            // Google nos devolvió un error en el token
+            $err_code = $token['error'] ?? 'unknown';
+            $err_desc = $token['error_description'] ?? 'sin descripción';
+            log_event(
+                "usuario_desconocido",
+                "ERROR",
+                "Error Google (fetch token): $err_code - $err_desc",
+                'auth'
+            );
+
+            $msg = 'Error de autenticación con Google. Detalle: ' . $err_desc;
+            echo "<script>alert(" . json_encode($msg, JSON_UNESCAPED_UNICODE) . ");window.location='login.php';</script>";
+            exit;
         }
     } catch (Throwable $e) {
+        // Excepción en la librería / network / etc.
         log_event("usuario_desconocido", "ERROR", "Excepción Google: ".$e->getMessage(), 'auth');
-        echo "<script>alert('Error de autenticación con Google.');</script>";
+        $msg = 'Error de autenticación con Google. El administrador debe revisar el log.';
+        echo "<script>alert(" . json_encode($msg, JSON_UNESCAPED_UNICODE) . ");window.location='login.php';</script>";
+        exit;
     }
 }
 
 // --------------------------------------------------------------------
 // 5) PROCESO LOGIN LOCAL (usuario/contraseña)
 // --------------------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['password']) && !isset($_GET['code'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['username'], $_POST['password'])
+    && !isset($_GET['code'])
+) {
 
     // Si había que elegir empresa y no vino, cortar
     if ($must_choose_company && empty($_POST['company_id'])) {
@@ -181,17 +203,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         $username = trim((string)$_POST['username']);
         $password = (string)$_POST['password'];
 
-        $stmt = $conn->prepare("SELECT id, password, role, email FROM users WHERE username = ?");
-        $stmt->bind_param('s', $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user   = $result->fetch_assoc();
-        $stmt->close();
+        try {
+            // Esta parte antes podía lanzar excepción y devolver 500
+            $stmt = $conn->prepare("SELECT id, password, role, email FROM users WHERE username = ?");
+            $stmt->bind_param('s', $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $user   = $result->fetch_assoc();
+            $stmt->close();
+        } catch (Throwable $e) {
+            // Capturamos el error de DB para evitar HTTP 500
+            log_event('login.php', 'ERROR', 'Error DB en login local: '.$e->getMessage(), 'auth');
+            echo '<script>alert("Error interno al verificar tus credenciales. El administrador debe revisar el log.");</script>';
+            $user = null;
+        }
 
         if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id']   = (int)$user['id'];
-            $_SESSION['role']      = $user['role'];
-            $_SESSION['csrf_token']= bin2hex(random_bytes(32));
+            $_SESSION['user_id']    = (int)$user['id'];
+            $_SESSION['role']       = $user['role'];
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
             log_event($user['email'], "LOGIN LOCAL", "Acceso exitoso desde IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
@@ -201,9 +231,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
                 exit();
             }
 
-            // Si no autenticó por Google aún, lo enviamos a Google (tu política actual)
+            // Si no autenticó por Google aún, lo enviamos a Google (política actual)
             if (!isset($_SESSION['google_authenticated'])) {
-                header('Location: ' . $client->createAuthUrl());
+                header('Location: ' . $googleAuthUrl);
                 exit();
             } else {
                 header('Location: index.php');
