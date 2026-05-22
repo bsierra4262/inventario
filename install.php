@@ -133,27 +133,49 @@ $sql_create_db = "CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Instalación del Sistema de Inventario</title>
+  <title>Instalación · Asset Vault · INTELLIHELP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="theme-color" content="#663399">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="/assets/css/intellihelp.css" rel="stylesheet">
   <style>
-    body{font-family:'Saira',sans-serif;background:#fff;padding-top:30px}
-    .card{border-color:#663399}
-    .card-header{background:#663399;color:#fff}
-    .btn-success{background:#9cc930;border-color:#9cc930}
-    .btn-success:hover{background:#86b329;border-color:#86b329}
-    .alert{margin-top:10px;opacity:0;transition:opacity 1s ease-in-out}
-    footer{background:#663399;color:#fff;text-align:center;padding:10px 0;position:fixed;width:100%;bottom:0}
-    code{background:#f5f5f5;border:1px solid #eee;border-radius:6px;padding:2px 6px}
+    body { background: linear-gradient(135deg, #f4f1f9 0%, #ffffff 100%); min-height: 100vh; padding: 40px 16px; }
+    .install-wrap { max-width: 760px; margin: 0 auto; }
+    .install-card { background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(102,51,153,.15); overflow: hidden; }
+    .install-card__header { background: linear-gradient(135deg, #663399, #4E247A); color: #fff; padding: 28px 32px; }
+    .install-card__brand { display: flex; align-items: center; gap: 14px; }
+    .install-card__logo { width: 52px; height: 52px; background: #fff; color: #663399; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; position: relative; }
+    .install-card__logo::after { content: ''; position: absolute; right: 6px; bottom: 6px; width: 10px; height: 10px; background: #9CC930; border-radius: 50%; }
+    .install-card__title { margin: 0; font-size: 22px; font-weight: 700; }
+    .install-card__subtitle { font-size: 13px; opacity: .75; margin-top: 2px; }
+    .install-card__body { padding: 28px 32px 32px; }
+    .install-card__body .alert { margin-bottom: 10px; opacity: 1 !important; animation: ih-fade-in 300ms ease; }
+    code { background: #f4f1f9; border: 1px solid #d0bfea; border-radius: 6px; padding: 2px 8px; font-size: 13px; color: #4E247A; }
+    .install-foot { text-align: center; margin-top: 24px; font-size: 12px; color: #666; }
+    /* Compatibilidad con las alertas que se imprimen desde el bloque PHP de instalación */
+    .alert { padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .alert::before { font-family: 'bootstrap-icons'; font-size: 16px; }
+    .alert-success { background: #DCFCE7; color: #14532D; border: 1px solid #BBF7D0; }
+    .alert-success::before { content: '\F26B'; color: #16A34A; }
+    .alert-warning { background: #FFEDD5; color: #7C2D12; border: 1px solid #FED7AA; }
+    .alert-warning::before { content: '\F33A'; color: #EA580C; }
+    .alert-danger  { background: #FEE2E2; color: #7F1D1D; border: 1px solid #FECACA; }
+    .alert-danger::before { content: '\F623'; color: #DC2626; }
   </style>
 </head>
 <body>
-<div class="container">
-  <h2 class="text-center mb-4">Instalación del Sistema de Inventario</h2>
-  <div class="card shadow-lg">
-    <div class="card-header text-center">Proceso de Instalación</div>
-    <div class="card-body">
+<div class="install-wrap">
+  <div class="install-card ih-anim-fade">
+    <div class="install-card__header">
+      <div class="install-card__brand">
+        <div class="install-card__logo">i</div>
+        <div>
+          <h1 class="install-card__title">Asset Vault — Instalación</h1>
+          <div class="install-card__subtitle">INTELLIHELP · Aprovisionamiento del tenant</div>
+        </div>
+      </div>
+    </div>
+    <div class="install-card__body">
 <?php
 // -----------------------------------------------------
 // 4) Crear base de datos y seleccionar la base objetivo
@@ -467,20 +489,30 @@ try {
 // 9) Instalación finalizada — redirigir a login
 // -----------------------------------------------------
 log_event("install.php", "INSTALACION", "Instalación completada correctamente.", "instalacion");
-echo "<div class='alert alert-success'>✅ <strong>Instalación finalizada.</strong> Redirigiendo a login en 3 segundos...</div>";
-echo "<script>setTimeout(()=>window.location.href='login.php', 3000);</script>";
-
+?>
+      <div class="ih-alert ih-alert--success ih-mt-4">
+        <i class="bi bi-check-circle-fill"></i>
+        <div>
+          <div class="ih-alert__title">Instalación finalizada</div>
+          Próximo paso: ingresá al panel SuperAdmin para configurar Google Workspace SSO y registrar empresas cliente.
+        </div>
+      </div>
+      <div class="ih-flex ih-gap-2 ih-mt-4">
+        <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary">
+          <i class="bi bi-shield-lock"></i> Ir al panel SuperAdmin
+        </a>
+        <a href="/login.php" class="ih-btn ih-btn--outline">
+          <i class="bi bi-box-arrow-in-right"></i> Login del inventario
+        </a>
+      </div>
+<?php
 @$conn->close();
 ?>
     </div>
   </div>
+  <div class="install-foot">
+    © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
+  </div>
 </div>
-<footer class="sticky-footer">© 2025 ITH - Todos los derechos reservados</footer>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded',()=> {
-  document.querySelectorAll('.alert').forEach((el,i)=>setTimeout(()=>el.style.opacity=1, 500*(i+1)));
-});
-</script>
 </body>
 </html>

@@ -19,7 +19,6 @@ if ($id <= 0) {
 $db  = new MasterDB();
 $err = '';
 
-// Cargar empresa
 $stmt = $db->pquery(
     'SELECT id, nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, active
      FROM companies WHERE id = ? LIMIT 1',
@@ -33,8 +32,8 @@ if (!$company) {
     exit;
 }
 
-// Cargar cloud_config del tenant
 $cloudConfig = [];
+$cloudConfigError = '';
 try {
     ['conn' => $tconn, 'prefix' => $pf] = tenant_conn_by_company($id);
     $ccTable = $pf . 'cloud_config';
@@ -67,14 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbUser = trim($_POST['db_user'] ?? $company['db_user'] ?? '');
     $dbPass = trim($_POST['db_pass'] ?? '');
 
-    if ($nombre === '') {
-        $err = 'El nombre es obligatorio.';
-    }
+    if ($nombre === '') { $err = 'El nombre es obligatorio.'; }
 
     if (!$err) {
         try {
-            // Actualizar companies en master
-            // Si db_pass viene vacío, no la modificamos (no pisamos la contraseña)
             if ($dbPass !== '') {
                 $db->pquery(
                     'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, db_pass=? WHERE id=?',
@@ -89,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            // Actualizar cloud_config en el tenant (solo si se enviaron valores)
             if ($clientId !== '' || $clientSecret !== '') {
                 try {
                     ['conn' => $tconn2, 'prefix' => $pf2] = tenant_conn_by_company($id);
@@ -100,17 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ['google', 'client_id',    $clientId],
                             ['google', 'redirect_uri', $redirectUri],
                         ];
-                        if ($clientSecret !== '') {
-                            $pairs[] = ['google', 'client_secret', $clientSecret];
-                        }
+                        if ($clientSecret !== '') $pairs[] = ['google', 'client_secret', $clientSecret];
                     } else {
                         $pairs = [
                             ['microsoft', 'tenant_id', $tenantIdMs],
                             ['microsoft', 'client_id', $clientId],
                         ];
-                        if ($clientSecret !== '') {
-                            $pairs[] = ['microsoft', 'client_secret', $clientSecret];
-                        }
+                        if ($clientSecret !== '') $pairs[] = ['microsoft', 'client_secret', $clientSecret];
                     }
 
                     foreach ($pairs as [$prov, $key, $val]) {
@@ -137,7 +127,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Si hay error, refrescar $company con los valores del POST para mantener el form
     $company['nombre']       = $_POST['nombre']       ?? $company['nombre'];
     $company['razon_social'] = $_POST['razon_social'] ?? $company['razon_social'];
     $company['cuit']         = $_POST['cuit']         ?? $company['cuit'];
@@ -147,174 +136,174 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $googleCC    = $cloudConfig['google']    ?? [];
 $microsoftCC = $cloudConfig['microsoft'] ?? [];
+
+$page_title    = 'Editar empresa';
+$page_section  = 'empresas';
+$topbar_title  = 'Editar empresa #' . $id;
+$topbar_subtitle = htmlspecialchars($company['nombre']);
+$topbar_user   = $_SESSION['superadmin_name']  ?? 'SuperAdmin';
+$topbar_email  = $_SESSION['superadmin_email'] ?? '';
+$topbar_actions = '<a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--outline ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<title>Editar empresa — Asset Vault</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<style>
-  body      { font-family: 'Saira', system-ui, sans-serif; background: #f4f1f9; }
-  .topbar   { background: #663399; color: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-  .topbar .brand { font-size: 18px; font-weight: 700; }
-  .topbar a { color: #fff; text-decoration: none; padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.15); }
-  .topbar a:hover { background: rgba(255,255,255,.25); }
-  .content  { max-width: 820px; margin: 28px auto; padding: 0 16px; }
-  .card     { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(102,51,153,.08); }
-  .card-header { background: #663399; color: #fff; border-radius: 16px 16px 0 0 !important; padding: 18px 24px; }
-  .card-header h5 { margin: 0; font-weight: 700; }
-  .card-body { padding: 24px; }
-  .form-label { font-size: 13px; font-weight: 600; color: #555; }
-  .form-control, .form-select { border-radius: 10px; border-color: #d0bfea; }
-  .form-control:focus, .form-select:focus { border-color: #663399; box-shadow: 0 0 0 .2rem rgba(102,51,153,.15); }
-  .section-title { font-size: 13px; font-weight: 700; color: #663399; text-transform: uppercase; letter-spacing: .5px; margin: 20px 0 10px; border-bottom: 2px solid #ede8f5; padding-bottom: 6px; }
-  .note { font-size: 12px; color: #888; margin-top: 4px; }
-  .btn-save { background: #663399; border-color: #663399; border-radius: 12px; font-weight: 700; padding: 11px 24px; }
-  .btn-save:hover { background: #4E247A; border-color: #4E247A; }
-</style>
-</head>
-<body>
 
-<div class="topbar">
-  <div class="brand">Editar empresa #<?php echo $id; ?></div>
-  <a href="/dashboard/dashboard_superadmin.php"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+<div class="ih-app">
+  <?php require __DIR__ . '/../includes/layout/sidebar_superadmin.php'; ?>
+  <?php require __DIR__ . '/../includes/layout/topbar.php'; ?>
+
+  <main class="ih-app__main ih-anim-fade">
+
+    <?php if ($err): ?>
+      <div class="ih-alert ih-alert--danger"><i class="bi bi-exclamation-triangle-fill"></i><div><?= htmlspecialchars($err) ?></div></div>
+    <?php endif; ?>
+    <?php if ($cloudConfigError): ?>
+      <div class="ih-alert ih-alert--warning">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>No se pudo leer cloud_config del tenant: <?= htmlspecialchars($cloudConfigError) ?></div>
+      </div>
+    <?php endif; ?>
+
+    <div class="ih-card">
+      <div class="ih-card__header">
+        <div>
+          <h2 class="ih-card__title"><i class="bi bi-pencil-square"></i> <?= htmlspecialchars($company['nombre']) ?></h2>
+          <div class="ih-card__subtitle">Modificar datos generales, SSO y conexión DB</div>
+        </div>
+      </div>
+      <div class="ih-card__body">
+        <form method="post" autocomplete="off">
+          <?php csrf_input(); ?>
+          <input type="hidden" name="id" value="<?= $id ?>">
+
+          <div class="ih-section-title">Información general</div>
+          <div class="ih-grid">
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">Nombre <span class="req">*</span></label>
+                <input class="ih-input" name="nombre" value="<?= htmlspecialchars($company['nombre']) ?>" required>
+              </div>
+            </div>
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">Razón social</label>
+                <input class="ih-input" name="razon_social" value="<?= htmlspecialchars($company['razon_social'] ?? '') ?>">
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">CUIT</label>
+                <input class="ih-input" name="cuit" value="<?= htmlspecialchars($company['cuit'] ?? '') ?>">
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Proveedor</label>
+                <select class="ih-select" name="provider" onchange="ihToggleProvider(this.value)">
+                  <option value="google"    <?= ($company['provider'] ?? 'google') === 'google'    ? 'selected' : '' ?>>Google Drive</option>
+                  <option value="microsoft" <?= ($company['provider'] ?? '') === 'microsoft' ? 'selected' : '' ?>>Microsoft OneDrive</option>
+                </select>
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Estado</label>
+                <label class="ih-switch" style="margin-top:6px">
+                  <input type="checkbox" name="active" value="1" <?= (int)($company['active'] ?? 1) === 1 ? 'checked' : '' ?>>
+                  <span class="ih-switch__slider"></span>
+                </label>
+                <span class="ih-text-sm ih-text-muted" style="margin-left:10px">Empresa activa</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="cred-google">
+            <div class="ih-section-title">Credenciales OAuth — Google</div>
+            <div class="ih-field__hint ih-mb-2">Dejá vacío lo que no quieras modificar.</div>
+            <div class="ih-grid">
+              <div class="ih-col-6">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client ID</label>
+                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($googleCC['client_id'] ?? '') ?>">
+                </div>
+              </div>
+              <div class="ih-col-6">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client Secret</label>
+                  <input class="ih-input" name="client_secret" type="password" placeholder="(sin cambios si está vacío)">
+                </div>
+              </div>
+              <div class="ih-col-12">
+                <div class="ih-field">
+                  <label class="ih-field__label">Redirect URI</label>
+                  <input class="ih-input" name="redirect_uri" value="<?= htmlspecialchars($googleCC['redirect_uri'] ?? '') ?>">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="cred-microsoft" style="display:none;">
+            <div class="ih-section-title">Credenciales OAuth — Microsoft</div>
+            <div class="ih-grid">
+              <div class="ih-col-4">
+                <div class="ih-field">
+                  <label class="ih-field__label">Tenant ID</label>
+                  <input class="ih-input" name="ms_tenant_id" value="<?= htmlspecialchars($microsoftCC['tenant_id'] ?? '') ?>">
+                </div>
+              </div>
+              <div class="ih-col-4">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client ID</label>
+                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($microsoftCC['client_id'] ?? '') ?>">
+                </div>
+              </div>
+              <div class="ih-col-4">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client Secret</label>
+                  <input class="ih-input" name="client_secret" type="password" placeholder="(sin cambios si está vacío)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <?php if ($company['tenant_mode'] === 'external'): ?>
+            <div class="ih-section-title">Base de datos del tenant</div>
+            <div class="ih-grid">
+              <div class="ih-col-3">
+                <div class="ih-field"><label class="ih-field__label">Host</label>
+                  <input class="ih-input" name="db_host" value="<?= htmlspecialchars($company['db_host'] ?? 'localhost') ?>"></div>
+              </div>
+              <div class="ih-col-3">
+                <div class="ih-field"><label class="ih-field__label">Nombre DB</label>
+                  <input class="ih-input" name="db_name" value="<?= htmlspecialchars($company['db_name'] ?? '') ?>"></div>
+              </div>
+              <div class="ih-col-3">
+                <div class="ih-field"><label class="ih-field__label">Usuario</label>
+                  <input class="ih-input" name="db_user" value="<?= htmlspecialchars($company['db_user'] ?? '') ?>"></div>
+              </div>
+              <div class="ih-col-3">
+                <div class="ih-field"><label class="ih-field__label">Contraseña</label>
+                  <input class="ih-input" name="db_pass" type="password" placeholder="(sin cambios si está vacío)"></div>
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <div class="ih-flex ih-gap-2 ih-mt-6">
+            <button class="ih-btn ih-btn--primary" type="submit"><i class="bi bi-check-lg"></i> Guardar cambios</button>
+            <a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--ghost">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<div class="content">
-  <?php if ($err): ?>
-    <div class="alert alert-danger mt-3" style="border-radius:12px;"><?php echo htmlspecialchars($err); ?></div>
-  <?php endif; ?>
-  <?php if (!empty($cloudConfigError)): ?>
-    <div class="alert alert-warning mt-3" style="border-radius:12px;">
-      No se pudo leer cloud_config del tenant: <?php echo htmlspecialchars($cloudConfigError); ?>
-    </div>
-  <?php endif; ?>
-
-  <div class="card mt-3">
-    <div class="card-header">
-      <h5><i class="bi bi-pencil-square me-2"></i><?php echo htmlspecialchars($company['nombre']); ?></h5>
-    </div>
-    <div class="card-body">
-      <form method="post" autocomplete="off">
-        <?php csrf_input(); ?>
-        <input type="hidden" name="id" value="<?php echo $id; ?>">
-
-        <div class="section-title">Información general</div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Nombre *</label>
-            <input class="form-control" name="nombre" value="<?php echo htmlspecialchars($company['nombre']); ?>" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Razón social</label>
-            <input class="form-control" name="razon_social" value="<?php echo htmlspecialchars($company['razon_social'] ?? ''); ?>">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">CUIT</label>
-            <input class="form-control" name="cuit" value="<?php echo htmlspecialchars($company['cuit'] ?? ''); ?>">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Proveedor de nube</label>
-            <select class="form-select" name="provider" onchange="toggleProvider(this.value)">
-              <option value="google" <?php echo ($company['provider'] ?? 'google') === 'google' ? 'selected' : ''; ?>>Google Drive</option>
-              <option value="microsoft" <?php echo ($company['provider'] ?? '') === 'microsoft' ? 'selected' : ''; ?>>Microsoft OneDrive</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Estado</label>
-            <div class="form-check form-switch mt-2">
-              <input class="form-check-input" type="checkbox" name="active" id="active" value="1"
-                     <?php echo (int)($company['active'] ?? 1) === 1 ? 'checked' : ''; ?>>
-              <label class="form-check-label" for="active">Empresa activa</label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Credenciales Google -->
-        <div id="cred-google">
-          <div class="section-title">Credenciales OAuth — Google</div>
-          <div class="note mb-2">Dejá en blanco los campos que no querés modificar.</div>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Client ID</label>
-              <input class="form-control" name="client_id" value="<?php echo htmlspecialchars($googleCC['client_id'] ?? ''); ?>">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Client Secret</label>
-              <input class="form-control" name="client_secret" type="password" placeholder="(sin cambios si está vacío)">
-            </div>
-            <div class="col-12">
-              <label class="form-label">Redirect URI</label>
-              <input class="form-control" name="redirect_uri" value="<?php echo htmlspecialchars($googleCC['redirect_uri'] ?? ''); ?>">
-            </div>
-          </div>
-        </div>
-
-        <!-- Credenciales Microsoft -->
-        <div id="cred-microsoft" style="display:none;">
-          <div class="section-title">Credenciales OAuth — Microsoft</div>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Tenant ID</label>
-              <input class="form-control" name="ms_tenant_id" value="<?php echo htmlspecialchars($microsoftCC['tenant_id'] ?? ''); ?>">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Client ID (App ID)</label>
-              <input class="form-control" name="client_id" value="<?php echo htmlspecialchars($microsoftCC['client_id'] ?? ''); ?>">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Client Secret</label>
-              <input class="form-control" name="client_secret" type="password" placeholder="(sin cambios si está vacío)">
-            </div>
-          </div>
-        </div>
-
-        <?php if ($company['tenant_mode'] === 'external'): ?>
-        <div class="section-title">Base de datos del tenant</div>
-        <div class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label">Host</label>
-            <input class="form-control" name="db_host" value="<?php echo htmlspecialchars($company['db_host'] ?? 'localhost'); ?>">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Nombre DB</label>
-            <input class="form-control" name="db_name" value="<?php echo htmlspecialchars($company['db_name'] ?? ''); ?>">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Usuario</label>
-            <input class="form-control" name="db_user" value="<?php echo htmlspecialchars($company['db_user'] ?? ''); ?>">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Contraseña</label>
-            <input class="form-control" name="db_pass" type="password" placeholder="(sin cambios si está vacío)">
-          </div>
-        </div>
-        <?php endif; ?>
-
-        <div class="mt-4 d-flex gap-2">
-          <button class="btn btn-primary btn-save" type="submit">
-            <i class="bi bi-check-lg me-1"></i> Guardar cambios
-          </button>
-          <a href="/dashboard/dashboard_superadmin.php" class="btn btn-outline-secondary" style="border-radius:12px;">Cancelar</a>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function toggleProvider(val) {
+function ihToggleProvider(val) {
   document.getElementById('cred-google').style.display    = (val === 'google')    ? '' : 'none';
   document.getElementById('cred-microsoft').style.display = (val === 'microsoft') ? '' : 'none';
 }
-(function(){
-  toggleProvider(document.querySelector('[name="provider"]').value);
-})();
+(function(){ ihToggleProvider(document.querySelector('[name="provider"]').value); })();
 </script>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>
