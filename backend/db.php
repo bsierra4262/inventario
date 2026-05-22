@@ -9,8 +9,8 @@
 declare(strict_types=1);
 
 // ---------- Rutas robustas ----------
-define('BACKEND_PATH', __DIR__);                   // .../Desarrollo/backend
-define('ROOT_PATH', dirname(BACKEND_PATH));        // .../Desarrollo
+defined('BACKEND_PATH') || define('BACKEND_PATH', __DIR__);
+defined('ROOT_PATH')    || define('ROOT_PATH', dirname(BACKEND_PATH));
 
 // ---------- Logger opcional ----------
 $loggerPath = ROOT_PATH . '/logs/logger.php';

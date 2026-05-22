@@ -1,33 +1,35 @@
 <?php
 /**
  * Configuración de plataforma (Hostinger)
+ * Todas las constantes usan defined() guard para ser seguras ante doble inclusión
+ * (ocurre en subdominios virtuales donde realpath() resuelve distinto según el path de acceso).
  */
 
-define('PLATFORM_ENV', 'prod'); // prod|dev
+defined('PLATFORM_ENV')          || define('PLATFORM_ENV',          'prod');
 
 // === MASTER DB (plataforma) ===
-define('MASTER_DB_HOST', 'localhost');
-define('MASTER_DB_NAME', 'u566451014_master');
-define('MASTER_DB_USER', 'u566451014_admin');
-define('MASTER_DB_PASS', '***SECRETO-PURGADO***');
+defined('MASTER_DB_HOST')        || define('MASTER_DB_HOST',        'localhost');
+defined('MASTER_DB_NAME')        || define('MASTER_DB_NAME',        'u566451014_master');
+defined('MASTER_DB_USER')        || define('MASTER_DB_USER',        'u566451014_admin');
+defined('MASTER_DB_PASS')        || define('MASTER_DB_PASS',        '***SECRETO-PURGADO***');
 
 // === Paths seguros (dentro de public_html) ===
-define('SECURE_BASE', __DIR__ . '/../../secure');                  // /public_html/secure
-define('TENANTS_SECURE_PATH', SECURE_BASE . '/tenants');           // /public_html/secure/tenants
-define('LOG_PATH', __DIR__ . '/../../logs/audit.log');
+defined('SECURE_BASE')           || define('SECURE_BASE',           __DIR__ . '/../../secure');
+defined('TENANTS_SECURE_PATH')   || define('TENANTS_SECURE_PATH',   SECURE_BASE . '/tenants');
+defined('LOG_PATH')              || define('LOG_PATH',              __DIR__ . '/../../logs/audit.log');
 
 // === Proveedores soportados ===
-const PROVIDERS = ['google', 'microsoft'];
+defined('PROVIDERS')             || define('PROVIDERS',             ['google', 'microsoft']);
 
 // === Modo de alta de empresa ===
-define('DEFAULT_TENANT_MODE', 'prefix');
+defined('DEFAULT_TENANT_MODE')   || define('DEFAULT_TENANT_MODE',   'prefix');
 
 // === Prefijo de tablas tenant cuando se use 'prefix' ===
-define('TENANT_PREFIX_BASE', 't');
+defined('TENANT_PREFIX_BASE')    || define('TENANT_PREFIX_BASE',    't');
 
 // === Seguridad ===
-define('CSRF_TOKEN_NAME', '_csrf');
-define('SESSION_SUPERADMIN_FLAG', 'is_superadmin');
+defined('CSRF_TOKEN_NAME')       || define('CSRF_TOKEN_NAME',       '_csrf');
+defined('SESSION_SUPERADMIN_FLAG') || define('SESSION_SUPERADMIN_FLAG', 'is_superadmin');
 
 // === Utilidades ===
 function platform_log($msg){
