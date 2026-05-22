@@ -570,7 +570,11 @@ $iconMap = [
     <div class="d-flex justify-content-between align-items-center flex-wrap mt-4 mb-3">
       <h3 class="fw-bold text-uppercase" style="color: #4E247A; font-family: 'Saira', sans-serif;">Lista de Activos</h3>
       <div class="d-flex flex-wrap gap-2">
-        <a href="backend/export_csv.php" class="btn btn-sm" style="background-color: #86B329; color: white;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar CSV</a>
+        <?php
+          require_once __DIR__ . '/backend/csrf.php';
+          $csrf_export = generateCsrfToken('export_inventario');
+        ?>
+        <a href="backend/export_csv.php?csrf_token=<?= urlencode($csrf_export) ?>" class="btn btn-sm" style="background-color: #86B329; color: white;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar CSV</a>
         <form action="backend/import_csv.php" method="POST" enctype="multipart/form-data" class="d-inline">
           <label class="btn btn-sm btn-outline-secondary mb-0">
             <i class="bi bi-upload"></i> Importar CSV
@@ -1145,13 +1149,13 @@ $iconMap = [
         <input type="text" class="form-control" name="ubicacion">
       </div>
       <div class="col-md-6">
-        <label for="fecha_ingreso" class="form-label text-uppercase" style="color: #663399;">Fecha de Ingreso</label>
+        <label for="fecha_ingreso" class="form-label text-uppercase" style="color: #663399;">Fecha de Recepción <span style="font-size:0.8em; text-transform:none; font-weight:400;">(Fecha de remito)</span></label>
         <input type="date" class="form-control" name="fecha_ingreso">
       </div>
-     <!-- <div class="col-md-6"> -->
-     <!--   <label for="fecha_egreso" class="form-label text-uppercase" style="color: #663399;">Fecha de Egreso</label> -->
-     <!--   <input type="date" class="form-control" name="fecha_egreso"> -->
-     <!-- </div>  -->
+      <div class="col-md-6">
+        <label for="fecha_compra" class="form-label text-uppercase" style="color: #663399;">Fecha de Compra <span style="font-size:0.8em; text-transform:none; font-weight:400;">(Orden de compra – Opcional)</span></label>
+        <input type="date" class="form-control" name="fecha_compra">
+      </div>
       <div class="col-12">
         <label for="archivo" class="form-label text-uppercase" style="color: #663399;">Subir Archivos</label>
         <input type="file" class="form-control" name="archivo[]" multiple id="file-input">

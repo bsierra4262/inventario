@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id']) && !isset($_GET['
       ¿Por qué vas a archivar este Activo?
     </h2>
 
-    <form method="post" action="edelete.php">
+    <form method="post" action="delete.php">
       <!-- Token CSRF -->
       <input type="hidden" name="csrf_token" value="<?= e($csrf_token) ?>">
       <!-- ID del producto -->
@@ -137,6 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id']) && !isset($_GET['
           <option>Perdida</option>
           <option>Robo</option>
         </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Fecha de Baja <span class="text-muted">(opcional)</span></label>
+        <input type="date" name="fecha_baja" class="form-control" value="<?= date('Y-m-d') ?>">
       </div>
 
       <div class="mb-3">
@@ -175,6 +180,13 @@ elseif (
     $producto_id = intval($_POST['id']);
     $motivo  = trim((string)($_POST['motivo'] ?? ''));
     $detalle = trim((string)($_POST['detalle'] ?? ''));
+    $fecha_baja = trim((string)($_POST['fecha_baja'] ?? ''));
+    if ($fecha_baja && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_baja)) {
+        $fecha_baja = date('Y-m-d');
+    }
+    if (!$fecha_baja) {
+        $fecha_baja = date('Y-m-d');
+    }
 
     $motivo_clean  = htmlspecialchars($motivo, ENT_QUOTES, 'UTF-8');
     $detalle_clean = htmlspecialchars($detalle, ENT_QUOTES, 'UTF-8');
@@ -183,13 +195,13 @@ elseif (
     $conn->begin_transaction();
 
     try {
-        // Marca el producto como archivado
+        // Marca el producto como archivado y guarda fecha de baja
         $stmt_update = $conn->prepare("
             UPDATE productos
-            SET archivado = 1
+            SET archivado = 1, fecha_baja = ?
             WHERE id = ?
         ");
-        $stmt_update->bind_param('i', $producto_id);
+        $stmt_update->bind_param('si', $fecha_baja, $producto_id);
         $stmt_update->execute();
         $stmt_update->close();
 
@@ -323,7 +335,7 @@ elseif (
         );
 
         echo "<h2 class='text-success'><i class='bi bi-check-circle'></i> Activo archivado correctamente</h2>";
-        echo "<p>Motivo: <strong>" . e($motivo_clean) . "</strong><br>Detalle: " . ($detalle_clean !== '' ? e($detalle_clean) : 'Sin detalle adicional.') . "</p>";
+        echo "<p>Motivo: <strong>" . e($motivo_clean) . "</strong><br>Fecha de Baja: <strong>" . e($fecha_baja) . "</strong><br>Detalle: " . ($detalle_clean !== '' ? e($detalle_clean) : 'Sin detalle adicional.') . "</p>";
         echo "<a href='../index.php' class='btn btn-main mt-3'><i class='bi bi-arrow-left'></i> Volver al Panel</a>";
 
     } catch (Exception $e) {

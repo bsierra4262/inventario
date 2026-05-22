@@ -66,23 +66,25 @@ header('Content-Disposition: attachment; filename="'.$clean_name.'"');
 
 $output = fopen('php://output', 'w');
 
-// Encabezados compatibles con import_csv.php
+// Encabezados
 fputcsv($output, [
-    'asignado a',
-    'nombre/modelo',
-    'marca',
-    'descripcion',
+    'ID',
+    'Asignado a',
+    'Nombre/Modelo',
+    'Marca',
+    'Descripcion',
     'S/N Service Tag',
-    'cantidad',
-    'valor usd',
-    'estado',
-    'categoria',
-    'subcategoria',
-    'garantia',
-    'fecha garantia',
-    'ingreso',
-    'egreso',
-    'ubicacion',
+    'Cantidad',
+    'Valor de Compra en USD',
+    'Estado',
+    'Categoria',
+    'Subcategoria',
+    'Garantia (meses)',
+    'Fecha Garantia',
+    'Fecha Recepcion',
+    'Fecha Compra',
+    'Ubicacion',
+    'Fecha Carga',
     'patchcord_tipo',
     'patchcord_longitud',
     'switch_gestion',
@@ -109,8 +111,10 @@ fputcsv($output, [
 // vas a agregar (o ya agregaste) 'tenant_id' o similar para aislar clientes.
 // Si NO la tenés todavía, dejá comentada esa parte del WHERE.
 //
+$productosTable = tn('productos');
 $sql = "
-    SELECT 
+    SELECT
+        p.id,
         p.asignado_a,
         p.modelo,
         p.marca,
@@ -123,9 +127,10 @@ $sql = "
         p.subcategoria,
         p.periodo_garantia AS garantia,
         p.fecha_garantia,
-        p.fecha_ingreso AS ingreso,
-        p.fecha_egreso AS egreso,
+        p.fecha_ingreso,
+        p.fecha_compra,
         p.ubicacion,
+        COALESCE(p.fecha_carga, p.fecha_modificacion) AS fecha_carga,
         p.patchcord_tipo,
         p.patchcord_longitud,
         p.switch_gestion,
@@ -140,24 +145,12 @@ $sql = "
         p.detalle_otros,
         p.subsoftware,
         p.subsoftware_otros
-    FROM productos p
+    FROM `{$productosTable}` p
     WHERE p.archivado = 0
-    /* AND p.tenant_id = ? */ 
     ORDER BY p.id ASC
 ";
 
-// Si ya tenés multiempresa real, usamos prepare con bind_param:
-if ($tenant_id) {
-    $stmt = $conn->prepare($sql);
-    // sacá el comentario de la condición AND p.tenant_id = ? en el SQL de arriba antes de esto
-    // $stmt->bind_param('i', $tenant_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $stmt->close();
-} else {
-    // modo legacy sin tenant filter
-    $result = $conn->query($sql);
-}
+$result = $conn->query($sql);
 
 // -----------------------------------------------------
 // 5. NORMALIZACIÓN DE FECHAS
@@ -188,8 +181,8 @@ if ($result && $result->num_rows > 0) {
 
         // normalizamos fechas
         $row['fecha_garantia'] = convertir_fecha($row['fecha_garantia'] ?? '');
-        $row['ingreso']        = convertir_fecha($row['ingreso'] ?? '');
-        $row['egreso']         = convertir_fecha($row['egreso'] ?? '');
+        $row['fecha_ingreso']  = convertir_fecha($row['fecha_ingreso']  ?? '');
+        $row['fecha_compra']   = convertir_fecha($row['fecha_compra']   ?? '');
 
         // garantizamos string vacío en null
         $data = [];

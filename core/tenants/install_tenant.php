@@ -41,25 +41,45 @@ function install_tenant_schema(int $companyId, string $mode, array $externalDb):
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-    // === PRODUCTOS === (dejamos tu estructura actual)
+    // === PRODUCTOS ===
     $sql[] = "CREATE TABLE IF NOT EXISTS `{$pf}productos` (
       id INT AUTO_INCREMENT PRIMARY KEY,
       modelo VARCHAR(150),
       marca VARCHAR(120),
-      sn_tag VARCHAR(150),
+      descripcion TEXT,
+      servis_tag VARCHAR(150),
       estado VARCHAR(50),
-      garantia VARCHAR(50),
-      ingreso DATE,
-      egreso DATE,
-      ubicacion VARCHAR(150),
-      asignado_a VARCHAR(150),
-      valor_usd DECIMAL(12,2) DEFAULT 0,
-      cantidad INT DEFAULT 1,
       categoria VARCHAR(120),
       subcategoria VARCHAR(120),
-      detalle_tecnico TEXT,
-      descripcion TEXT,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      periodo_garantia INT DEFAULT 0,
+      fecha_garantia DATE NULL,
+      ubicacion VARCHAR(150),
+      carpeta_raiz_drive VARCHAR(255) NULL,
+      fecha_ingreso DATE NULL COMMENT 'Fecha de recepcion fisica del equipo (remito)',
+      fecha_egreso DATE NULL,
+      fecha_compra DATE NULL COMMENT 'Fecha de la orden de compra (opcional)',
+      fecha_baja DATE NULL COMMENT 'Fecha de baja/archivado',
+      asignado_a VARCHAR(150),
+      cantidad INT DEFAULT 1,
+      valor_usd DECIMAL(12,2) DEFAULT 0,
+      archivado TINYINT(1) DEFAULT 0,
+      patchcord_tipo VARCHAR(50) NULL,
+      patchcord_longitud VARCHAR(50) NULL,
+      switch_gestion VARCHAR(50) NULL,
+      antenas_tipo VARCHAR(50) NULL,
+      bobina_categoria VARCHAR(50) NULL,
+      bobina_ubicacion VARCHAR(50) NULL,
+      bobina_longitud VARCHAR(50) NULL,
+      conectores_tipo VARCHAR(50) NULL,
+      detalle_conectores VARCHAR(255) NULL,
+      cintas_generacion VARCHAR(50) NULL,
+      detalle_repuesto TEXT NULL,
+      detalle_otros TEXT NULL,
+      subsoftware VARCHAR(150) NULL,
+      subsoftware_otros VARCHAR(255) NULL,
+      detalle_tecnico TEXT NULL,
+      fecha_carga DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Fecha de carga automatica al sistema',
+      fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
     // === MOVIMIENTOS ===

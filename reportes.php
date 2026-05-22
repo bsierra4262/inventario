@@ -1,18 +1,25 @@
 <?php
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 require __DIR__ . '/backend/db.php';
 require_once __DIR__ . '/logs/logger.php';
-session_start();
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
-$user_id   = $_SESSION['user_id'];
-$sql_user  = "SELECT role FROM users WHERE id = ?";
+$user_id     = $_SESSION['user_id'];
+$usersTable  = tn('users');
+$prodTable   = tn('productos');
+$movTable    = tn('producto_movimientos');
+
+$sql_user  = "SELECT role FROM `{$usersTable}` WHERE id = ?";
 $stmt_user = $conn->prepare($sql_user);
 $stmt_user->bind_param('i', $user_id);
 $stmt_user->execute();
 $user      = $stmt_user->get_result()->fetch_assoc();
+$stmt_user->close();
 $is_admin  = ($user && $user['role'] === 'admin');
 
 // --- CATEGORÍAS Y SUBCATEGORÍAS FIJAS ---
@@ -594,23 +601,29 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
         if (!empty($_GET['modelo']))       $f[] = "LOWER(modelo) LIKE LOWER('%".$conn->real_escape_string($_GET['modelo'])."%')";
         if (!empty($_GET['estado']))       $f[] = "estado = '".$conn->real_escape_string($_GET['estado'])."'";
         if (!empty($_GET['ubicacion']))    $f[] = "LOWER(ubicacion) LIKE LOWER('%".$conn->real_escape_string($_GET['ubicacion'])."%')";
+        // Filtro por Fecha de Carga (created_at / fecha_carga automática)
+        $col_carga = "IF(fecha_carga IS NOT NULL AND fecha_carga != '0000-00-00 00:00:00', DATE(fecha_carga), DATE(fecha_modificacion))";
         if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-            $f[] = "fecha_ingreso BETWEEN '".$_GET['fecha_desde']."' AND '".$_GET['fecha_hasta']."'";
+            $fd = $conn->real_escape_string($_GET['fecha_desde']);
+            $fh = $conn->real_escape_string($_GET['fecha_hasta']);
+            $f[] = "($col_carga) BETWEEN '$fd' AND '$fh'";
         } elseif (!empty($_GET['fecha_desde'])) {
-            $f[] = "fecha_ingreso >= '".$_GET['fecha_desde']."'";
+            $fd = $conn->real_escape_string($_GET['fecha_desde']);
+            $f[] = "($col_carga) >= '$fd'";
         } elseif (!empty($_GET['fecha_hasta'])) {
-            $f[] = "fecha_ingreso <= '".$_GET['fecha_hasta']."'";
+            $fh = $conn->real_escape_string($_GET['fecha_hasta']);
+            $f[] = "($col_carga) <= '$fh'";
         }
 
-        // 👇 FILTRO FIJO: SIEMPRE excluir archivados (para todos los roles)
+        // SIEMPRE excluir archivados
         $f[] = "archivado = 0";
 
         $hay_filtros = count($f) > 0;
 
-        $sql = "SELECT * FROM productos"
+        $sql = "SELECT * FROM `{$prodTable}`"
              . ($hay_filtros ? " WHERE ".implode(" AND ", $f) : "")
              . " ORDER BY id DESC "
-             . (empty($_GET) ? "LIMIT 100" : ""); // límite solo sin filtros
+             . (empty($_GET) ? "LIMIT 100" : "");
 
         $res = $conn->query($sql);
         while ($row = $res->fetch_assoc()):
@@ -748,12 +761,17 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
         $f = [];
         if (!empty($_GET['categoria']))    $f[] = "categoria = '".$conn->real_escape_string($_GET['categoria'])."'";
         if (!empty($_GET['subcategoria'])) $f[] = "subcategoria = '".$conn->real_escape_string($_GET['subcategoria'])."'";
+        $col_carga_r = "IF(fecha_carga IS NOT NULL AND fecha_carga != '0000-00-00 00:00:00', DATE(fecha_carga), DATE(fecha_modificacion))";
         if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-          $f[] = "fecha_ingreso BETWEEN '".$_GET['fecha_desde']."' AND '".$_GET['fecha_hasta']."'";
+          $fd = $conn->real_escape_string($_GET['fecha_desde']);
+          $fh = $conn->real_escape_string($_GET['fecha_hasta']);
+          $f[] = "($col_carga_r) BETWEEN '$fd' AND '$fh'";
         } elseif (!empty($_GET['fecha_desde'])) {
-          $f[] = "fecha_ingreso >= '".$_GET['fecha_desde']."'";
+          $fd = $conn->real_escape_string($_GET['fecha_desde']);
+          $f[] = "($col_carga_r) >= '$fd'";
         } elseif (!empty($_GET['fecha_hasta'])) {
-          $f[] = "fecha_ingreso <= '".$_GET['fecha_hasta']."'";
+          $fh = $conn->real_escape_string($_GET['fecha_hasta']);
+          $f[] = "($col_carga_r) <= '$fh'";
         }
         // Excluir archivados SIEMPRE
         $f[] = "archivado = 0";
@@ -779,7 +797,7 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
               TRIM(REPLACE(categoria,   CHAR(160),' '))      AS categoria_mostrar,
               TRIM(REPLACE(subcategoria,CHAR(160),' '))      AS subcategoria_mostrar,
               cantidad
-            FROM productos
+            FROM `{$prodTable}`
             $where
           ) t
           GROUP BY modelo_key, marca_key, categoria_key, subcategoria_key
@@ -894,7 +912,7 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
               <th>Marca</th>
               <th>Categoría</th>
               <th>Subcategoría</th>
-              <th>Fecha Ingreso</th>
+              <th>Fecha Base Amortiz.</th>
               <th>Valor de Compra en USD</th>
               <th>Años Amortiz.</th>
               <th>Valor Actual</th>
@@ -903,30 +921,40 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
           <tbody>
             <?php
             $anios = isset($_GET['anios']) ? intval($_GET['anios']) : 4;
-            $filtros = [];
-            if (!$is_admin) $filtros[] = "archivado=0";
-            $where = count($filtros) ? "WHERE ".implode(" AND ", $filtros) : "";
-            $hay_filtros = !empty($_GET); // Si hay cualquier filtro en GET
+            // Excluir archivados y productos con fecha_egreso (dados de baja)
+            $filtros = [
+                "archivado = 0",
+                "(fecha_egreso IS NULL OR fecha_egreso = '0000-00-00')"
+            ];
+            $where = "WHERE ".implode(" AND ", $filtros);
+            $hay_filtros = !empty($_GET);
             $limit = !$hay_filtros ? "LIMIT 100" : "";
-            $sql = "SELECT * FROM productos $where ORDER BY id DESC $limit";
+            $sql = "SELECT * FROM `{$prodTable}` $where ORDER BY id DESC $limit";
             $res = $conn->query($sql);
-            
+
             $totalActual = 0; $totalCompra = 0;
             while($row = $res->fetch_assoc()):
-               $fecha = $row['fecha_ingreso'] ? new DateTime($row['fecha_ingreso']) : null;
+               // Prioridad: fecha_compra si está, sino fecha_ingreso
+               $fecha_base = null;
+               if (!empty($row['fecha_compra']) && $row['fecha_compra'] !== '0000-00-00') {
+                   $fecha_base = new DateTime($row['fecha_compra']);
+               } elseif (!empty($row['fecha_ingreso']) && $row['fecha_ingreso'] !== '0000-00-00') {
+                   $fecha_base = new DateTime($row['fecha_ingreso']);
+               }
                $hoy = new DateTime();
-               $valor_compra = $row['valor_usd'] * $row['cantidad'];
+               $valor_compra = floatval($row['valor_usd']) * intval($row['cantidad']);
                $totalCompra += $valor_compra;
-               if ($fecha && $anios>0) {
-                  $interval = $fecha->diff($hoy);
+               if ($fecha_base && $anios > 0) {
+                  $interval = $fecha_base->diff($hoy);
                   $aniosTrans = ($interval->y) + ($interval->m/12);
                   $depreciacion = min(1, $aniosTrans/$anios);
-                  $valor_actual = round($valor_compra * (1 - $depreciacion),2);
+                  $valor_actual = round($valor_compra * (1 - $depreciacion), 2);
                   if ($valor_actual < 0) $valor_actual = 0;
                } else {
                   $valor_actual = $valor_compra;
                }
                $totalActual += $valor_actual;
+               $fecha_base_str = $fecha_base ? $fecha_base->format('Y-m-d') : '—';
             ?>
                <tr>
                   <td><?= $row['id'] ?></td>
@@ -934,7 +962,13 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
                   <td><?= htmlspecialchars($row['marca']) ?></td>
                   <td><?= htmlspecialchars($row['categoria']) ?></td>
                   <td><?= htmlspecialchars($row['subcategoria']) ?></td>
-                  <td><?= htmlspecialchars($row['fecha_ingreso']) ?></td>
+                  <td><?= htmlspecialchars($fecha_base_str) ?>
+                    <?php if (!empty($row['fecha_compra']) && $row['fecha_compra'] !== '0000-00-00'): ?>
+                      <br><small class="text-muted">Compra</small>
+                    <?php elseif (!empty($row['fecha_ingreso']) && $row['fecha_ingreso'] !== '0000-00-00'): ?>
+                      <br><small class="text-muted">Ingreso</small>
+                    <?php endif; ?>
+                  </td>
                   <td>$<?= number_format($valor_compra,2) ?></td>
                   <td><?=$anios?></td>
                   <td>$<?= number_format($valor_actual,2) ?></td>
@@ -1070,8 +1104,8 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
                 pm.fecha_ingreso AS ingreso_mod, pm.fecha_egreso AS egreso_mod, pm.ubicacion AS ubic_mod,
                 pm.detalle_tecnico AS detec_mod, pm.patchcord_tipo AS pctipo_mod, pm.patchcord_longitud AS pclong_mod,
                 pm.categoria AS cat_mod, pm.subcategoria AS sub_mod
-                FROM producto_movimientos pm
-                LEFT JOIN users u ON pm.realizado_por = u.id
+                FROM `{$movTable}` pm
+                LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
                 WHERE $where
                 ORDER BY pm.fecha DESC
                 $limit";
@@ -1251,9 +1285,9 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
         $hay_filtros = count($f) > 1; // 'Archivado' siempre está
         $limit = !$hay_filtros ? "LIMIT 100" : "";
         
-        $sql = "SELECT pm.*, u.username, u.email 
-                FROM producto_movimientos pm 
-                LEFT JOIN users u ON pm.realizado_por = u.id 
+        $sql = "SELECT pm.*, u.username, u.email
+                FROM `{$movTable}` pm
+                LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
                 ".(count($f) ? "WHERE ".implode(" AND ",$f) : "")."
                 ORDER BY pm.fecha DESC
                 $limit";

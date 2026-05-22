@@ -79,12 +79,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_garantia = htmlspecialchars($_POST['fecha_garantia'] ?? '');
     $ubicacion = trim(htmlspecialchars($_POST['ubicacion'] ?? ''));
     $fecha_ingreso = htmlspecialchars($_POST['fecha_ingreso'] ?? '');
-    $fecha_egreso = htmlspecialchars($_POST['fecha_egreso'] ?? '');
+    $fecha_compra  = htmlspecialchars($_POST['fecha_compra'] ?? '');
+    // Normalizar fechas vacías a NULL-safe empty string
+    if ($fecha_ingreso === '' || $fecha_ingreso === '0000-00-00') $fecha_ingreso = '';
+    if ($fecha_compra  === '' || $fecha_compra  === '0000-00-00') $fecha_compra  = '';
 
    $_SESSION['form_data'] = compact(
        'modelo','marca','descripcion','servis_tag','estado','categoria','subcategoria',
        'periodo_garantia','fecha_garantia','ubicacion','fecha_ingreso',
-       'fecha_egreso','asignado_a','cantidad'
+       'fecha_compra','asignado_a','cantidad'
    );
 
     try {
@@ -111,21 +114,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare(
             "INSERT INTO productos (
-                modelo, marca, descripcion, servis_tag, estado, categoria, subcategoria, 
+                modelo, marca, descripcion, servis_tag, estado, categoria, subcategoria,
                 periodo_garantia, fecha_garantia, ubicacion, carpeta_raiz_drive, fecha_ingreso,
-                fecha_egreso, asignado_a, cantidad, valor_usd, 
-                patchcord_tipo, patchcord_longitud, switch_gestion, antenas_tipo, 
-                bobina_categoria, bobina_ubicacion, bobina_longitud, 
-                conectores_tipo, detalle_conectores, cintas_generacion, 
+                fecha_compra, asignado_a, cantidad, valor_usd,
+                patchcord_tipo, patchcord_longitud, switch_gestion, antenas_tipo,
+                bobina_categoria, bobina_ubicacion, bobina_longitud,
+                conectores_tipo, detalle_conectores, cintas_generacion,
                 detalle_repuesto, detalle_otros, subsoftware, subsoftware_otros
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        
+
+        $fi = $fecha_ingreso ?: null;
+        $fc = $fecha_compra  ?: null;
+
         $stmt->bind_param(
             'sssssssissssssdsssssssssssssss',
             $modelo, $marca, $descripcion, $servis_tag, $estado, $categoria, $subcategoria,
             $periodo_garantia, $fecha_garantia, $ubicacion, $carpeta_raiz_drive,
-            $fecha_ingreso, $fecha_egreso, $asignado_a, $cantidad, $valor_usd,
+            $fi, $fc, $asignado_a, $cantidad, $valor_usd,
             $patchcord_tipo, $patchcord_longitud, $switch_gestion, $antenas_tipo,
             $bobina_categoria, $bobina_ubicacion, $bobina_longitud,
             $conectores_tipo, $detalle_conectores, $cintas_generacion,
@@ -195,7 +201,7 @@ if (count($subFolders->getFiles()) > 0) {
                 producto_id, accion, descripcion, realizado_por,
                 modelo, marca, detalle_tecnico, asignado_a, categoria, subcategoria,
                 servis_tag, cantidad, valor_usd, estado, carpeta_raiz_drive,
-                fecha_ingreso, fecha_egreso, ubicacion, fecha_garantia, periodo_garantia,
+                fecha_ingreso, ubicacion, fecha_garantia, periodo_garantia,
                 patchcord_tipo, patchcord_longitud, switch_gestion, antenas_tipo,
                 bobina_categoria, bobina_ubicacion, bobina_longitud,
                 conectores_tipo, detalle_conectores, cintas_generacion,
@@ -204,50 +210,48 @@ if (count($subFolders->getFiles()) > 0) {
                 ?, 'Agregado', ?, ?,
                 ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?
             )
         ");
-        
-        // ATENCIÓN: Se agrega $descripcion como segundo parámetro
+
         $stmt_mov->bind_param(
-            'isissssssssisssssssssssssssssssss',
-            $producto_id,     // i
-            $descripcion,     // s   <-- lo que pone el usuario
-            $user_id,         // i
-            $modelo,          // s
-            $marca,           // s
-            $detalle_tecnico, // s
-            $asignado_a,      // s
-            $categoria,       // s
-            $subcategoria,    // s
-            $servis_tag,      // s
-            $cantidad,        // i
-            $valor_usd,       // s
-            $estado,          // s
-            $carpeta_raiz_drive, // s
-            $fecha_ingreso,   // s
-            $fecha_egreso,    // s
-            $ubicacion,       // s
-            $fecha_garantia,  // s
-            $periodo_garantia,// s (si es int, usá 'i')
-            $patchcord_tipo,  // s
-            $patchcord_longitud, // s
-            $switch_gestion,  // s
-            $antenas_tipo,    // s
-            $bobina_categoria,// s
-            $bobina_ubicacion,// s
-            $bobina_longitud, // s
-            $conectores_tipo, // s
-            $detalle_conectores, // s
-            $cintas_generacion, // s
-            $detalle_repuesto, // s
-            $detalle_otros,    // s
-            $subsoftware,      // s
-            $subsoftware_otros // s
+            'isisssssssssssssssssssssssssssss',
+            $producto_id,
+            $descripcion,
+            $user_id,
+            $modelo,
+            $marca,
+            $detalle_tecnico,
+            $asignado_a,
+            $categoria,
+            $subcategoria,
+            $servis_tag,
+            $cantidad,
+            $valor_usd,
+            $estado,
+            $carpeta_raiz_drive,
+            $fi,
+            $ubicacion,
+            $fecha_garantia,
+            $periodo_garantia,
+            $patchcord_tipo,
+            $patchcord_longitud,
+            $switch_gestion,
+            $antenas_tipo,
+            $bobina_categoria,
+            $bobina_ubicacion,
+            $bobina_longitud,
+            $conectores_tipo,
+            $detalle_conectores,
+            $cintas_generacion,
+            $detalle_repuesto,
+            $detalle_otros,
+            $subsoftware,
+            $subsoftware_otros
         );
 
         if (!$stmt_mov->execute()) {
