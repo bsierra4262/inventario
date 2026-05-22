@@ -8,6 +8,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/backend/db.php';
 require_once __DIR__ . '/backend/csrf.php';
 require_once __DIR__ . '/logs/logger.php';
+require_once __DIR__ . '/core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) { header('Location: login.php'); exit(); }
@@ -18,7 +19,7 @@ $s->bind_param('i', $user_id);
 $s->execute();
 $me = $s->get_result()->fetch_assoc();
 $s->close();
-if (!$me || $me['role'] !== 'admin') { header('Location: index.php'); exit(); }
+require_permission('integration.edit', $me);
 
 $configTable = tn('cloud_config');
 $googleCfg = [];

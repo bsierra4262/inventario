@@ -77,7 +77,7 @@ switch ($action) {
         if (!validate_password($password)) {
             redirect_users('La contraseña debe tener al menos 8 caracteres con letras y números.', 'error');
         }
-        if (!in_array($role, ['admin', 'user'], true)) {
+        if (!in_array($role, ['admin', 'manager', 'user', 'viewer'], true)) {
             $role = 'user';
         }
 
@@ -120,11 +120,11 @@ switch ($action) {
         if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             redirect_users('Email inválido.', 'error');
         }
-        if (!in_array($role, ['admin', 'user'], true)) {
+        if (!in_array($role, ['admin', 'manager', 'user', 'viewer'], true)) {
             redirect_users('Rol inválido.', 'error');
         }
 
-        // No puede quitarse el rol admin a sí mismo
+        // No puede quitarse el rol admin a sí mismo (evita lockout)
         if ($target_id === $user_id && $role !== 'admin') {
             redirect_users('No podés quitarte el rol de admin a vos mismo.', 'error');
         }

@@ -24,6 +24,7 @@ require_once __DIR__ . '/core/config/platform.php';
 require_once __DIR__ . '/core/db/master_connection.php';
 
 $companies = [];
+$masterDbError = '';
 try {
     $master = new MasterDB();
     $stmt = $master->pquery('SELECT id, nombre FROM companies WHERE active = 1 ORDER BY nombre ASC');
@@ -31,13 +32,55 @@ try {
     while ($row = $res->fetch_assoc()) { $companies[] = $row; }
 } catch (Throwable $e) {
     log_event('login.php', 'ERROR', 'Master DB no disponible: '.$e->getMessage(), 'auth');
+    $masterDbError = $e->getMessage();
+}
+
+// Si master DB no responde → mandar a install (asume primera ejecución)
+if ($masterDbError !== '') {
     header('Location: install.php');
     exit();
 }
 
+// Si no hay empresas activas → MOSTRAR pantalla de bloqueo (no enviar a install)
+// El install no debe ser accesible para usuarios finales del tenant.
 if (empty($companies)) {
-    header('Location: install.php');
-    exit();
+    $page_title = 'Acceso restringido';
+    require __DIR__ . '/includes/layout/head.php';
+    ?>
+    <div class="ih-auth">
+      <div class="ih-auth__card ih-anim-fade">
+        <div class="ih-auth__header">
+          <div class="ih-auth__brand">
+            <div class="ih-auth__logo">i</div>
+            <div class="ih-auth__brand-text">
+              <strong>INTELLIHELP</strong>
+              <span>Asset Vault</span>
+            </div>
+          </div>
+          <h2 class="ih-auth__title">Sin empresas activas</h2>
+          <p class="ih-auth__subtitle">Aún no hay ningún cliente habilitado en esta plataforma</p>
+        </div>
+        <div class="ih-auth__body">
+          <div class="ih-alert ih-alert--info">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>
+              El SuperAdmin debe crear primero una empresa cliente desde el
+              <strong>Panel SuperAdmin → Nueva empresa</strong>. Ahí se define el
+              admin del tenant con email y contraseña.
+            </div>
+          </div>
+          <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary ih-btn--block">
+            <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
+          </a>
+        </div>
+        <div class="ih-auth__footer">
+          © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
+        </div>
+      </div>
+    </div>
+    <?php
+    require __DIR__ . '/includes/layout/foot.php';
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['company_id']) && ctype_digit($_POST['company_id'])) {
@@ -256,6 +299,13 @@ require __DIR__ . '/includes/layout/head.php';
     </div>
 
     <div class="ih-auth__body">
+
+      <?php if (!empty($_GET['bye'])): ?>
+        <div class="ih-alert ih-alert--success">
+          <i class="bi bi-check-circle-fill"></i>
+          <div>Tu sesión se cerró correctamente.</div>
+        </div>
+      <?php endif; ?>
 
       <?php if ($error_msg): ?>
         <div class="ih-alert ih-alert--danger">

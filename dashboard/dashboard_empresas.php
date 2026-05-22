@@ -32,6 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbUser = trim($_POST['db_user'] ?? '');
     $dbPass = trim($_POST['db_pass'] ?? '');
 
+    $subdomain  = trim((string)($_POST['subdomain']  ?? ''));
+    $loginUrl   = trim((string)($_POST['login_url']  ?? ''));
+    if ($loginUrl === '' && $subdomain !== '') {
+        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/login.php';
+    }
+
     $adminEmail = trim($_POST['admin_email']    ?? '');
     $adminPass  = trim($_POST['admin_password'] ?? '');
 
@@ -52,11 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db = new MasterDB();
 
             $stmt = $db->pquery(
-                'INSERT INTO companies (nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, active)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-                'sssssssss',
+                'INSERT INTO companies (nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, subdomain, login_url, active)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                'sssssssssss',
                 [$nombre, $razon, $cuit, $provider, $tenant_mode,
-                 $dbHost ?: 'localhost', $dbName ?: null, $dbUser ?: null, $dbPass ?: null]
+                 $dbHost ?: 'localhost', $dbName ?: null, $dbUser ?: null, $dbPass ?: null,
+                 $subdomain ?: null, $loginUrl ?: null]
             );
             $newId = $db->conn->insert_id;
 
@@ -265,6 +272,28 @@ require __DIR__ . '/../includes/layout/head.php';
               </div>
             </div>
             <div class="ih-field__hint">Creá la DB y el usuario en el hosting antes de continuar.</div>
+          </div>
+
+          <!-- Acceso del tenant -->
+          <div class="ih-section-title">Acceso del cliente</div>
+          <div class="ih-grid">
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">Subdominio del cliente</label>
+                <div class="ih-input-group">
+                  <input class="ih-input" name="subdomain" value="<?= htmlspecialchars($_POST['subdomain'] ?? '') ?>" placeholder="cliente">
+                  <span class="ih-input-group__addon">.intellihelp.tech</span>
+                </div>
+                <div class="ih-field__hint">Opcional. Si vas a configurar un subdominio dedicado para esta empresa.</div>
+              </div>
+            </div>
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">URL completa de login</label>
+                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://cliente.intellihelp.tech/login.php">
+                <div class="ih-field__hint">Si lo dejás vacío, se autocompleta con <code>https://[subdominio].intellihelp.tech/login.php</code>.</div>
+              </div>
+            </div>
           </div>
 
           <!-- Admin del tenant -->

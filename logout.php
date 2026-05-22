@@ -1,91 +1,75 @@
 <?php
 /**
- * logout.php - Versión multiempresa
- * -----------------------------------
- * - Cierra sesión de usuario (Google y local)
- * - Limpia todas las variables, incluyendo company_id
- * - Maneja cookies de sesión seguras
- * - Logger opcional
+ * logout.php — Cierre de sesión TENANT (Asset Vault)
+ *
+ * - Revoca el token de Google si existe
+ * - Borra TODAS las variables de sesión (incluida company_id)
+ * - Elimina la cookie de sesión
+ * - Destruye la sesión y arranca una limpia
+ * - Redirige al login del inventario
  */
 
 declare(strict_types=1);
 
-// Detectar dominio actual automáticamente
-$currentHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$cookieDomain = str_contains($currentHost, '.') ? $currentHost : '';
-
-// Configurar cookies de sesión seguras
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => $cookieDomain,
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
+// Iniciar sesión con parámetros seguros
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$cookieDomain = str_contains($host, '.') ? $host : '';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => $cookieDomain,
+        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
-// -----------------------------------------
-// Logger opcional (no romper si no existe)
-// -----------------------------------------
+// Logger opcional
 $loggerPath = __DIR__ . '/logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath;
 } else {
     if (!function_exists('log_event')) {
-        function log_event($origin, $type, $msg, $tag = 'auth') { /* silencioso */ }
+        function log_event($origin, $type, $msg, $tag = 'auth') {}
     }
 }
 
-// -----------------------------------------
-// Registrar cierre de sesión
-// -----------------------------------------
 $usuario_log = $_SESSION['user_email'] ?? ($_SESSION['user_id'] ?? 'usuario_desconocido');
-log_event($usuario_log, "LOGOUT", "Cierre de sesión desde IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
+log_event($usuario_log, 'LOGOUT', 'Cierre de sesión desde IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
-// -----------------------------------------
 // Revocar token de Google si existe
-// -----------------------------------------
-if (isset($_SESSION['access_token']['access_token'])) {
+if (!empty($_SESSION['access_token']['access_token'])) {
     $accessToken = $_SESSION['access_token']['access_token'];
-    $revokeUrl = 'https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken);
-    @file_get_contents($revokeUrl);
+    @file_get_contents('https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken));
 }
 
-// -----------------------------------------
-// Limpiar variables de sesión
-// -----------------------------------------
+// Limpiar sesión completa
 $_SESSION = [];
 
-// También eliminamos cualquier referencia de multiempresa
-unset($_SESSION['company_id'], $_SESSION['tenant'], $_SESSION['tenant_id']);
-
-// -----------------------------------------
-// Eliminar cookie de sesión
-// -----------------------------------------
-if (ini_get("session.use_cookies")) {
+// Borrar cookie
+if (ini_get('session.use_cookies')) {
     setcookie(
         session_name(),
         '',
         [
-            'expires' => time() - 42000,
-            'path' => '/',
-            'domain' => $cookieDomain,
-            'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+            'expires'  => time() - 42000,
+            'path'     => '/',
+            'domain'   => $cookieDomain,
+            'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
             'httponly' => true,
-            'samesite' => 'Lax'
+            'samesite' => 'Lax',
         ]
     );
 }
 
-// Destruir la sesión completamente
+// Destruir y regenerar
 session_destroy();
+session_start();
+session_regenerate_id(true);
+$_SESSION = [];
 
-// -----------------------------------------
-// Redirigir al login
-// -----------------------------------------
-header('Location: login.php');
+header('Location: /login.php?bye=1');
 exit;

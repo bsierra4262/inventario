@@ -239,6 +239,13 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       <?php endif; ?>
 
+      <?php if (!empty($_GET['bye'])): ?>
+        <div class="ih-alert ih-alert--success">
+          <i class="bi bi-check-circle-fill"></i>
+          <div>Tu sesión se cerró correctamente.</div>
+        </div>
+      <?php endif; ?>
+
       <?php if ($err): ?>
         <div class="ih-alert ih-alert--danger">
           <i class="bi bi-x-circle-fill"></i>

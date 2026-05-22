@@ -20,7 +20,7 @@ $db  = new MasterDB();
 $err = '';
 
 $stmt = $db->pquery(
-    'SELECT id, nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, active
+    'SELECT id, nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, subdomain, login_url, active
      FROM companies WHERE id = ? LIMIT 1',
     'i', [$id]
 );
@@ -66,21 +66,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dbUser = trim($_POST['db_user'] ?? $company['db_user'] ?? '');
     $dbPass = trim($_POST['db_pass'] ?? '');
 
+    $subdomain = trim((string)($_POST['subdomain'] ?? ''));
+    $loginUrl  = trim((string)($_POST['login_url'] ?? ''));
+    if ($loginUrl === '' && $subdomain !== '') {
+        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/login.php';
+    }
+
     if ($nombre === '') { $err = 'El nombre es obligatorio.'; }
 
     if (!$err) {
         try {
             if ($dbPass !== '') {
                 $db->pquery(
-                    'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, db_pass=? WHERE id=?',
-                    'ssssisssssi',
-                    [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $dbPass, $id]
+                    'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, db_pass=?, subdomain=?, login_url=? WHERE id=?',
+                    'ssssisssssssi',
+                    [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $dbPass, $subdomain ?: null, $loginUrl ?: null, $id]
                 );
             } else {
                 $db->pquery(
-                    'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=? WHERE id=?',
-                    'sssissssi',
-                    [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $id]
+                    'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, subdomain=?, login_url=? WHERE id=?',
+                    'sssissssssi',
+                    [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $subdomain ?: null, $loginUrl ?: null, $id]
                 );
             }
 
@@ -213,6 +219,25 @@ require __DIR__ . '/../includes/layout/head.php';
                   <span class="ih-switch__slider"></span>
                 </label>
                 <span class="ih-text-sm ih-text-muted" style="margin-left:10px">Empresa activa</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ih-section-title">Acceso del cliente</div>
+          <div class="ih-grid">
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">Subdominio</label>
+                <div class="ih-input-group">
+                  <input class="ih-input" name="subdomain" value="<?= htmlspecialchars($company['subdomain'] ?? '') ?>" placeholder="cliente">
+                  <span class="ih-input-group__addon">.intellihelp.tech</span>
+                </div>
+              </div>
+            </div>
+            <div class="ih-col-6">
+              <div class="ih-field">
+                <label class="ih-field__label">URL completa de login</label>
+                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($company['login_url'] ?? '') ?>" placeholder="https://cliente.intellihelp.tech/login.php">
               </div>
             </div>
           </div>

@@ -8,8 +8,21 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
+
+// Verificación de permiso: solo admin / manager pueden archivar
+if (!empty($user_id) && is_numeric($user_id)) {
+    $_uid = (int)$user_id;
+    $_ut  = tn('users');
+    $_st  = $conn->prepare("SELECT role FROM `{$_ut}` WHERE id = ?");
+    $_st->bind_param('i', $_uid);
+    $_st->execute();
+    $_me = $_st->get_result()->fetch_assoc();
+    $_st->close();
+    require_permission('asset.archive', $_me);
+}
 
 // Helper seguro para imprimir valores en HTML
 function e(string $v): string {

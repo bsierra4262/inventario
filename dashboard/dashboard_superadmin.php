@@ -13,7 +13,7 @@ $companies = [];
 $loadError = '';
 try {
     $res = $db->conn->query("
-        SELECT id, nombre, razon_social, cuit, provider, tenant_mode, active, created_at
+        SELECT id, nombre, razon_social, cuit, provider, tenant_mode, active, created_at, login_url, subdomain
         FROM companies
         ORDER BY id ASC
     ");
@@ -127,6 +127,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <tr>
                 <th>ID</th>
                 <th>Empresa</th>
+                <th>URL acceso</th>
                 <th>Proveedor</th>
                 <th>Modo</th>
                 <th>Estado</th>
@@ -146,6 +147,21 @@ require __DIR__ . '/../includes/layout/head.php';
                   <div class="ih-fw-700"><?= htmlspecialchars($c['nombre']) ?></div>
                   <?php if (!empty($c['razon_social'])): ?>
                     <div class="ih-text-xs ih-text-muted"><?= htmlspecialchars($c['razon_social']) ?></div>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php $url = $c['login_url'] ?? ''; ?>
+                  <?php if ($url): ?>
+                    <div class="ih-flex ih-items-center ih-gap-2">
+                      <a href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener" class="ih-text-sm ih-fw-600" style="color:#663399;text-decoration:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block">
+                        <i class="bi bi-box-arrow-up-right"></i> <?= htmlspecialchars(preg_replace('#^https?://#', '', $url)) ?>
+                      </a>
+                      <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($url, ENT_QUOTES) ?>');this.innerHTML='<i class=\'bi bi-check2\'></i>'" title="Copiar URL">
+                        <i class="bi bi-clipboard"></i>
+                      </button>
+                    </div>
+                  <?php else: ?>
+                    <span class="ih-text-xs ih-text-muted">— sin URL definida —</span>
                   <?php endif; ?>
                 </td>
                 <td>

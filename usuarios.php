@@ -8,6 +8,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/backend/db.php';
 require_once __DIR__ . '/backend/csrf.php';
 require_once __DIR__ . '/logs/logger.php';
+require_once __DIR__ . '/core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -28,10 +29,8 @@ if (!$currentUser) {
     exit();
 }
 
-if ($currentUser['role'] !== 'admin') {
-    header('Location: index.php');
-    exit();
-}
+// Solo admin del tenant puede gestionar usuarios
+require_permission('user.view', $currentUser);
 
 $allUsers = [];
 $res = $conn->query("SELECT id, username, email, role, created_at FROM `{$usersTable}` ORDER BY id ASC");
@@ -149,9 +148,14 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
             <div class="ih-field">
               <label class="ih-field__label">Rol <span class="req">*</span></label>
               <select class="ih-select" name="role" required>
-                <option value="user">Usuario regular</option>
-                <option value="admin">Administrador</option>
+                <option value="user">Usuario (CRUD parcial)</option>
+                <option value="manager">Gerente (CRUD + reportes)</option>
+                <option value="admin">Administrador (todo)</option>
+                <option value="viewer">Solo lectura</option>
               </select>
+              <div class="ih-field__hint">
+                Admin: gestiona todo. Gerente: CRUD activos + reportes. Usuario: ver/crear/editar. Viewer: solo lectura.
+              </div>
             </div>
           </div>
         </div>
@@ -201,11 +205,16 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
                 </td>
                 <td class="ih-text-sm"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
                 <td>
-                  <?php if ($u['role'] === 'admin'): ?>
-                    <span class="ih-badge ih-badge--purple">Admin</span>
-                  <?php else: ?>
-                    <span class="ih-badge ih-badge--green">Usuario</span>
-                  <?php endif; ?>
+                  <?php
+                    $roleClass = match ($u['role']) {
+                        'admin'   => 'ih-badge--purple',
+                        'manager' => 'ih-badge--info',
+                        'user'    => 'ih-badge--green',
+                        'viewer'  => 'ih-badge',
+                        default   => 'ih-badge',
+                    };
+                  ?>
+                  <span class="ih-badge <?= $roleClass ?>"><?= htmlspecialchars(role_label($u['role'])) ?></span>
                 </td>
                 <td class="ih-text-xs ih-text-muted"><?= htmlspecialchars($u['created_at'] ?? '') ?></td>
                 <td class="ih-text-center">
@@ -250,8 +259,10 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
           <div class="ih-field">
             <label class="ih-field__label">Rol</label>
             <select name="role" id="editRole" class="ih-select">
+              <option value="viewer">Solo lectura</option>
               <option value="user">Usuario</option>
-              <option value="admin">Admin</option>
+              <option value="manager">Gerente</option>
+              <option value="admin">Administrador</option>
             </select>
           </div>
           <div class="ih-field">

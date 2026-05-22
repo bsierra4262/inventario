@@ -52,6 +52,8 @@ try {
         db_name          VARCHAR(200) DEFAULT NULL,
         db_user          VARCHAR(200) DEFAULT NULL,
         db_pass          VARCHAR(255) DEFAULT NULL,
+        subdomain        VARCHAR(100) DEFAULT NULL,
+        login_url        VARCHAR(500) DEFAULT NULL,
         active           TINYINT(1)  NOT NULL DEFAULT 1,
         created_at       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -63,6 +65,8 @@ try {
         "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `provider`         ENUM('google','microsoft') NOT NULL DEFAULT 'google'",
         "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `credentials_path` VARCHAR(500)  DEFAULT NULL",
         "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `active`           TINYINT(1)   NOT NULL DEFAULT 1",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `subdomain`        VARCHAR(100)  DEFAULT NULL",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `login_url`        VARCHAR(500)  DEFAULT NULL",
     ] as $_alter) {
         try { $master->conn->query($_alter); } catch (Throwable $_ae) {}
     }
@@ -468,22 +472,13 @@ try {
 }
 
 // -----------------------------------------------------
-// 8) Usuario admin por defecto
+// 8) NO se crea ningún usuario por defecto.
+//    En el modelo SaaS, los usuarios del tenant se crean desde el panel SuperAdmin
+//    al dar de alta una empresa (dashboard_empresas.php). Esto evita el clásico
+//    "admin/admin" inseguro y obliga a un onboarding controlado.
 // -----------------------------------------------------
-try {
-    $default_password = password_hash('admin', PASSWORD_DEFAULT);
-    $sql_insert_user = "
-        INSERT INTO users (username, password, email, role, created_at)
-        SELECT 'admin', '$default_password', 'admin@inventario.local', 'admin', NOW()
-        WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
-    ";
-    $conn->query($sql_insert_user);
-    log_event("install.php", "INSTALACION", "Usuario admin creado/ya existente.", "instalacion");
-    echo "<div class='alert alert-success'>✅ Usuario administrador creado (o ya existía).</div>";
-} catch (Throwable $e) {
-    log_event("install.php", "ERROR", "Error creando usuario admin: ".$e->getMessage(), "instalacion");
-    echo "<div class='alert alert-danger'>❌ Error creando usuario admin: ".htmlspecialchars($e->getMessage())."</div>";
-}
+echo "<div class='alert alert-info'>ℹ️ No se crean usuarios por defecto. Creá la empresa cliente desde el panel SuperAdmin — el admin del tenant se crea ahí con email y contraseña que elijas.</div>";
+log_event("install.php", "INSTALACION", "Schema instalado sin usuarios tenant (modelo SaaS).", "instalacion");
 
 // -----------------------------------------------------
 // 9) Instalación finalizada — redirigir a login
