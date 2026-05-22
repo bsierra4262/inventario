@@ -32,17 +32,23 @@ defined('CSRF_TOKEN_NAME')       || define('CSRF_TOKEN_NAME',       '_csrf');
 defined('SESSION_SUPERADMIN_FLAG') || define('SESSION_SUPERADMIN_FLAG', 'is_superadmin');
 
 // === Logo de la plataforma ===
-// Poné tu logo en assets/img/logo.png (o logo.svg) y se mostrará automáticamente.
+// Soporte automático: SVG tiene prioridad sobre PNG.
+// Dropeá tu logo en assets/img/logo.svg (o logo.png) y aparece en todos lados.
 defined('LOGO_FILE') || define('LOGO_FILE', __DIR__ . '/../../assets/img/logo.png');
 defined('LOGO_URL')  || define('LOGO_URL',  '/assets/img/logo.png');
+defined('LOGO_SVG_FILE') || define('LOGO_SVG_FILE', __DIR__ . '/../../assets/img/logo.svg');
+defined('LOGO_SVG_URL')  || define('LOGO_SVG_URL',  '/assets/img/logo.svg');
 
 /**
- * Devuelve el HTML del logo: <img> si existe el archivo, o la letra 'i' como fallback.
- * $size: ancho/alto en px para el fallback (la imagen hereda el contenedor).
+ * Devuelve el HTML del logo: SVG > PNG > fallback letra 'i'.
  */
 function platform_logo_html(): string {
+    $style = 'width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit';
+    if (is_file(LOGO_SVG_FILE)) {
+        return '<img src="' . LOGO_SVG_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
+    }
     if (is_file(LOGO_FILE)) {
-        return '<img src="' . LOGO_URL . '" alt="INTELLIHELP" style="width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit" referrerpolicy="no-referrer">';
+        return '<img src="' . LOGO_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
     }
     return 'i';
 }
