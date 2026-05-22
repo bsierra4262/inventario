@@ -28,12 +28,48 @@ if (is_file($loggerPath)) {
 }
 
 // -----------------------------------------
-// 3) Parámetros de instalación
+// 3) Bootstrap de la DB master (companies)
+//    Se ejecuta SIEMPRE — es idempotente (CREATE IF NOT EXISTS / INSERT IGNORE)
+//    Debe ir antes del chequeo "ya instalado" para no quedar en loop si el tenant
+//    existía pero la master nunca tuvo la tabla companies.
 // -----------------------------------------
 $dbname = 'u566451014_desarrollo'; // <- tu DB objetivo
 
-// Verificar si ya está instalado usando estado de DB (sin install.lock)
-// Si la tabla `users` ya existe → sistema instalado, redirigir a login
+try {
+    require_once __DIR__ . '/core/config/platform.php';
+    require_once __DIR__ . '/core/db/master_connection.php';
+    $master = new MasterDB();
+
+    $master->conn->query("CREATE TABLE IF NOT EXISTS `companies` (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(200) NOT NULL,
+        tenant_mode ENUM('prefix','external') NOT NULL DEFAULT 'external',
+        db_host     VARCHAR(200) DEFAULT 'localhost',
+        db_name     VARCHAR(200) DEFAULT NULL,
+        db_user     VARCHAR(200) DEFAULT NULL,
+        db_pass     VARCHAR(255) DEFAULT NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $chk = $master->conn->prepare("SELECT id FROM companies WHERE nombre = 'ITH' LIMIT 1");
+    $chk->execute();
+    if ($chk->get_result()->num_rows === 0) {
+        $ins = $master->conn->prepare(
+            "INSERT INTO companies (nombre, tenant_mode, db_host, db_name, db_user, db_pass)
+             VALUES ('ITH', 'external', 'localhost', 'u566451014_desarrollo', 'u566451014_desarrollo', '***SECRETO-PURGADO***')"
+        );
+        $ins->execute();
+        $ins->close();
+    }
+    $chk->close();
+} catch (Throwable $e) {
+    log_event("install.php", "ADVERTENCIA", "No se pudo configurar DB master: ".$e->getMessage(), "instalacion");
+}
+
+// -----------------------------------------
+// 3b) Verificar si el tenant ya está instalado
+//     Si la tabla `users` existe → redirigir a login (la master ya fue bootstrappeada arriba)
+// -----------------------------------------
 try {
     $testConn = @new mysqli('localhost', 'u566451014_desarrollo', '***SECRETO-PURGADO***', $dbname);
     if (!$testConn->connect_errno) {
@@ -48,42 +84,6 @@ try {
     }
 } catch (Throwable $e) {
     // No se puede conectar → continuar con la instalación
-}
-
-// -----------------------------------------
-// 3b) Bootstrap de la DB master (companies)
-// -----------------------------------------
-try {
-    require_once __DIR__ . '/core/config/platform.php';
-    require_once __DIR__ . '/core/db/master_connection.php';
-    $master = new MasterDB();
-
-    // Crear tabla companies si no existe
-    $master->conn->query("CREATE TABLE IF NOT EXISTS `companies` (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        nombre      VARCHAR(200) NOT NULL,
-        tenant_mode ENUM('prefix','external') NOT NULL DEFAULT 'external',
-        db_host     VARCHAR(200) DEFAULT 'localhost',
-        db_name     VARCHAR(200) DEFAULT NULL,
-        db_user     VARCHAR(200) DEFAULT NULL,
-        db_pass     VARCHAR(255) DEFAULT NULL,
-        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    // Registrar empresa ITH si no existe
-    $chk = $master->conn->prepare("SELECT id FROM companies WHERE nombre = 'ITH' LIMIT 1");
-    $chk->execute();
-    if ($chk->get_result()->num_rows === 0) {
-        $ins = $master->conn->prepare(
-            "INSERT INTO companies (nombre, tenant_mode, db_host, db_name, db_user, db_pass)
-             VALUES ('ITH', 'external', 'localhost', 'u566451014_desarrollo', 'u566451014_desarrollo', '***SECRETO-PURGADO***')"
-        );
-        $ins->execute();
-    }
-    $chk->close();
-} catch (Throwable $e) {
-    // No es fatal — el tenant puede instalarse igual. Mostrar advertencia.
-    log_event("install.php", "ADVERTENCIA", "No se pudo configurar DB master: ".$e->getMessage(), "instalacion");
 }
 
 // Crear base si no existe
