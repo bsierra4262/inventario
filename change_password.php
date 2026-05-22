@@ -6,6 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 // -----------------------------
 // DB multiempresa + Logger
 // -----------------------------
+require_once __DIR__ . '/core/config/platform.php';
 require_once __DIR__ . '/backend/db.php'; // obtiene $conn del tenant activo
 
 $loggerPath = __DIR__ . '/logs/logger.php';
@@ -161,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="ih-auth__card ih-anim-fade">
     <div class="ih-auth__header">
       <div class="ih-auth__brand">
-        <div class="ih-auth__logo">i</div>
+        <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
         <div class="ih-auth__brand-text">
           <strong>INTELLIHELP</strong>
           <span>Asset Vault</span>

@@ -31,6 +31,22 @@ defined('TENANT_PREFIX_BASE')    || define('TENANT_PREFIX_BASE',    't');
 defined('CSRF_TOKEN_NAME')       || define('CSRF_TOKEN_NAME',       '_csrf');
 defined('SESSION_SUPERADMIN_FLAG') || define('SESSION_SUPERADMIN_FLAG', 'is_superadmin');
 
+// === Logo de la plataforma ===
+// Poné tu logo en assets/img/logo.png (o logo.svg) y se mostrará automáticamente.
+defined('LOGO_FILE') || define('LOGO_FILE', __DIR__ . '/../../assets/img/logo.png');
+defined('LOGO_URL')  || define('LOGO_URL',  '/assets/img/logo.png');
+
+/**
+ * Devuelve el HTML del logo: <img> si existe el archivo, o la letra 'i' como fallback.
+ * $size: ancho/alto en px para el fallback (la imagen hereda el contenedor).
+ */
+function platform_logo_html(): string {
+    if (is_file(LOGO_FILE)) {
+        return '<img src="' . LOGO_URL . '" alt="INTELLIHELP" style="width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit" referrerpolicy="no-referrer">';
+    }
+    return 'i';
+}
+
 // === Utilidades ===
 function platform_log($msg){
     $line = '['.date('Y-m-d H:i:s').'] '.$msg.PHP_EOL;

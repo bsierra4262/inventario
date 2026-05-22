@@ -11,7 +11,7 @@ function ih_sa_active(string $key, string $current): string {
 ?>
 <aside class="ih-sidebar ih-app__sidebar">
   <a href="/dashboard/dashboard_superadmin.php" class="ih-sidebar__brand">
-    <span class="ih-sidebar__logo">i</span>
+    <span class="ih-sidebar__logo"><?= platform_logo_html() ?></span>
     <span class="ih-sidebar__brand-text">
       <strong>Asset Vault</strong>
       <span>INTELLIHELP · SuperAdmin</span>

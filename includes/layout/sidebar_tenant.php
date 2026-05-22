@@ -13,7 +13,7 @@ function ih_tn_active(string $key, string $current): string {
 ?>
 <aside class="ih-sidebar ih-app__sidebar">
   <a href="/inventario/index.php" class="ih-sidebar__brand">
-    <span class="ih-sidebar__logo">i</span>
+    <span class="ih-sidebar__logo"><?= platform_logo_html() ?></span>
     <span class="ih-sidebar__brand-text">
       <strong>Asset Vault</strong>
       <span><?= htmlspecialchars($tenant_name) ?></span>

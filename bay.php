@@ -236,7 +236,7 @@ session_destroy();
   <div class="ih-auth__card ih-anim-fade" style="max-width:520px">
     <div class="ih-auth__header">
       <div class="ih-auth__brand">
-        <div class="ih-auth__logo">i</div>
+        <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
         <div class="ih-auth__brand-text">
           <strong>INTELLIHELP</strong>
           <span>Asset Vault · DEV</span>

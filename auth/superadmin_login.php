@@ -53,11 +53,16 @@ try {
         $isFirstRun = true;
         $u = 'bsierra';
         $h = password_hash('***SECRETO-PURGADO***', PASSWORD_DEFAULT);
-        $e = 'bsierra4262@gmail.com';
+        $e = 'bsierra@intellihelp.tech';
         $st = $db->conn->prepare("INSERT INTO users_platform (username, password, email, role) VALUES (?, ?, ?, 'superadmin')");
         $st->bind_param('sss', $u, $h, $e);
         $st->execute();
         $st->close();
+    } else {
+        // Migrar email legacy si sigue con el valor viejo
+        try {
+            $db->conn->query("UPDATE users_platform SET email = 'bsierra@intellihelp.tech' WHERE username = 'bsierra' AND email = 'bsierra4262@gmail.com'");
+        } catch (Throwable) {}
     }
 } catch (Throwable $be) {
     $bootstrapError = $be->getMessage();
@@ -69,6 +74,7 @@ try {
 $googleClientId     = '';
 $googleClientSecret = '';
 $googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_login.php';
+$googleHd           = ''; // dominio de Workspace requerido (vacío = sin restricción)
 
 try {
     if ($db) {
@@ -79,12 +85,13 @@ try {
             updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        $res = $db->conn->query("SELECT config_key, config_value FROM platform_config WHERE config_key IN ('sa_google_client_id','sa_google_client_secret','sa_google_redirect_uri')");
+        $res = $db->conn->query("SELECT config_key, config_value FROM platform_config WHERE config_key IN ('sa_google_client_id','sa_google_client_secret','sa_google_redirect_uri','sa_google_hd')");
         if ($res) {
             while ($r = $res->fetch_assoc()) {
                 if ($r['config_key'] === 'sa_google_client_id')     $googleClientId     = $r['config_value'];
                 if ($r['config_key'] === 'sa_google_client_secret') $googleClientSecret = $r['config_value'];
                 if ($r['config_key'] === 'sa_google_redirect_uri')  $googleRedirectUri  = $r['config_value'];
+                if ($r['config_key'] === 'sa_google_hd')            $googleHd           = $r['config_value'];
             }
         }
     }
@@ -102,6 +109,9 @@ if ($googleConfigured) {
         $client->addScope(['email', 'profile', 'openid']);
         $client->setAccessType('online');
         $client->setPrompt('select_account');
+        if ($googleHd !== '') {
+            $client->setHostedDomain($googleHd); // Google prefiltra la cuenta a ese dominio
+        }
         $googleAuthUrl = $client->createAuthUrl();
     } catch (Throwable $e) {
         $googleConfigured = false;
@@ -133,6 +143,12 @@ if ($googleConfigured && isset($_GET['code']) && $_GET['code'] !== '' && $db) {
 
         if ($email === '') {
             throw new Exception('Google no devolvió email.');
+        }
+
+        // Verificar dominio Workspace si está configurado
+        if ($googleHd !== '' && !str_ends_with($email, '@' . strtolower($googleHd))) {
+            $err = "Solo cuentas @{$googleHd} pueden acceder al panel SuperAdmin. Usaste: {$email}";
+            goto show_login_page;
         }
 
         // Buscar usuario superadmin por google_sub o por email
@@ -199,13 +215,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
 
 $page_title = 'Acceso SuperAdmin';
 require __DIR__ . '/../includes/layout/head.php';
+show_login_page:
 ?>
 
 <div class="ih-auth">
   <div class="ih-auth__card ih-anim-fade">
     <div class="ih-auth__header">
       <div class="ih-auth__brand">
-        <div class="ih-auth__logo">i</div>
+        <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
         <div class="ih-auth__brand-text">
           <strong>INTELLIHELP</strong>
           <span>Panel SuperAdmin</span>
@@ -254,34 +271,34 @@ require __DIR__ . '/../includes/layout/head.php';
       <?php endif; ?>
 
       <?php if ($googleConfigured): ?>
+        <!-- Google SSO configurado: SOLO acceso por Google Workspace -->
         <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
           <i class="bi bi-google"></i> Continuar con Google Workspace
         </a>
-        <div class="ih-auth__divider">o usá credenciales</div>
-      <?php endif; ?>
-
-      <form method="post" autocomplete="off">
-        <?php csrf_input(); ?>
-        <div class="ih-field">
-          <label class="ih-field__label" for="username">Usuario</label>
-          <input class="ih-input" type="text" id="username" name="username" placeholder="bsierra" required autofocus>
-        </div>
-
-        <div class="ih-field">
-          <label class="ih-field__label" for="password">Contraseña</label>
-          <input class="ih-input" type="password" id="password" name="password" placeholder="••••••••" required>
-        </div>
-
-        <button class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" type="submit">
-          <i class="bi bi-box-arrow-in-right"></i> Ingresar
-        </button>
-      </form>
-
-      <?php if (!$googleConfigured): ?>
+        <?php if ($googleHd !== ''): ?>
+          <p class="ih-text-xs ih-text-muted ih-text-center" style="margin-top:10px">
+            <i class="bi bi-shield-check"></i> Solo cuentas <strong>@<?= htmlspecialchars($googleHd) ?></strong>
+          </p>
+        <?php endif; ?>
+      <?php else: ?>
+        <!-- Sin Google SSO configurado: login local -->
+        <form method="post" autocomplete="off">
+          <?php csrf_input(); ?>
+          <div class="ih-field">
+            <label class="ih-field__label" for="username">Usuario</label>
+            <input class="ih-input" type="text" id="username" name="username" placeholder="bsierra" required autofocus>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label" for="password">Contraseña</label>
+            <input class="ih-input" type="password" id="password" name="password" placeholder="••••••••" required>
+          </div>
+          <button class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" type="submit">
+            <i class="bi bi-box-arrow-in-right"></i> Ingresar
+          </button>
+        </form>
         <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
           <i class="bi bi-info-circle"></i>
-          Google SSO no está configurado. Configurá las credenciales OAuth en
-          <em>Integraciones</em> después de ingresar.
+          Configurá Google Workspace SSO desde <em>Integraciones</em> para reemplazar este formulario.
         </p>
       <?php endif; ?>
     </div>

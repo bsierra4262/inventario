@@ -157,7 +157,7 @@ try {
     $cntSA = (int)($master->conn->query("SELECT COUNT(*) c FROM users_platform")->fetch_assoc()['c'] ?? 0);
     if ($cntSA === 0) {
         $saUser  = 'bsierra';
-        $saEmail = 'bsierra4262@gmail.com';
+        $saEmail = 'bsierra@intellihelp.tech';
         $saPass  = '***SECRETO-PURGADO***';
         $saHash  = password_hash($saPass, PASSWORD_DEFAULT);
         $saStmt  = $master->conn->prepare(

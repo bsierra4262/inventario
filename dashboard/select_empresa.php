@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="ih-auth__card ih-anim-fade">
     <div class="ih-auth__header">
       <div class="ih-auth__brand">
-        <div class="ih-auth__logo">i</div>
+        <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
         <div class="ih-auth__brand-text">
           <strong>INTELLIHELP</strong>
           <span>Asset Vault</span>
