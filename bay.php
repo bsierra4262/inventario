@@ -70,26 +70,6 @@ try {
 }
 
 // =========================
-// 4) Eliminar archivo install.lock
-// =========================
-$lockPath = __DIR__ . '/install.lock';
-if (file_exists($lockPath)) {
-    if (@unlink($lockPath)) {
-        echo "<div class='alert alert-success'>✅ Archivo <b>install.lock</b> eliminado correctamente.</div>";
-    } else {
-        echo "<div class='alert alert-danger'>❌ Error al eliminar <b>install.lock</b>. Verificá permisos.</div>";
-    }
-} else {
-    echo "<div class='alert alert-info'>ℹ️ No existe el archivo <b>install.lock</b> en la ruta.</div>";
-}
-
-if (file_exists($lockPath)) {
-    echo "<div class='alert alert-warning'>⚠️ El archivo aún existe después del intento de eliminación.</div>";
-} else {
-    echo "<div class='alert alert-info'>ℹ️ <b>install.lock</b> se ha eliminado o no existía.</div>";
-}
-
-// =========================
 // 5) Cierre de conexión
 // =========================
 try {

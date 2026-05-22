@@ -1,6 +1,3 @@
-# Instalación — no se commitea para no bloquear reinstalación en el servidor
-install.lock
-
 # Logs — se regeneran solos en el servidor
 logs/audit.log
 logs/*.log

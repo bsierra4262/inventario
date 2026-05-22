@@ -562,6 +562,11 @@ $iconMap = [
            style="background: #fff; color: #4E247A; border: 1.5px solid #4E247A; border-radius: 6px; font-weight: 600; min-width:120px; justify-content: center;">
             <i class="bi bi-people"></i>
             Usuarios</a>
+        <a class="nav-link d-flex align-items-center gap-2"
+           href="configurar_integracion.php"
+           style="background: #fff; color: #0d6efd; border: 1.5px solid #0d6efd; border-radius: 6px; font-weight: 600; min-width:130px; justify-content: center;">
+            <i class="bi bi-cloud-arrow-up"></i>
+            Integración</a>
         <?php endif; ?>
         <a class="nav-link d-flex align-items-center gap-2"
            href="reportes.php"

@@ -67,30 +67,52 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try { $conn->set_charset('utf8mb4'); } catch (Throwable $e) { /* ya configurado */ }
 
 // --------------------------------------------------------------------
-// 3) Configuración Google Client
+// 3) Configuración Google Client — leer desde DB si existe, sino fallback
 // --------------------------------------------------------------------
-$client = new Google_Client();
-$client->setClientId('777999666864-jkesvkp9b4sh5sf9odpjmn3k46tsjtmn.apps.googleusercontent.com');
-$client->setClientSecret('TU_CLIENT_SECRET_DE_GOOGLE');
-$client->setRedirectUri('https://desarrollo.intellihelp.tech/login.php');
-$client->addScope([
-    Google_Service_Drive::DRIVE,
-    Google_Service_Drive::DRIVE_FILE,
-    Google_Service_Drive::DRIVE_METADATA_READONLY,
-    Google_Service_Drive::DRIVE_APPDATA,
-    'email',
-    'profile'
-]);
-$client->setAccessType('offline');
-$client->setPrompt('select_account consent');
+$googleClientId     = '';
+$googleClientSecret = '';
+$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
 
-// URL de autenticación Google
-$googleAuthUrl = $client->createAuthUrl();
+try {
+    $cfgTable = tn('cloud_config');
+    $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+    if ($cfgRes) {
+        while ($cfgRow = $cfgRes->fetch_assoc()) {
+            if ($cfgRow['config_key'] === 'client_id')     $googleClientId     = $cfgRow['config_value'];
+            if ($cfgRow['config_key'] === 'client_secret') $googleClientSecret = $cfgRow['config_value'];
+            if ($cfgRow['config_key'] === 'redirect_uri')  $googleRedirectUri  = $cfgRow['config_value'];
+        }
+    }
+} catch (Throwable $e) {
+    // tabla cloud_config no existe aún (instancia vieja) — Google OAuth no disponible
+}
+
+$googleConfigured = ($googleClientId !== '' && $googleClientSecret !== '');
+$client     = null;
+$googleAuthUrl = null;
+
+if ($googleConfigured) {
+    $client = new Google_Client();
+    $client->setClientId($googleClientId);
+    $client->setClientSecret($googleClientSecret);
+    $client->setRedirectUri($googleRedirectUri);
+    $client->addScope([
+        Google_Service_Drive::DRIVE,
+        Google_Service_Drive::DRIVE_FILE,
+        Google_Service_Drive::DRIVE_METADATA_READONLY,
+        Google_Service_Drive::DRIVE_APPDATA,
+        'email',
+        'profile'
+    ]);
+    $client->setAccessType('offline');
+    $client->setPrompt('select_account consent');
+    $googleAuthUrl = $client->createAuthUrl();
+}
 
 // --------------------------------------------------------------------
 // 4) PROCESO GOOGLE LOGIN
 // --------------------------------------------------------------------
-if (isset($_GET['code']) && $_GET['code'] !== '') {
+if ($googleConfigured && isset($_GET['code']) && $_GET['code'] !== '') {
     try {
         $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
 
@@ -252,8 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                 exit();
             }
 
-            // Si no autenticó por Google aún, lo enviamos a Google (política actual)
-            if (!isset($_SESSION['google_authenticated'])) {
+            // Si Google está configurado y aún no autenticó con Google, lo enviamos
+            if ($googleConfigured && !isset($_SESSION['google_authenticated'])) {
                 header('Location: ' . $googleAuthUrl);
                 exit();
             } else {
@@ -320,15 +342,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
                 </form>
 
+                <?php if ($googleConfigured): ?>
                 <div class="d-grid">
                     <?php if ($must_choose_company && empty($_SESSION['company_id'])): ?>
-                        <button type="button" class="btn btn-outline-secondary" disabled>Ingresar con Google (elegí empresa)</button>
+                        <button type="button" class="btn btn-outline-secondary" disabled>Ingresar con Google (elegí empresa primero)</button>
                     <?php else: ?>
                         <a class="btn btn-outline-primary" href="<?= htmlspecialchars($googleAuthUrl) ?>">
-                            Ingresar con Google
+                            <i class="bi bi-google me-1"></i> Ingresar con Google
                         </a>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
 
             </div>
         </div>

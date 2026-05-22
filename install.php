@@ -32,11 +32,22 @@ if (is_file($loggerPath)) {
 // -----------------------------------------
 $dbname = 'u566451014_desarrollo'; // <- tu DB objetivo
 
-// Si ya fue ejecutado, bloquear reinstalación accidental
-if (file_exists(__DIR__ . '/install.lock')) {
-    log_event("install.php", "INSTALACION BLOQUEADA", "Intento de reinstalación detectado.", "instalacion");
-    echo "<script>alert('El script de instalación ya fue ejecutado.'); window.location.href = 'login.php';</script>";
-    exit;
+// Verificar si ya está instalado usando estado de DB (sin install.lock)
+// Si la tabla `users` ya existe → sistema instalado, redirigir a login
+try {
+    $testConn = @new mysqli('localhost', 'u566451014_desarrollo', '***SECRETO-PURGADO***', $dbname);
+    if (!$testConn->connect_errno) {
+        $chkInstalled = $testConn->query("SHOW TABLES LIKE 'users'");
+        if ($chkInstalled && $chkInstalled->num_rows > 0) {
+            $testConn->close();
+            log_event("install.php", "INSTALACION BLOQUEADA", "Sistema ya instalado (tabla users existe).", "instalacion");
+            echo "<script>alert('El sistema ya está instalado.'); window.location.href = 'login.php';</script>";
+            exit;
+        }
+        $testConn->close();
+    }
+} catch (Throwable $e) {
+    // No se puede conectar → continuar con la instalación
 }
 
 // -----------------------------------------
@@ -276,6 +287,17 @@ CREATE TABLE IF NOT EXISTS user_devices (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ",
 
+"cloud_config" => "
+CREATE TABLE IF NOT EXISTS cloud_config (
+    id           INT(11) AUTO_INCREMENT PRIMARY KEY,
+    provider     ENUM('google','microsoft') NOT NULL,
+    config_key   VARCHAR(100) NOT NULL,
+    config_value TEXT NOT NULL,
+    updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY provider_key (provider, config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+",
+
 ];
 
 foreach ($tables as $name => $sql) {
@@ -402,16 +424,11 @@ try {
 }
 
 // -----------------------------------------------------
-// 9) Crear install.lock y redirigir a login
+// 9) Instalación finalizada — redirigir a login
 // -----------------------------------------------------
-if (file_put_contents(__DIR__ . '/install.lock', 'Instalación completada.') !== false) {
-    log_event("install.php", "INSTALACION", "Archivo install.lock creado.", "instalacion");
-    echo "<div class='alert alert-info'>ℹ️ Instalación finalizada. Redirigiendo a login...</div>";
-    echo "<script>setTimeout(()=>window.location.href='login.php', 2500);</script>";
-} else {
-    log_event("install.php", "ERROR", "No se pudo crear install.lock", "instalacion");
-    echo "<div class='alert alert-danger'>❌ No se pudo crear <code>install.lock</code>. Ver permisos del directorio.</div>";
-}
+log_event("install.php", "INSTALACION", "Instalación completada correctamente.", "instalacion");
+echo "<div class='alert alert-success'>✅ <strong>Instalación finalizada.</strong> Redirigiendo a login en 3 segundos...</div>";
+echo "<script>setTimeout(()=>window.location.href='login.php', 3000);</script>";
 
 @$conn->close();
 ?>
