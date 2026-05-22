@@ -17,7 +17,7 @@ if (!isset($_SESSION['user_id'])) {
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $producto_id = intval($_GET['id']);
 
-    $sql_producto = "SELECT * FROM productos WHERE id = ?";
+    $sql_producto = "SELECT * FROM `" . tn('productos') . "` WHERE id = ?";
     $stmt = $conn->prepare($sql_producto);
     if (!$stmt) {
         log_event($user_id, "ERROR", "Error en la consulta SQL: " . $conn->error, "consulta");

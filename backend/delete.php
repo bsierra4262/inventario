@@ -9,12 +9,6 @@ require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 
-// Config PHP debug (podés bajar esto en prod)
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
-
-// Usuario actual (para logs / producto_movimientos)
 $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
 
 // Helper seguro para imprimir valores en HTML
@@ -197,7 +191,7 @@ elseif (
     try {
         // Marca el producto como archivado y guarda fecha de baja
         $stmt_update = $conn->prepare("
-            UPDATE productos
+            UPDATE `" . tn('productos') . "`
             SET archivado = 1, fecha_baja = ?
             WHERE id = ?
         ");
@@ -206,7 +200,7 @@ elseif (
         $stmt_update->close();
 
         // Obtenemos el producto completo para loguear snapshot en producto_movimientos
-        $stmt_prod = $conn->prepare("SELECT * FROM productos WHERE id = ?");
+        $stmt_prod = $conn->prepare("SELECT * FROM `" . tn('productos') . "` WHERE id = ?");
         $stmt_prod->bind_param("i", $producto_id);
         $stmt_prod->execute();
         $result_prod = $stmt_prod->get_result();
@@ -241,7 +235,7 @@ elseif (
          * Muy importante: mantenemos tus tipos en bind_param.
          */
         $stmt_mov = $conn->prepare("
-            INSERT INTO producto_movimientos 
+            INSERT INTO `" . tn('producto_movimientos') . "`
             (
                 producto_id,
                 accion,

@@ -10,69 +10,72 @@ require_once __DIR__ . '/csrf.php';
 
 $iconMap = require __DIR__ . '/../iconMap.php';
 
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-
 // ======================================================
 // DETECCIÓN DEL PROVEEDOR DE ALMACENAMIENTO
 // ======================================================
-// Por ahora tu implementación real es Google Drive. Dejamos preparado OneDrive
-// para que no rompa cuando en el futuro se agregue el flujo MS (Graph).
-$storageProvider = strtolower((string)($_SESSION['storage_provider'] ?? 'google')); 
+$storageProvider = strtolower((string)($_SESSION['storage_provider'] ?? 'google'));
 // valores esperados: 'google' | 'microsoft'
 
 // ======================================================
 // CLIENTE GOOGLE (solo si provider = google)
+// Lee credenciales desde la DB cloud_config
 // ======================================================
-$googleService = null;
-$parentFolderId = '1dn00hb-ZX7DAe9EUNklxTkryS2Nd6YPS'; // carpeta raíz multiempresa (tenés esto hardcodeado)
+$googleService  = null;
+$parentFolderId = '';
 $tempDir        = __DIR__ . '/temp';
-if (!is_dir($tempDir)) {
-    mkdir($tempDir, 0777, true);
-}
+if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
 
 if ($storageProvider === 'google') {
+    $googleClientId     = '';
+    $googleClientSecret = '';
+    $googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
 
-    $client = new Google\Client();
-    $client->setAuthConfig(__DIR__ . '/client_secret.json');
-    $client->setRedirectUri('https://' . $_SERVER['HTTP_HOST'] . '/backend/edit.php');
-    $client->addScope([
-        Google\Service\Drive::DRIVE_FILE,
-        Google\Service\Drive::DRIVE_METADATA_READONLY,
-        Google\Service\Drive::DRIVE_APPDATA
-    ]);
-    $client->setAccessType('offline');
-    $client->setPrompt('select_account consent');
-
-    // OAuth callback de Google
-    if (isset($_GET['code'])) {
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-        if (!isset($token['error'])) {
-            $_SESSION['access_token'] = $token;
-            header('Location: /backend/edit.php?id=' . urlencode($_GET['id'] ?? ''));
-            exit();
-        } else {
-            log_event("usuario_desconocido","ERROR","Error token: ".$token['error_description'],"transaccion");
-            header('Location: resultado.php?status=error&origen=editar&msg='
-                .urlencode('Error al obtener token: '.$token['error_description']));
-            exit();
+    try {
+        $cfgTable = tn('cloud_config');
+        $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+        if ($cfgRes) {
+            while ($cfgRow = $cfgRes->fetch_assoc()) {
+                match ($cfgRow['config_key']) {
+                    'client_id'      => $googleClientId     = $cfgRow['config_value'],
+                    'client_secret'  => $googleClientSecret = $cfgRow['config_value'],
+                    'redirect_uri'   => $googleRedirectUri  = $cfgRow['config_value'],
+                    'root_folder_id' => $parentFolderId     = $cfgRow['config_value'],
+                    default          => null,
+                };
+            }
         }
+    } catch (Throwable $e) {
+        log_event((string)($_SESSION['user_id'] ?? '?'), 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
     }
 
-    // Set access token o redirigir a OAuth
-    if (isset($_SESSION['access_token'])) {
+    if ($googleClientId && $googleClientSecret && isset($_SESSION['access_token'])) {
+        $client = new Google\Client();
+        $client->setClientId($googleClientId);
+        $client->setClientSecret($googleClientSecret);
+        $client->setRedirectUri($googleRedirectUri);
+        $client->addScope([
+            Google\Service\Drive::DRIVE,
+            Google\Service\Drive::DRIVE_FILE,
+            Google\Service\Drive::DRIVE_METADATA_READONLY,
+            Google\Service\Drive::DRIVE_APPDATA,
+        ]);
+        $client->setAccessType('offline');
         $client->setAccessToken($_SESSION['access_token']);
-        if ($client->isAccessTokenExpired()) {
-            $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-            $_SESSION['access_token'] = $client->getAccessToken();
-        }
-    } else {
-        header('Location: ' . $client->createAuthUrl());
-        exit();
-    }
 
-    // Servicio Google Drive
-    $googleService = new Google\Service\Drive($client);
+        if ($client->isAccessTokenExpired()) {
+            $refresh = $client->getRefreshToken();
+            if ($refresh) {
+                $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+                $_SESSION['access_token'] = $newToken;
+            } else {
+                unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
+                header('Location: ../login.php');
+                exit();
+            }
+        }
+
+        $googleService = new Google\Service\Drive($client);
+    }
 }
 
 // ======================================================
@@ -89,8 +92,8 @@ $producto_id = intval($_GET['id']);
 // ======================================================
 // CARGAR PRODUCTO DESDE BD
 // ======================================================
-$stmt = $conn->prepare("SELECT * FROM productos WHERE id = ?");
-$stmt->bind_param('i',$producto_id);
+$stmt = $conn->prepare("SELECT * FROM `" . tn('productos') . "` WHERE id = ?");
+$stmt->bind_param('i', $producto_id);
 $stmt->execute();
 $producto = $stmt->get_result()->fetch_assoc();
 $stmt->close();
@@ -141,7 +144,7 @@ function drive_buscarOCrearCarpetaRaizProducto(
     }
 
     // Guardar en BD para persistir
-    $updateFolder = $conn->prepare("UPDATE productos SET carpeta_raiz_drive = ? WHERE id = ?");
+    $updateFolder = $conn->prepare("UPDATE `" . tn('productos') . "` SET carpeta_raiz_drive = ? WHERE id = ?");
     $updateFolder->bind_param('si', $carpeta_raiz_drive, $producto_id);
     $updateFolder->execute();
     $updateFolder->close();
@@ -350,7 +353,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     // 5) Comparar cambios con BD para decidir si hay UPDATE
     // ==================================================
 
-    $stmt_old = $conn->prepare("SELECT * FROM productos WHERE id = ?");
+    $stmt_old = $conn->prepare("SELECT * FROM `" . tn('productos') . "` WHERE id = ?");
     $stmt_old->bind_param('i', $producto_id);
     $stmt_old->execute();
     $producto_actual = $stmt_old->get_result()->fetch_assoc();
@@ -380,25 +383,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     // ==================================================
     if ($hayCambios) {
 
-        $sql = "UPDATE productos SET
-                modelo             = ?, marca             = ?, descripcion        = ?,
-                servis_tag         = ?, estado            = ?, categoria         = ?,
-                subcategoria       = ?, periodo_garantia  = ?, fecha_garantia     = ?,
-                ubicacion          = ?, fecha_ingreso     = ?, fecha_egreso       = ?,
-                asignado_a         = ?, cantidad          = ?, valor_usd          = ?,
-                detalle_repuesto   = ?, detalle_otos      = ?, patchcord_tipo     = ?,
-                patchcord_longitud = ?, switch_gestion    = ?, antenas_tipo       = ?,
-                bobina_categoria   = ?, bobina_ubicacion  = ?, bobina_longitud    = ?,
-                conectores_tipo    = ?, detalle_conectores= ?, cintas_generacion  = ?,
-                subsoftware        = ?, subsoftware_otros = ?, detalle_tecnico    = ?,
-                archivado          = ?
-            WHERE id = ?";
-
-        // OJO: tu versión original tenía un pequeño typo en la columna `detalle_otros`
-        // En tu código original de update usaste `detalle_otros` (bien),
-        // acá accidentalmente tenías `detalle_otos` en el SET del SQL.
-        // Lo corrijo para que NO rompa.
-        $sql = "UPDATE productos SET
+        $sql = "UPDATE `" . tn('productos') . "` SET
                 modelo             = ?, marca             = ?, descripcion        = ?,
                 servis_tag         = ?, estado            = ?, categoria          = ?,
                 subcategoria       = ?, periodo_garantia  = ?, fecha_garantia     = ?,

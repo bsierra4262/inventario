@@ -1,10 +1,6 @@
 <?php
 declare(strict_types=1);
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
-
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
@@ -180,10 +176,8 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         continue;
     }
 
-    // INSERT en productos
-    // Nota multiempresa: si tu tabla productos tiene columna tenant_id, agregala acá.
     $sqlProd = "
-        INSERT INTO productos (
+        INSERT INTO `" . tn('productos') . "` (
             asignado_a,
             modelo,
             marca,
@@ -291,7 +285,7 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
     //   carpeta_raiz_drive
     // )
     $sqlMov = "
-        INSERT INTO producto_movimientos (
+        INSERT INTO `" . tn('producto_movimientos') . "` (
             producto_id,
             accion,
             descripcion,
