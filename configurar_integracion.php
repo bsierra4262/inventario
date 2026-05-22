@@ -9,7 +9,6 @@ require_once __DIR__ . '/backend/db.php';
 require_once __DIR__ . '/backend/csrf.php';
 require_once __DIR__ . '/logs/logger.php';
 
-// --- Solo admins ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) { header('Location: login.php'); exit(); }
 
@@ -21,9 +20,7 @@ $me = $s->get_result()->fetch_assoc();
 $s->close();
 if (!$me || $me['role'] !== 'admin') { header('Location: index.php'); exit(); }
 
-// --- Leer config actual de DB ---
 $configTable = tn('cloud_config');
-$existsConfig = false;
 $googleCfg = [];
 $msCfg     = [];
 
@@ -31,17 +28,11 @@ try {
     $res = $conn->query("SELECT provider, config_key, config_value FROM `{$configTable}`");
     if ($res) {
         while ($row = $res->fetch_assoc()) {
-            if ($row['provider'] === 'google') {
-                $googleCfg[$row['config_key']] = $row['config_value'];
-            } else {
-                $msCfg[$row['config_key']] = $row['config_value'];
-            }
+            if ($row['provider'] === 'google') $googleCfg[$row['config_key']] = $row['config_value'];
+            else $msCfg[$row['config_key']] = $row['config_value'];
         }
-        $existsConfig = true;
     }
-} catch (Throwable $e) {
-    // Tabla puede no existir en instancias viejas — no romper
-}
+} catch (Throwable $e) {}
 
 $csrf = generateCsrfToken('cloud_config');
 $feedbackMsg  = htmlspecialchars($_GET['msg']  ?? '');
@@ -55,274 +46,319 @@ function mask(string $val): string {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Integración Cloud – Asset Vault</title>
-    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        html,body{height:100%;margin:0;padding:0;font-family:'Saira',sans-serif;background:#F5F5F5;color:#333}
-        body{display:flex;flex-direction:column;min-height:100vh}
-        header{background:#663399;color:#fff;padding:1rem;display:flex;justify-content:space-between;align-items:center}
-        header h1{font-size:1.5rem;margin:0}
-        .back-btn{background:#4E247A;color:#fff;border:none;padding:.5rem 1rem;border-radius:5px;text-decoration:none;font-weight:500}
-        .back-btn:hover{background:#86B329;color:#fff}
-        .main{flex:1;padding:2rem 1rem 5rem;max-width:960px;margin:0 auto;width:100%}
-        h2{color:#4E247A;font-weight:700}
-        .provider-card{background:#fff;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(102,51,153,.08)}
-        .provider-card .card-title{font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-        .google-hdr{color:#EA4335}
-        .ms-hdr{color:#0078D4}
-        .badge-active{background:#86B329;color:#fff;font-size:.75rem;padding:.3em .7em;border-radius:20px}
-        .badge-inactive{background:#aaa;color:#fff;font-size:.75rem;padding:.3em .7em;border-radius:20px}
-        .btn-purple{background:#663399;color:#fff;border:none}.btn-purple:hover{background:#4E247A;color:#fff}
-        .btn-green{background:#86B329;color:#fff;border:none}.btn-green:hover{background:#5a8a1b;color:#fff}
-        .cfg-val{font-family:monospace;font-size:.85rem;background:#f0f0f0;padding:.2rem .5rem;border-radius:4px}
-        .footer{text-align:center;padding:1rem;background:#663399;color:#fff;position:fixed;bottom:0;left:0;width:100%}
-        nav.tabs-cloud{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
-        nav.tabs-cloud button{border:none;padding:.5rem 1.2rem;border-radius:20px;font-weight:600;cursor:pointer;background:#e8e8e8;color:#555}
-        nav.tabs-cloud button.active{background:#663399;color:#fff}
-        .tab-panel{display:none}.tab-panel.active{display:block}
-        .help-link{font-size:.82rem;color:#663399;text-decoration:none}
-        .help-link:hover{text-decoration:underline}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#663399">
+<title>Integración Cloud · Asset Vault · INTELLIHELP</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="/assets/css/intellihelp.css" rel="stylesheet">
+<style>
+  /* Topbar tenant compartido */
+  header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
+  header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
+  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
+  header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
+  header.ih-topbar-tenant .topbar-spacer { flex: 1; }
+  header.ih-topbar-tenant a.back { color: #663399; font-weight: 600; font-size: 13px; text-decoration: none; padding: 8px 14px; border-radius: 10px; border: 1px solid #D0BFEA; background: #fff; transition: all .15s; }
+  header.ih-topbar-tenant a.back:hover { background: #F4F1F9; }
+
+  .provider-tabs { display: flex; gap: 6px; margin-bottom: 18px; padding: 6px; background: #fff; border-radius: 14px; border: 1px solid #E4E4E7; width: fit-content; }
+  .provider-tab { padding: 9px 18px; border-radius: 10px; border: 0; background: transparent; color: #71717A; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .15s; font-family: 'Saira', sans-serif; display: inline-flex; align-items: center; gap: 8px; }
+  .provider-tab:hover { background: #F4F1F9; color: #663399; }
+  .provider-tab.is-active { background: #663399; color: #fff; }
+  .provider-panel { display: none; }
+  .provider-panel.is-active { display: block; animation: ih-fade-in 250ms ease; }
+
+  .cfg-current { background: #F4F1F9; border: 1px solid #D0BFEA; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; }
+  .cfg-current code { background: #fff; border: 1px solid #D0BFEA; padding: 2px 8px; border-radius: 6px; font-size: 12px; color: #4E247A; }
+
+  .json-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .json-tab { padding: 7px 14px; border-radius: 8px; border: 1px solid #E4E4E7; background: #fff; color: #71717A; font-weight: 600; font-size: 12px; cursor: pointer; font-family: 'Saira', sans-serif; transition: all .15s; }
+  .json-tab.is-active { background: #663399; color: #fff; border-color: #663399; }
+</style>
 </head>
 <body>
-<header>
-    <h1><i class="bi bi-cloud-arrow-up"></i> Integración Cloud Storage</h1>
-    <a href="index.php" class="back-btn"><i class="bi bi-arrow-left"></i> Volver</a>
+
+<header class="ih-topbar-tenant">
+  <a class="brand" href="index.php">
+    <div class="brand__logo">i</div>
+    <div class="brand__text">
+      <strong>Asset Vault</strong>
+      <span>INTELLIHELP · Inventario</span>
+    </div>
+  </a>
+  <div class="topbar-spacer"></div>
+  <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
 </header>
 
-<div class="main">
+<main style="max-width:980px;margin:0 auto;padding:24px 16px 60px;">
 
-    <?php if ($feedbackMsg): ?>
-    <div class="alert alert-<?= $feedbackType ?> alert-dismissible fade show">
-        <?= $feedbackMsg ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="ih-page-header">
+    <div>
+      <h1 class="ih-page-header__title"><i class="bi bi-cloud-arrow-up-fill" style="color:#663399"></i> Integración Cloud Storage</h1>
+      <div class="ih-page-header__subtitle">Conectá Google Drive o Microsoft OneDrive para guardar los archivos de tus activos</div>
     </div>
-    <?php endif; ?>
+  </div>
 
-    <h2 class="mb-1"><i class="bi bi-hdd-network me-2"></i>Configuración de almacenamiento</h2>
-    <p class="text-muted mb-4">Conectá Google Drive o Microsoft OneDrive para guardar archivos adjuntos a los activos. Las credenciales se almacenan encriptadas en tu base de datos.</p>
+  <?php if ($feedbackMsg): ?>
+    <div class="ih-alert ih-alert--<?= $feedbackType === 'danger' ? 'danger' : 'success' ?>">
+      <i class="bi bi-<?= $feedbackType === 'danger' ? 'exclamation-triangle' : 'check-circle' ?>-fill"></i>
+      <div><?= $feedbackMsg ?></div>
+      <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
+    </div>
+  <?php endif; ?>
 
-    <nav class="tabs-cloud">
-        <button class="active" onclick="showTab('google', this)"><i class="bi bi-google me-1"></i> Google Drive</button>
-        <button onclick="showTab('microsoft', this)"><i class="bi bi-microsoft me-1"></i> Microsoft OneDrive</button>
-    </nav>
+  <div class="provider-tabs">
+    <button class="provider-tab is-active" onclick="showProvider('google', this)">
+      <i class="bi bi-google"></i> Google Drive
+    </button>
+    <button class="provider-tab" onclick="showProvider('microsoft', this)">
+      <i class="bi bi-microsoft"></i> Microsoft OneDrive
+    </button>
+  </div>
 
-    <!-- ======================== GOOGLE ======================== -->
-    <div id="tab-google" class="tab-panel active">
-        <div class="provider-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="card-title google-hdr">
-                    <i class="bi bi-google"></i> Google Drive / Google Workspace
-                    <?php if (!empty($googleCfg['client_id'])): ?>
-                    <span class="badge-active">✓ Configurado</span>
-                    <?php else: ?>
-                    <span class="badge-inactive">Sin configurar</span>
-                    <?php endif; ?>
-                </div>
-                <?php if (!empty($googleCfg)): ?>
-                <form method="POST" action="backend/cloud_config_crud.php" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                    <input type="hidden" name="action" value="clear">
-                    <input type="hidden" name="provider" value="google">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar config de Google?')">
-                        <i class="bi bi-trash"></i> Limpiar
-                    </button>
-                </form>
-                <?php endif; ?>
-            </div>
-
-            <?php if (!empty($googleCfg)): ?>
-            <div class="mb-3 p-3" style="background:#f8f8f8;border-radius:8px;">
-                <strong>Config actual:</strong><br>
-                <small>Client ID: <span class="cfg-val"><?= htmlspecialchars(mask($googleCfg['client_id'] ?? '')) ?></span></small><br>
-                <?php if (!empty($googleCfg['root_folder_id'])): ?>
-                <small>Carpeta raíz Drive: <span class="cfg-val"><?= htmlspecialchars($googleCfg['root_folder_id']) ?></span></small><br>
-                <?php endif; ?>
-            </div>
+  <!-- ============================ GOOGLE ============================ -->
+  <div id="prov-google" class="provider-panel is-active">
+    <div class="ih-card">
+      <div class="ih-card__header">
+        <div>
+          <h2 class="ih-card__title">
+            <i class="bi bi-google" style="color:#EA4335"></i> Google Drive / Workspace
+          </h2>
+          <div class="ih-card__subtitle">
+            <?php if (!empty($googleCfg['client_id'])): ?>
+              <span class="ih-badge ih-badge--success ih-badge--dot">Configurado</span>
+            <?php else: ?>
+              <span class="ih-badge">Sin configurar</span>
             <?php endif; ?>
-
-            <!-- Tabs internos: JSON vs Manual -->
-            <ul class="nav nav-pills mb-3" id="google-mode-tabs">
-                <li class="nav-item">
-                    <button class="nav-link active" onclick="switchGoogleMode('json', this)">
-                        <i class="bi bi-file-earmark-code me-1"></i> Pegar / Subir JSON
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" onclick="switchGoogleMode('form', this)">
-                        <i class="bi bi-pencil me-1"></i> Ingresar manualmente
-                    </button>
-                </li>
-            </ul>
-
-            <form method="POST" action="backend/cloud_config_crud.php" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                <input type="hidden" name="action" value="save_google">
-                <input type="hidden" name="provider" value="google">
-                <input type="hidden" name="google_mode" id="google_mode_input" value="json">
-
-                <!-- Modo JSON -->
-                <div id="google-json-mode">
-                    <div class="alert alert-info py-2 mb-3" style="font-size:.88rem;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Descargá el JSON desde
-                        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="help-link">Google Cloud Console</a>
-                        → Credenciales → OAuth 2.0 → Descargar JSON.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Subir archivo credentials.json</label>
-                        <input type="file" name="credentials_file" class="form-control" accept=".json">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">O pegar el contenido del JSON</label>
-                        <textarea name="credentials_json" class="form-control font-monospace" rows="6" placeholder='{"web":{"client_id":"...","client_secret":"...","redirect_uris":[...]}}'></textarea>
-                    </div>
-                </div>
-
-                <!-- Modo Manual -->
-                <div id="google-form-mode" style="display:none">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Client ID *</label>
-                            <input type="text" name="google_client_id" class="form-control"
-                                value="<?= htmlspecialchars($googleCfg['client_id'] ?? '') ?>"
-                                placeholder="xxxxx.apps.googleusercontent.com">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Client Secret *</label>
-                            <input type="text" name="google_client_secret" class="form-control"
-                                placeholder="GOCSPX-...">
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Redirect URI</label>
-                            <input type="url" name="google_redirect_uri" class="form-control"
-                                value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? 'https://desarrollo.intellihelp.tech/login.php') ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">ID Carpeta Raíz Drive <small class="text-muted">(opcional)</small></label>
-                            <input type="text" name="google_root_folder" class="form-control"
-                                value="<?= htmlspecialchars($googleCfg['root_folder_id'] ?? '') ?>"
-                                placeholder="1BxiMVs...">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-green">
-                        <i class="bi bi-save me-1"></i> Guardar configuración de Google Drive
-                    </button>
-                </div>
-            </form>
+          </div>
         </div>
-    </div>
+        <?php if (!empty($googleCfg)): ?>
+          <form method="POST" action="backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Google?')">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+            <input type="hidden" name="action" value="clear">
+            <input type="hidden" name="provider" value="google">
+            <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" style="color:#DC2626">
+              <i class="bi bi-trash"></i> Limpiar
+            </button>
+          </form>
+        <?php endif; ?>
+      </div>
 
-    <!-- ======================== MICROSOFT ======================== -->
-    <div id="tab-microsoft" class="tab-panel">
-        <div class="provider-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="card-title ms-hdr">
-                    <i class="bi bi-microsoft"></i> Microsoft OneDrive / SharePoint
-                    <?php if (!empty($msCfg['client_id'])): ?>
-                    <span class="badge-active">✓ Configurado</span>
-                    <?php else: ?>
-                    <span class="badge-inactive">Sin configurar</span>
-                    <?php endif; ?>
-                </div>
-                <?php if (!empty($msCfg)): ?>
-                <form method="POST" action="backend/cloud_config_crud.php" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                    <input type="hidden" name="action" value="clear">
-                    <input type="hidden" name="provider" value="microsoft">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar config de Microsoft?')">
-                        <i class="bi bi-trash"></i> Limpiar
-                    </button>
-                </form>
-                <?php endif; ?>
-            </div>
+      <div class="ih-card__body">
 
-            <?php if (!empty($msCfg)): ?>
-            <div class="mb-3 p-3" style="background:#f8f8f8;border-radius:8px;">
-                <strong>Config actual:</strong><br>
-                <small>Tenant ID: <span class="cfg-val"><?= htmlspecialchars(mask($msCfg['tenant_id'] ?? '')) ?></span></small><br>
-                <small>Client ID: <span class="cfg-val"><?= htmlspecialchars(mask($msCfg['client_id'] ?? '')) ?></span></small><br>
+        <?php if (!empty($googleCfg)): ?>
+          <div class="cfg-current">
+            <div class="ih-text-xs ih-fw-700 ih-text-muted" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Configuración actual</div>
+            <div class="ih-text-sm">
+              Client ID: <code><?= htmlspecialchars(mask($googleCfg['client_id'] ?? '')) ?></code>
             </div>
+            <?php if (!empty($googleCfg['redirect_uri'])): ?>
+              <div class="ih-text-sm ih-mt-2">Redirect URI: <code><?= htmlspecialchars($googleCfg['redirect_uri']) ?></code></div>
             <?php endif; ?>
+            <?php if (!empty($googleCfg['root_folder_id'])): ?>
+              <div class="ih-text-sm ih-mt-2">Carpeta raíz Drive: <code><?= htmlspecialchars($googleCfg['root_folder_id']) ?></code></div>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
 
-            <div class="alert alert-info py-2 mb-3" style="font-size:.88rem;">
-                <i class="bi bi-info-circle me-1"></i>
-                Registrá una app en
-                <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps" target="_blank" class="help-link">Azure Portal</a>
-                → App registrations → New registration. Necesitás los permisos <code>Files.ReadWrite</code> y <code>Sites.ReadWrite.All</code>.
-            </div>
-
-            <form method="POST" action="backend/cloud_config_crud.php">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-                <input type="hidden" name="action" value="save_microsoft">
-                <input type="hidden" name="provider" value="microsoft">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Tenant ID (Directory ID) *</label>
-                        <input type="text" name="ms_tenant_id" class="form-control" required
-                            value="<?= htmlspecialchars($msCfg['tenant_id'] ?? '') ?>"
-                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                        <small class="text-muted">Azure Active Directory → Properties → Tenant ID</small>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Client ID (Application ID) *</label>
-                        <input type="text" name="ms_client_id" class="form-control" required
-                            value="<?= htmlspecialchars($msCfg['client_id'] ?? '') ?>"
-                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Client Secret *</label>
-                        <input type="password" name="ms_client_secret" class="form-control" required
-                            placeholder="Secreto generado en Azure">
-                        <small class="text-muted">Certificates & secrets → New client secret</small>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label fw-semibold">Redirect URI</label>
-                        <input type="url" name="ms_redirect_uri" class="form-control"
-                            value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? 'https://desarrollo.intellihelp.tech/login.php') ?>">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Drive ID / Site ID <small class="text-muted">(SharePoint)</small></label>
-                        <input type="text" name="ms_drive_id" class="form-control"
-                            value="<?= htmlspecialchars($msCfg['drive_id'] ?? '') ?>"
-                            placeholder="Opcional — para SharePoint específico">
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-purple">
-                        <i class="bi bi-save me-1"></i> Guardar configuración de Microsoft
-                    </button>
-                </div>
-            </form>
+        <div class="ih-alert ih-alert--info" style="font-size:13px;">
+          <i class="bi bi-info-circle-fill"></i>
+          <div>
+            Descargá el JSON desde
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>
+            → Credenciales → OAuth 2.0 Client → Descargar JSON. Asegurate de habilitar la <strong>Drive API</strong>.
+          </div>
         </div>
+
+        <div class="json-tabs">
+          <button class="json-tab is-active" type="button" onclick="switchGoogleMode('json', this)">
+            <i class="bi bi-file-earmark-code"></i> Pegar / Subir JSON
+          </button>
+          <button class="json-tab" type="button" onclick="switchGoogleMode('form', this)">
+            <i class="bi bi-pencil"></i> Ingresar manualmente
+          </button>
+        </div>
+
+        <form method="POST" action="backend/cloud_config_crud.php" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="save_google">
+          <input type="hidden" name="provider" value="google">
+          <input type="hidden" name="google_mode" id="google_mode_input" value="json">
+
+          <!-- Modo JSON -->
+          <div id="google-json-mode">
+            <div class="ih-field">
+              <label class="ih-field__label">Subir archivo credentials.json</label>
+              <input type="file" name="credentials_file" class="ih-input" accept=".json">
+            </div>
+            <div class="ih-field">
+              <label class="ih-field__label">O pegar el contenido del JSON</label>
+              <textarea name="credentials_json" class="ih-textarea" rows="6" style="font-family:monospace;font-size:12px" placeholder='{"web":{"client_id":"...","client_secret":"...","redirect_uris":[...]}}'></textarea>
+            </div>
+          </div>
+
+          <!-- Modo Manual -->
+          <div id="google-form-mode" style="display:none">
+            <div class="ih-grid">
+              <div class="ih-col-6">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client ID <span class="req">*</span></label>
+                  <input class="ih-input" type="text" name="google_client_id"
+                         value="<?= htmlspecialchars($googleCfg['client_id'] ?? '') ?>"
+                         placeholder="xxxxx.apps.googleusercontent.com">
+                </div>
+              </div>
+              <div class="ih-col-6">
+                <div class="ih-field">
+                  <label class="ih-field__label">Client Secret <span class="req">*</span></label>
+                  <input class="ih-input" type="text" name="google_client_secret" placeholder="GOCSPX-...">
+                </div>
+              </div>
+              <div class="ih-col-8">
+                <div class="ih-field">
+                  <label class="ih-field__label">Redirect URI</label>
+                  <input class="ih-input" type="url" name="google_redirect_uri"
+                         value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/login.php')) ?>">
+                </div>
+              </div>
+              <div class="ih-col-4">
+                <div class="ih-field">
+                  <label class="ih-field__label">ID Carpeta raíz Drive</label>
+                  <input class="ih-input" type="text" name="google_root_folder"
+                         value="<?= htmlspecialchars($googleCfg['root_folder_id'] ?? '') ?>"
+                         placeholder="1BxiMVs... (opcional)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="ih-btn ih-btn--accent ih-mt-4">
+            <i class="bi bi-save"></i> Guardar configuración de Google
+          </button>
+        </form>
+      </div>
     </div>
+  </div>
 
-</div>
+  <!-- ============================ MICROSOFT ============================ -->
+  <div id="prov-microsoft" class="provider-panel">
+    <div class="ih-card">
+      <div class="ih-card__header">
+        <div>
+          <h2 class="ih-card__title">
+            <i class="bi bi-microsoft" style="color:#0078D4"></i> Microsoft OneDrive / SharePoint
+          </h2>
+          <div class="ih-card__subtitle">
+            <?php if (!empty($msCfg['client_id'])): ?>
+              <span class="ih-badge ih-badge--success ih-badge--dot">Configurado</span>
+            <?php else: ?>
+              <span class="ih-badge">Sin configurar</span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php if (!empty($msCfg)): ?>
+          <form method="POST" action="backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Microsoft?')">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+            <input type="hidden" name="action" value="clear">
+            <input type="hidden" name="provider" value="microsoft">
+            <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" style="color:#DC2626">
+              <i class="bi bi-trash"></i> Limpiar
+            </button>
+          </form>
+        <?php endif; ?>
+      </div>
 
-<div class="footer">© <?= date('Y') ?> ITH — Asset Vault</div>
+      <div class="ih-card__body">
+        <?php if (!empty($msCfg)): ?>
+          <div class="cfg-current">
+            <div class="ih-text-xs ih-fw-700 ih-text-muted" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Configuración actual</div>
+            <div class="ih-text-sm">Tenant ID: <code><?= htmlspecialchars(mask($msCfg['tenant_id'] ?? '')) ?></code></div>
+            <div class="ih-text-sm ih-mt-2">Client ID: <code><?= htmlspecialchars(mask($msCfg['client_id'] ?? '')) ?></code></div>
+          </div>
+        <?php endif; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <div class="ih-alert ih-alert--info" style="font-size:13px;">
+          <i class="bi bi-info-circle-fill"></i>
+          <div>
+            Registrá una app en
+            <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps" target="_blank" rel="noopener">Azure Portal</a>
+            → App registrations → New registration. Permisos necesarios: <code>Files.ReadWrite</code>, <code>Sites.ReadWrite.All</code>.
+          </div>
+        </div>
+
+        <form method="POST" action="backend/cloud_config_crud.php">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="save_microsoft">
+          <input type="hidden" name="provider" value="microsoft">
+
+          <div class="ih-grid">
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Tenant ID (Directory ID) <span class="req">*</span></label>
+                <input class="ih-input" type="text" name="ms_tenant_id" required
+                       value="<?= htmlspecialchars($msCfg['tenant_id'] ?? '') ?>"
+                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                <div class="ih-field__hint">Azure AD → Properties → Tenant ID</div>
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Client ID (App ID) <span class="req">*</span></label>
+                <input class="ih-input" type="text" name="ms_client_id" required
+                       value="<?= htmlspecialchars($msCfg['client_id'] ?? '') ?>"
+                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Client Secret <span class="req">*</span></label>
+                <input class="ih-input" type="password" name="ms_client_secret" required placeholder="Secret de Azure">
+                <div class="ih-field__hint">Certificates &amp; secrets → New</div>
+              </div>
+            </div>
+            <div class="ih-col-8">
+              <div class="ih-field">
+                <label class="ih-field__label">Redirect URI</label>
+                <input class="ih-input" type="url" name="ms_redirect_uri"
+                       value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/login.php')) ?>">
+              </div>
+            </div>
+            <div class="ih-col-4">
+              <div class="ih-field">
+                <label class="ih-field__label">Drive ID / Site ID (SharePoint)</label>
+                <input class="ih-input" type="text" name="ms_drive_id"
+                       value="<?= htmlspecialchars($msCfg['drive_id'] ?? '') ?>"
+                       placeholder="Opcional">
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="ih-btn ih-btn--primary ih-mt-4">
+            <i class="bi bi-save"></i> Guardar configuración de Microsoft
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</main>
+
 <script>
-function showTab(name, btn) {
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('nav.tabs-cloud button').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    btn.classList.add('active');
+function showProvider(name, btn) {
+  document.querySelectorAll('.provider-panel').forEach(p => p.classList.remove('is-active'));
+  document.querySelectorAll('.provider-tab').forEach(b => b.classList.remove('is-active'));
+  document.getElementById('prov-' + name).classList.add('is-active');
+  btn.classList.add('is-active');
 }
-
 function switchGoogleMode(mode, btn) {
-    document.getElementById('google_mode_input').value = mode;
-    document.getElementById('google-json-mode').style.display = mode === 'json' ? '' : 'none';
-    document.getElementById('google-form-mode').style.display = mode === 'form' ? '' : 'none';
-    document.querySelectorAll('#google-mode-tabs .nav-link').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+  document.getElementById('google_mode_input').value = mode;
+  document.getElementById('google-json-mode').style.display = mode === 'json' ? '' : 'none';
+  document.getElementById('google-form-mode').style.display = mode === 'form' ? '' : 'none';
+  document.querySelectorAll('.json-tab').forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
 }
 </script>
 </body>

@@ -487,16 +487,30 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
     </style>
 </head>
 <body style="margin:0; padding:0; background:#f5f5f5;">
-  <header style="background:#6d3ca5; color:#fff; display:flex; align-items:center; justify-content:space-between; padding:0.7rem 1.5rem 0.7rem 0.9rem; min-height:40px;">
-    <div style="display:flex; align-items:center;">
-      <i class="bi bi-bar-chart-line" style="font-size:1.3rem; margin-right:8px; margin-top:1px;"></i>
-      <span style="font-weight:600; font-size:1.25rem; letter-spacing:0.01em;">Reportes</span>
-    </div>
-    <a href="index.php" class="btn-volver">
-    <i class="bi bi-arrow-left-short"></i>
-    Volver al Inventario</a>
+  <link rel="stylesheet" href="/assets/css/intellihelp.css">
+  <style>
+    header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
+    header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
+    header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+    header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
+    header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
+    header.ih-topbar-tenant .topbar-spacer { flex: 1; }
+    header.ih-topbar-tenant a.back { color: #663399; font-weight: 600; font-size: 13px; text-decoration: none; padding: 8px 14px; border-radius: 10px; border: 1px solid #D0BFEA; background: #fff; transition: all .15s; }
+    header.ih-topbar-tenant a.back:hover { background: #F4F1F9; }
+  </style>
+  <header class="ih-topbar-tenant">
+    <a class="brand" href="index.php">
+      <div class="brand__logo">i</div>
+      <div class="brand__text">
+        <strong>Asset Vault</strong>
+        <span>INTELLIHELP · Reportes</span>
+      </div>
+    </a>
+    <div class="topbar-spacer"></div>
+    <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
   </header>
-  <div style="height: 32px;"></div>
+  <div style="height: 24px;"></div>
 
   <!-- NAV TABS -->
   <ul class="nav nav-tabs mb-3" id="reporteTabs" role="tablist">
@@ -1793,6 +1807,6 @@ exportCsvBtns.forEach(btn => {
     });
 });
 </script>
-<footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
+<footer class="footer">© <?= date('Y') ?> INTELLIHELP S.A. — Asset Vault</footer>
 </body>
 </html>

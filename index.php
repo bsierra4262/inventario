@@ -538,36 +538,90 @@ $iconMap = [
     </style>
 </head>
 <body>
-<header>
-    <h1><i class="bi bi-box"></i> Asset Vault</h1>
-    <a href="logout.php" class="logout-btn"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a>
+<!-- TOPBAR INTELLIHELP -->
+<link rel="stylesheet" href="/assets/css/intellihelp.css">
+<style>
+  /* Override del header viejo para no chocar con el topbar nuevo */
+  header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
+  header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; }
+  header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
+  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
+  header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
+  header.ih-topbar-tenant h1, header.ih-topbar-tenant .h1 { font-size: 15px; color: #18181B; font-weight: 700; margin: 0; }
+  header.ih-topbar-tenant .topbar-spacer { flex: 1; }
+  header.ih-topbar-tenant .menu-btn { background: transparent; border: 1px solid #E4E4E7; color: #663399; padding: 7px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; text-decoration: none; margin-left: 6px; font-family: 'Saira', sans-serif; }
+  header.ih-topbar-tenant .menu-btn:hover { background: #F4F1F9; border-color: #663399; color: #4E247A; }
+  header.ih-topbar-tenant .menu-btn--logout { background: #663399; color: #fff; border-color: #663399; }
+  header.ih-topbar-tenant .menu-btn--logout:hover { background: #4E247A; border-color: #4E247A; color: #fff; }
+  .tenant-dropdown { position: relative; display: inline-block; }
+  .tenant-dropdown__menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid #E4E4E7; border-radius: 12px; box-shadow: 0 12px 40px rgba(102,51,153,.12); min-width: 220px; z-index: 1000; padding: 6px; overflow: hidden; }
+  .tenant-dropdown.is-open .tenant-dropdown__menu { display: block; animation: ih-fade-in 200ms ease; }
+  .tenant-dropdown__item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: #3F3F46; font-size: 13px; font-weight: 500; border-radius: 8px; text-decoration: none; transition: all .15s; }
+  .tenant-dropdown__item:hover { background: #F4F1F9; color: #663399; }
+  .tenant-dropdown__item i { font-size: 16px; color: #663399; opacity: .85; }
+  .tenant-dropdown__divider { height: 1px; background: #E4E4E7; margin: 4px 0; }
+  .tenant-dropdown__section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #A1A1AA; padding: 8px 12px 4px; font-weight: 600; }
+  @media (max-width: 640px) {
+    header.ih-topbar-tenant .brand__text { display: none; }
+    header.ih-topbar-tenant .menu-btn span { display: none; }
+  }
+</style>
+<header class="ih-topbar-tenant">
+  <div class="brand">
+    <div class="brand__logo">i</div>
+    <div class="brand__text">
+      <strong>Asset Vault</strong>
+      <span>INTELLIHELP · Inventario</span>
+    </div>
+  </div>
+  <div class="topbar-spacer"></div>
+
+  <a href="reportes.php" class="menu-btn">
+    <i class="bi bi-graph-up"></i> <span>Reportes</span>
+  </a>
+
+  <div class="tenant-dropdown" id="tenantDropdown">
+    <button type="button" class="menu-btn" onclick="document.getElementById('tenantDropdown').classList.toggle('is-open')">
+      <i class="bi bi-person-circle"></i> <span><?= htmlspecialchars(($user['username'] ?? 'Cuenta')) ?></span>
+      <i class="bi bi-chevron-down" style="font-size:11px"></i>
+    </button>
+    <div class="tenant-dropdown__menu">
+      <div class="tenant-dropdown__section">Cuenta</div>
+      <a class="tenant-dropdown__item" href="change_password.php"><i class="bi bi-key"></i> Cambiar contraseña</a>
+
+      <?php if (($user['role'] ?? '') === 'admin'): ?>
+        <div class="tenant-dropdown__divider"></div>
+        <div class="tenant-dropdown__section">Administración</div>
+        <a class="tenant-dropdown__item" href="usuarios.php"><i class="bi bi-people"></i> Usuarios del tenant</a>
+        <a class="tenant-dropdown__item" href="configurar_integracion.php"><i class="bi bi-cloud-arrow-up"></i> Integración Drive</a>
+        <a class="tenant-dropdown__item" href="importar.php"><i class="bi bi-arrow-left-right"></i> Backup &amp; migración</a>
+      <?php endif; ?>
+
+      <div class="tenant-dropdown__divider"></div>
+      <a class="tenant-dropdown__item" href="logout.php" style="color:#DC2626"><i class="bi bi-box-arrow-right" style="color:#DC2626"></i> Cerrar sesión</a>
+    </div>
+  </div>
 </header>
+<!-- Cerrar dropdown al click fuera -->
+<script>
+document.addEventListener('click', function(e){
+  var d = document.getElementById('tenantDropdown');
+  if (d && !d.contains(e.target)) d.classList.remove('is-open');
+});
+</script>
+
 <div class="container">
     <ul class="nav nav-tabs" id="myTab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#ver-inventario" type="button" role="tab">Ver Activos</button>
+            <button class="nav-link active" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#ver-inventario" type="button" role="tab">
+              <i class="bi bi-box-seam"></i> Ver Activos
+            </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="agregar-tab" data-bs-toggle="tab" data-bs-target="#agregar-producto" type="button" role="tab">Agregar Activo</button>
-        </li>
-        <li class="nav-item ms-auto d-flex gap-2 align-items-center" role="presentation" style="margin-left:auto !important;">
-        <?php if (($user['role'] ?? '') === 'admin'): ?>
-        <a class="nav-link d-flex align-items-center gap-2"
-           href="usuarios.php"
-           style="background: #fff; color: #4E247A; border: 1.5px solid #4E247A; border-radius: 6px; font-weight: 600; min-width:120px; justify-content: center;">
-            <i class="bi bi-people"></i>
-            Usuarios</a>
-        <a class="nav-link d-flex align-items-center gap-2"
-           href="configurar_integracion.php"
-           style="background: #fff; color: #0d6efd; border: 1.5px solid #0d6efd; border-radius: 6px; font-weight: 600; min-width:130px; justify-content: center;">
-            <i class="bi bi-cloud-arrow-up"></i>
-            Integración</a>
-        <?php endif; ?>
-        <a class="nav-link d-flex align-items-center gap-2"
-           href="reportes.php"
-           style="background: #fff; color: #663399; border: 1.5px solid #86B329; border-radius: 6px; font-weight: 600; min-width:120px; justify-content: center;">
-            <i class="bi bi-bar-chart-line"></i>
-            Reportes</a>
+            <button class="nav-link" id="agregar-tab" data-bs-toggle="tab" data-bs-target="#agregar-producto" type="button" role="tab">
+              <i class="bi bi-plus-square"></i> Agregar Activo
+            </button>
         </li>
     </ul>
     
@@ -873,7 +927,7 @@ $iconMap = [
     </div>
     
 </div>
-<footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
+<footer class="footer">© <?= date('Y') ?> INTELLIHELP S.A. — Asset Vault</footer>
 <!-- Agregar Activo -->
   <div class="tab-pane fade" id="agregar-producto" role="tabpanel"
        style="background-color: #F5F5F5; padding: 2rem; border-radius: 8px;">
@@ -1171,7 +1225,7 @@ $iconMap = [
       </div>
     </div>
   </form>
-    <footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
+    <footer class="footer">© <?= date('Y') ?> INTELLIHELP S.A. — Asset Vault</footer>
         <!-- Bootstrap JS -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Validación de archivos -->

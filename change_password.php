@@ -152,52 +152,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cambiar Contraseña - Intellihelp</title>
-    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
-    <style>
-        body {
-            display:flex;flex-direction:column;justify-content:center;align-items:center;
-            min-height:100vh;font-family:'Saira',sans-serif;background-color:#f5f5f5;animation:fadeIn 1s ease-in-out
-        }
-        .container { opacity:0; transform:translateY(30px); animation:fadeInUp 1s ease-out forwards }
-        .form-control,.btn { border-radius:30px; transition:transform .3s ease, box-shadow .3s ease }
-        .form-control:focus { transform:translateY(-4px); box-shadow:0 4px 8px rgba(0,0,0,.1) }
-        .btn-primary { background-color:#9cc930; border-color:#9cc930 }
-        .btn-primary:hover { background-color:#86b329; border-color:#86b329; transform:translateY(-4px) }
-        @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-        footer { text-align:center; padding:20px 0; width:100%; background-color:#663399; color:#fff; position:fixed; bottom:0 }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#663399">
+  <title>Cambiar contraseña · Asset Vault · INTELLIHELP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="/assets/css/intellihelp.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container mt-5">
-        <?php if (!empty($msg_html)) { echo $msg_html; } ?>
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <h2 class="text-center mb-4">Cambiar Contraseña</h2>
-                <form action="change_password.php" method="POST" autocomplete="off">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <div class="mb-3">
-                        <label for="new_password" class="form-label">Nueva Contraseña</label>
-                        <input type="password" class="form-control" id="new_password" name="new_password" required minlength="8"
-                               pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Mínimo 8 caracteres, con letras y números">
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="8"
-                               pattern="(?=.*[A-Za-z])(?=.*\d).{8,}">
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Cambiar Contraseña</button>
-                </form>
-            </div>
+<div class="ih-auth">
+  <div class="ih-auth__card ih-anim-fade">
+    <div class="ih-auth__header">
+      <div class="ih-auth__brand">
+        <div class="ih-auth__logo">i</div>
+        <div class="ih-auth__brand-text">
+          <strong>INTELLIHELP</strong>
+          <span>Asset Vault</span>
         </div>
+      </div>
+      <h2 class="ih-auth__title">Cambiar contraseña</h2>
+      <p class="ih-auth__subtitle">Por seguridad, definí una contraseña personal</p>
     </div>
 
-    <footer>© 2025 ITH - Todos los derechos reservados</footer>
+    <div class="ih-auth__body">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+      <?php
+        if (!empty($msg_html)) {
+          // Adaptar HTML legacy de alertas a estilo ih-alert
+          $clean = str_replace(
+            ['<div class="alert alert-danger">', '<div class="alert alert-success">'],
+            ['<div class="ih-alert ih-alert--danger"><i class="bi bi-exclamation-triangle-fill"></i><div>', '<div class="ih-alert ih-alert--success"><i class="bi bi-check-circle-fill"></i><div>'],
+            $msg_html
+          );
+          $clean = str_replace('</div>', '</div></div>', $clean);
+          echo $clean;
+        }
+      ?>
+
+      <form method="POST" action="change_password.php" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+
+        <div class="ih-field">
+          <label class="ih-field__label" for="new_password">Nueva contraseña</label>
+          <input class="ih-input" type="password" id="new_password" name="new_password" required minlength="8"
+                 pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Mínimo 8 caracteres con letras y números">
+          <div class="ih-field__hint">Mínimo 8 caracteres, debe incluir letras y números.</div>
+        </div>
+
+        <div class="ih-field">
+          <label class="ih-field__label" for="confirm_password">Confirmar contraseña</label>
+          <input class="ih-input" type="password" id="confirm_password" name="confirm_password" required minlength="8"
+                 pattern="(?=.*[A-Za-z])(?=.*\d).{8,}">
+        </div>
+
+        <button class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" type="submit">
+          <i class="bi bi-shield-check"></i> Cambiar contraseña
+        </button>
+      </form>
+
+      <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
+        Después de cambiarla se cerrará la sesión y deberás volver a ingresar.
+      </p>
+    </div>
+
+    <div class="ih-auth__footer">
+      © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
+    </div>
+  </div>
+</div>
 </body>
 </html>
