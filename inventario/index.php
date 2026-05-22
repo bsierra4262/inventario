@@ -7,15 +7,15 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 // Router por rol: si el usuario tiene sesión de superadmin, su lugar es el panel SaaS, no el inventario.
-require_once __DIR__ . '/core/config/platform.php';
+require_once __DIR__ . '/../core/config/platform.php';
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
     header('Location: /dashboard/dashboard_superadmin.php');
     exit;
 }
 
-require_once __DIR__ . '/backend/db.php';    // $conn + tn() del tenant activo
-require_once __DIR__ . '/logs/logger.php';   // log_event()
-require_once __DIR__ . '/backend/csrf.php';  // generateCsrfToken() — debe cargarse antes del output HTML
+require_once __DIR__ . '/../backend/db.php';    // $conn + tn() del tenant activo
+require_once __DIR__ . '/../logs/logger.php';   // log_event()
+require_once __DIR__ . '/../backend/csrf.php';  // generateCsrfToken() — debe cargarse antes del output HTML
 
 try {
     // Aseguramos charset correcto (por si acaso)
@@ -24,7 +24,7 @@ try {
 
     // Debe haber usuario logueado
     if (empty($_SESSION['user_id'])) {
-        header('Location: login.php');
+        header('Location: /auth/login.php');
         exit();
     }
 
@@ -42,7 +42,7 @@ try {
     if (!$user) {
         log_event("index.php", "ERROR", "Usuario ID {$user_id} no encontrado en {$usersTable}", "auth");
         session_destroy();
-        header('Location: login.php');
+        header('Location: /auth/login.php');
         exit();
     }
 
@@ -50,7 +50,7 @@ try {
     if ($user['role'] === 'admin' && password_verify('admin', $user['password'])) {
         echo "<script>
                 alert('Por favor, cambia tu contraseña de administrador.');
-                window.location='change_password.php';
+                window.location='/auth/change_password.php';
               </script>";
         exit();
     }
@@ -139,7 +139,7 @@ try {
 
 } catch (Throwable $e) {
     log_event("sistema", "ERROR", "Error en index.php: " . $e->getMessage(), "app");
-    echo "<script>alert('Error de base de datos. El administrador debe revisar el log.');window.location='login.php';</script>";
+    echo "<script>alert('Error de base de datos. El administrador debe revisar el log.');window.location='/auth/login.php';</script>";
     exit();
 }
 
@@ -582,7 +582,7 @@ $iconMap = [
   header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
   header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; }
   header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__logo::after { display: none; }
   header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
   header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
   header.ih-topbar-tenant h1, header.ih-topbar-tenant .h1 { font-size: 15px; color: #18181B; font-weight: 700; margin: 0; }
@@ -606,7 +606,7 @@ $iconMap = [
 </style>
 <header class="ih-topbar-tenant">
   <div class="brand">
-    <div class="brand__logo">i</div>
+    <div class="brand__logo"><?= platform_logo_html() ?></div>
     <div class="brand__text">
       <strong>Asset Vault</strong>
       <span>INTELLIHELP · Inventario</span>
@@ -614,7 +614,7 @@ $iconMap = [
   </div>
   <div class="topbar-spacer"></div>
 
-  <a href="reportes.php" class="menu-btn">
+  <a href="/inventario/reportes.php" class="menu-btn">
     <i class="bi bi-graph-up"></i> <span>Reportes</span>
   </a>
 
@@ -625,18 +625,18 @@ $iconMap = [
     </button>
     <div class="tenant-dropdown__menu">
       <div class="tenant-dropdown__section">Cuenta</div>
-      <a class="tenant-dropdown__item" href="change_password.php"><i class="bi bi-key"></i> Cambiar contraseña</a>
+      <a class="tenant-dropdown__item" href="/auth/change_password.php"><i class="bi bi-key"></i> Cambiar contraseña</a>
 
       <?php if (($user['role'] ?? '') === 'admin'): ?>
         <div class="tenant-dropdown__divider"></div>
         <div class="tenant-dropdown__section">Administración</div>
-        <a class="tenant-dropdown__item" href="usuarios.php"><i class="bi bi-people"></i> Usuarios del tenant</a>
-        <a class="tenant-dropdown__item" href="configurar_integracion.php"><i class="bi bi-cloud-arrow-up"></i> Integración Drive</a>
-        <a class="tenant-dropdown__item" href="importar.php"><i class="bi bi-arrow-left-right"></i> Backup &amp; migración</a>
+        <a class="tenant-dropdown__item" href="/inventario/usuarios.php"><i class="bi bi-people"></i> Usuarios del tenant</a>
+        <a class="tenant-dropdown__item" href="/inventario/configurar_integracion.php"><i class="bi bi-cloud-arrow-up"></i> Integración Drive</a>
+        <a class="tenant-dropdown__item" href="/inventario/importar.php"><i class="bi bi-arrow-left-right"></i> Backup &amp; migración</a>
       <?php endif; ?>
 
       <div class="tenant-dropdown__divider"></div>
-      <a class="tenant-dropdown__item" href="logout.php" style="color:#DC2626"><i class="bi bi-box-arrow-right" style="color:#DC2626"></i> Cerrar sesión</a>
+      <a class="tenant-dropdown__item" href="/auth/logout.php" style="color:#DC2626"><i class="bi bi-box-arrow-right" style="color:#DC2626"></i> Cerrar sesión</a>
     </div>
   </div>
 </header>
@@ -692,7 +692,7 @@ document.addEventListener('click', function(e){
         <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
         <div class="ih-stat__value"><?= (int)$kpi_archivados ?></div>
         <div class="ih-stat__delta">
-          <a href="reportes.php?tab=archivados" style="color:inherit;font-weight:600;text-decoration:underline">Ver detalle →</a>
+          <a href="/inventario/reportes.php?tab=archivados" style="color:inherit;font-weight:600;text-decoration:underline">Ver detalle →</a>
         </div>
       </div>
     </div>
@@ -700,8 +700,8 @@ document.addEventListener('click', function(e){
     <div class="d-flex justify-content-between align-items-center flex-wrap mt-4 mb-3">
       <h3 class="fw-bold text-uppercase" style="color: #4E247A; font-family: 'Saira', sans-serif;">Lista de Activos</h3>
       <div class="d-flex flex-wrap gap-2">
-        <a href="backend/export_csv.php?csrf_token=<?= urlencode($csrf_export) ?>" class="btn btn-sm" style="background-color: #86B329; color: white;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar CSV</a>
-        <form action="backend/import_csv.php" method="POST" enctype="multipart/form-data" class="d-inline">
+        <a href="/backend/export_csv.php?csrf_token=<?= urlencode($csrf_export) ?>" class="btn btn-sm" style="background-color: #86B329; color: white;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar CSV</a>
+        <form action="/backend/import_csv.php" method="POST" enctype="multipart/form-data" class="d-inline">
           <label class="btn btn-sm btn-outline-secondary mb-0">
             <i class="bi bi-upload"></i> Importar CSV
             <input type="file" name="csv_file" accept=".csv" onchange="this.form.submit()" hidden>
@@ -941,9 +941,9 @@ document.addEventListener('click', function(e){
           <?php endif; ?>
         </td>
         <td class="acciones-btns">
-          <a href="backend/view_details.php?id=<?= $row['id'] ?>" class="btn btn-outline-info btn-sm"><i class="bi bi-eye"></i></a>
-          <a href="backend/edit.php?id=<?= $row['id'] ?>" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
-          <a href="backend/delete.php?id=<?= $row['id'] ?>" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+          <a href="/backend/view_details.php?id=<?= $row['id'] ?>" class="btn btn-outline-info btn-sm"><i class="bi bi-eye"></i></a>
+          <a href="/backend/edit.php?id=<?= $row['id'] ?>" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+          <a href="/backend/delete.php?id=<?= $row['id'] ?>" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
         </td>
       </tr>
     <?php endwhile; ?>
@@ -1002,7 +1002,7 @@ document.addEventListener('click', function(e){
        style="background-color: #F5F5F5; padding: 2rem; border-radius: 8px;">
     <h3 class="fw-bold text-uppercase mb-4" style="color: #4E247A;">Agregar Activo</h3>
     <form id="form-agregar"
-        action="backend/upload_to_drive.php"
+        action="/backend/upload_to_drive.php"
         method="POST"
         enctype="multipart/form-data">
       <div class="row g-3">

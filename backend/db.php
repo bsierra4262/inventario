@@ -35,7 +35,7 @@ try {
     log_event("db.php", "ERROR", "Fallo al inicializar tenant: " . $e->getMessage(), "bootstrap");
     error_log("Error en bootstrap multiempresa: " . $e->getMessage());
     // Si falla el bootstrap, derivamos a install por si falta preparar entorno
-    header('Location: install.php');
+    header('Location: /install.php');
     exit();
 }
 
@@ -44,7 +44,7 @@ try {
 // ============================================================
 $_excluded_from_force = ['login.php', 'select_empresa.php', 'change_password.php', 'logout.php'];
 if (!in_array($current_file, $_excluded_from_force, true) && !empty($_SESSION['force_password_change'])) {
-    header('Location: /change_password.php');
+    header('Location: /auth/change_password.php');
     exit();
 }
 
@@ -55,7 +55,7 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
     try {
         if (!$conn || !$conn->ping()) {
             log_event("db.php", "ERROR", "Ping a la DB del tenant fallido", "bootstrap");
-            header('Location: install.php');
+            header('Location: /install.php');
             exit();
         }
 
@@ -70,7 +70,7 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
         }
         if ($check->num_rows === 0) {
             log_event("db.php", "ERROR", "Tabla `{$usersTable}` no encontrada en tenant", "bootstrap");
-            header('Location: install.php');
+            header('Location: /install.php');
             exit();
         }
         log_event("db.php", "APP", "Tabla `{$usersTable}` OK en tenant", "bootstrap");
@@ -91,7 +91,7 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
     } catch (Throwable $e) {
         log_event("db.php", "ERROR", "Verificación fallida: " . $e->getMessage(), "bootstrap");
         error_log("Error verificación DB (tenant): " . $e->getMessage());
-        header('Location: install.php');
+        header('Location: /install.php');
         exit();
     }
 }

@@ -28,7 +28,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 // Logger opcional
-$loggerPath = __DIR__ . '/logs/logger.php';
+$loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath;
 } else {
@@ -71,5 +71,5 @@ session_start();
 session_regenerate_id(true);
 $_SESSION = [];
 
-header('Location: /login.php?bye=1');
+header('Location: /auth/login.php?bye=1');
 exit;

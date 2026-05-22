@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
         }
     }
-    $target = $_SESSION['pending_target'] ?? '/index.php';
+    $target = $_SESSION['pending_target'] ?? '/inventario/index.php';
     unset($_SESSION['pending_target']);
     header('Location: ' . $target);
     exit;
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <div class="ih-mt-4 ih-text-center">
-        <a href="/login.php" class="ih-text-sm ih-text-muted">
+        <a href="/auth/login.php" class="ih-text-sm ih-text-muted">
           <i class="bi bi-arrow-left"></i> Volver al login
         </a>
       </div>

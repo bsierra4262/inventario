@@ -10,7 +10,7 @@ $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
 
 if (!isset($_SESSION['user_id'])) {
     log_event($user_id, "ERROR", "Intento de acceso a view_details sin sesión activa", "consulta");
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 

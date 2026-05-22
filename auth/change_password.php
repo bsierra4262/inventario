@@ -6,10 +6,10 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 // -----------------------------
 // DB multiempresa + Logger
 // -----------------------------
-require_once __DIR__ . '/core/config/platform.php';
-require_once __DIR__ . '/backend/db.php'; // obtiene $conn del tenant activo
+require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../backend/db.php'; // obtiene $conn del tenant activo
 
-$loggerPath = __DIR__ . '/logs/logger.php';
+$loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath; // log_event()
 } else {
@@ -22,7 +22,7 @@ if (is_file($loggerPath)) {
 // Guardas de sesión
 // -----------------------------
 if (empty($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -48,7 +48,7 @@ try {
 
     if (!$user) {
         log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "Usuario no encontrado", "auth");
-        header('Location: login.php');
+        header('Location: /auth/login.php');
         exit();
     }
 } catch (Throwable $e) {
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($isForced) {
                     // Modo forzado: limpiar flag de sesión y continuar al inventario
                     unset($_SESSION['force_password_change']);
-                    header('Location: index.php');
+                    header('Location: /inventario/index.php');
                     exit;
                 }
 
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 echo '<script>
                     alert("Contraseña cambiada exitosamente. Por favor, iniciá sesión nuevamente.");
-                    window.location.href = "login.php";
+                    window.location.href = "/auth/login.php";
                 </script>';
                 exit;
 
@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       ?>
 
-      <form method="POST" action="change_password.php" autocomplete="off">
+      <form method="POST" action="/auth/change_password.php" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
         <div class="ih-field">

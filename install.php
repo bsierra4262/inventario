@@ -63,7 +63,7 @@ try {
     .install-card__header { background: linear-gradient(135deg, #663399, #4E247A); color: #fff; padding: 28px 32px; }
     .install-card__brand { display: flex; align-items: center; gap: 14px; }
     .install-card__logo { width: 52px; height: 52px; background: #fff; color: #663399; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; position: relative; flex-shrink:0 }
-    .install-card__logo::after { content: ''; position: absolute; right: 6px; bottom: 6px; width: 10px; height: 10px; background: #9CC930; border-radius: 50%; }
+    .install-card__logo::after { display: none; }
     .install-card__title { margin: 0; font-size: 22px; font-weight: 700; }
     .install-card__subtitle { font-size: 13px; opacity: .75; margin-top: 2px; }
     .install-card__body { padding: 28px 32px 32px; }
@@ -81,7 +81,7 @@ try {
   <div class="install-card ih-anim-fade">
     <div class="install-card__header">
       <div class="install-card__brand">
-        <div class="install-card__logo">i</div>
+        <div class="install-card__logo"><?= platform_logo_html() ?></div>
         <div>
           <h1 class="install-card__title">Asset Vault — Instalación</h1>
           <div class="install-card__subtitle">INTELLIHELP · Configuración inicial del master DB</div>

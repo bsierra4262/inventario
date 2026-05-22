@@ -32,8 +32,8 @@ function ih_tn_active(string $key, string $current): string {
 
     <div class="ih-sidebar__group">
       <div class="ih-sidebar__group-title">Cuenta</div>
-      <a href="/change_password.php" class="ih-sidebar__link"><i class="bi bi-key"></i> Cambiar contraseña</a>
-      <a href="/logout.php"          class="ih-sidebar__link"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      <a href="/auth/change_password.php" class="ih-sidebar__link"><i class="bi bi-key"></i> Cambiar contraseña</a>
+      <a href="/auth/logout.php"          class="ih-sidebar__link"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
     </div>
   </nav>
 

@@ -7,7 +7,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 // Bloqueo acceso si no hay sesión válida
 if (empty($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 

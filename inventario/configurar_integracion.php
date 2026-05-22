@@ -5,13 +5,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-require_once __DIR__ . '/backend/db.php';
-require_once __DIR__ . '/backend/csrf.php';
-require_once __DIR__ . '/logs/logger.php';
-require_once __DIR__ . '/core/security/permissions.php';
+require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
-if (!$user_id) { header('Location: login.php'); exit(); }
+if (!$user_id) { header('Location: /auth/login.php'); exit(); }
 
 $usersTable = tn('users');
 $s = $conn->prepare("SELECT role FROM `{$usersTable}` WHERE id = ?");
@@ -58,7 +58,7 @@ function mask(string $val): string {
   header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
   header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
   header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__logo::after { display: none; }
   header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
   header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
   header.ih-topbar-tenant .topbar-spacer { flex: 1; }
@@ -83,15 +83,15 @@ function mask(string $val): string {
 <body>
 
 <header class="ih-topbar-tenant">
-  <a class="brand" href="index.php">
-    <div class="brand__logo">i</div>
+  <a class="brand" href="/inventario/index.php">
+    <div class="brand__logo"><?= platform_logo_html() ?></div>
     <div class="brand__text">
       <strong>Asset Vault</strong>
       <span>INTELLIHELP · Inventario</span>
     </div>
   </a>
   <div class="topbar-spacer"></div>
-  <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
+  <a class="back" href="/inventario/index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
 </header>
 
 <main style="max-width:980px;margin:0 auto;padding:24px 16px 60px;">
@@ -137,7 +137,7 @@ function mask(string $val): string {
           </div>
         </div>
         <?php if (!empty($googleCfg)): ?>
-          <form method="POST" action="backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Google?')">
+          <form method="POST" action="/backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Google?')">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <input type="hidden" name="action" value="clear">
             <input type="hidden" name="provider" value="google">
@@ -183,7 +183,7 @@ function mask(string $val): string {
           </button>
         </div>
 
-        <form method="POST" action="backend/cloud_config_crud.php" enctype="multipart/form-data">
+        <form method="POST" action="/backend/cloud_config_crud.php" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="save_google">
           <input type="hidden" name="provider" value="google">
@@ -222,7 +222,7 @@ function mask(string $val): string {
                 <div class="ih-field">
                   <label class="ih-field__label">Redirect URI</label>
                   <input class="ih-input" type="url" name="google_redirect_uri"
-                         value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/login.php')) ?>">
+                         value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/auth/login.php')) ?>">
                 </div>
               </div>
               <div class="ih-col-4">
@@ -261,7 +261,7 @@ function mask(string $val): string {
           </div>
         </div>
         <?php if (!empty($msCfg)): ?>
-          <form method="POST" action="backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Microsoft?')">
+          <form method="POST" action="/backend/cloud_config_crud.php" style="display:inline" onsubmit="return confirm('¿Eliminar configuración de Microsoft?')">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
             <input type="hidden" name="action" value="clear">
             <input type="hidden" name="provider" value="microsoft">
@@ -290,7 +290,7 @@ function mask(string $val): string {
           </div>
         </div>
 
-        <form method="POST" action="backend/cloud_config_crud.php">
+        <form method="POST" action="/backend/cloud_config_crud.php">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="save_microsoft">
           <input type="hidden" name="provider" value="microsoft">
@@ -324,7 +324,7 @@ function mask(string $val): string {
               <div class="ih-field">
                 <label class="ih-field__label">Redirect URI</label>
                 <input class="ih-input" type="url" name="ms_redirect_uri"
-                       value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/login.php')) ?>">
+                       value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').'/auth/login.php')) ?>">
               </div>
             </div>
             <div class="ih-col-4">

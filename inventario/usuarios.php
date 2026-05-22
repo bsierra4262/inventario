@@ -5,14 +5,14 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-require_once __DIR__ . '/backend/db.php';
-require_once __DIR__ . '/backend/csrf.php';
-require_once __DIR__ . '/logs/logger.php';
-require_once __DIR__ . '/core/security/permissions.php';
+require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -25,7 +25,7 @@ $stmt->close();
 
 if (!$currentUser) {
     session_destroy();
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -73,7 +73,7 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
   header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
   header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
   header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__logo::after { display: none; }
   header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
   header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
   header.ih-topbar-tenant .topbar-spacer { flex: 1; }
@@ -81,15 +81,15 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
   header.ih-topbar-tenant a.back:hover { background: #F4F1F9; }
 </style>
 <header class="ih-topbar-tenant">
-  <a class="brand" href="index.php">
-    <div class="brand__logo">i</div>
+  <a class="brand" href="/inventario/index.php">
+    <div class="brand__logo"><?= platform_logo_html() ?></div>
     <div class="brand__text">
       <strong>Asset Vault</strong>
       <span>INTELLIHELP · Inventario</span>
     </div>
   </a>
   <div class="topbar-spacer"></div>
-  <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
+  <a class="back" href="/inventario/index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
 </header>
 
 <main style="max-width:1100px;margin:0 auto;padding:24px 16px 60px;">
@@ -118,7 +118,7 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
       </div>
     </div>
     <div class="ih-card__body">
-      <form method="POST" action="backend/users_crud.php" autocomplete="off">
+      <form method="POST" action="/backend/users_crud.php" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
         <input type="hidden" name="action" value="create">
 
@@ -246,7 +246,7 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
         <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Editar: <span id="editUsername"></span></h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form method="POST" action="backend/users_crud.php" autocomplete="off">
+      <form method="POST" action="/backend/users_crud.php" autocomplete="off">
         <div class="modal-body">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="edit">
@@ -294,7 +294,7 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
       </div>
       <div class="modal-footer">
         <button type="button" class="ih-btn ih-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
-        <form method="POST" action="backend/users_crud.php" style="display:inline">
+        <form method="POST" action="/backend/users_crud.php" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="target_id" id="deleteTargetId">

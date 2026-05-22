@@ -6,7 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 // -----------------------------
 // 0) Logger opcional y vendor
 // -----------------------------
-$loggerPath = __DIR__ . '/logs/logger.php';
+$loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath;
 } else {
@@ -15,13 +15,13 @@ if (is_file($loggerPath)) {
     }
 }
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // -----------------------------
 // 1) Resolver empresa antes del tenant
 // -----------------------------
-require_once __DIR__ . '/core/config/platform.php';
-require_once __DIR__ . '/core/db/master_connection.php';
+require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../core/db/master_connection.php';
 
 $companies = [];
 $masterDbError = '';
@@ -37,7 +37,7 @@ try {
 
 // Si master DB no responde → mandar a install (asume primera ejecución)
 if ($masterDbError !== '') {
-    header('Location: install.php');
+    header('Location: /install.php');
     exit();
 }
 
@@ -45,7 +45,7 @@ if ($masterDbError !== '') {
 // El install no debe ser accesible para usuarios finales del tenant.
 if (empty($companies)) {
     $page_title = 'Acceso restringido';
-    require __DIR__ . '/includes/layout/head.php';
+    require __DIR__ . '/../includes/layout/head.php';
     ?>
     <div class="ih-auth">
       <div class="ih-auth__card ih-anim-fade">
@@ -79,7 +79,7 @@ if (empty($companies)) {
       </div>
     </div>
     <?php
-    require __DIR__ . '/includes/layout/foot.php';
+    require __DIR__ . '/../includes/layout/foot.php';
     exit;
 }
 
@@ -99,7 +99,7 @@ if (empty($_SESSION['company_id'])) {
 // -----------------------------
 // 2) Conexión tenant
 // -----------------------------
-require_once __DIR__ . '/backend/db.php';
+require_once __DIR__ . '/../backend/db.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try { $conn->set_charset('utf8mb4'); } catch (Throwable $e) {}
 
@@ -108,7 +108,7 @@ try { $conn->set_charset('utf8mb4'); } catch (Throwable $e) {}
 // -----------------------------
 $googleClientId     = '';
 $googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/login.php';
 
 try {
     $cfgTable = tn('cloud_config');
@@ -215,7 +215,7 @@ if ($googleConfigured && isset($_GET['code']) && $_GET['code'] !== '') {
                 }
 
                 log_event($correo, "LOGIN GOOGLE", "Acceso desde IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
-                header('Location: index.php');
+                header('Location: /inventario/index.php');
                 exit();
             }
         } else {
@@ -276,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 
             if ($mustChange) {
                 $_SESSION['force_password_change'] = true;
-                header('Location: change_password.php');
+                header('Location: /auth/change_password.php');
                 exit();
             }
 
@@ -285,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                 exit();
             }
 
-            header('Location: index.php');
+            header('Location: /inventario/index.php');
             exit();
         } else if (!$error_msg) {
             $error_msg = 'Credenciales inválidas.';
@@ -295,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 }
 
 $page_title = 'Iniciar sesión';
-require __DIR__ . '/includes/layout/head.php';
+require __DIR__ . '/../includes/layout/head.php';
 ?>
 
 <div class="ih-auth">
@@ -378,4 +378,4 @@ require __DIR__ . '/includes/layout/head.php';
   </div>
 </div>
 
-<?php require __DIR__ . '/includes/layout/foot.php'; ?>
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>

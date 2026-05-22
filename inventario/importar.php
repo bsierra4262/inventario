@@ -5,13 +5,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-require_once __DIR__ . '/backend/db.php';
-require_once __DIR__ . '/backend/csrf.php';
-require_once __DIR__ . '/logs/logger.php';
-require_once __DIR__ . '/core/security/permissions.php';
+require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
-if (!$user_id) { header('Location: login.php'); exit; }
+if (!$user_id) { header('Location: /auth/login.php'); exit; }
 
 $usersTable = tn('users');
 $s = $conn->prepare("SELECT role FROM `{$usersTable}` WHERE id = ?");
@@ -48,7 +48,7 @@ $icon = match ($type) {
   header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
   header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
   header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-  header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+  header.ih-topbar-tenant .brand__logo::after { display: none; }
   header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
   header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
   header.ih-topbar-tenant .topbar-spacer { flex: 1; }
@@ -93,15 +93,15 @@ $icon = match ($type) {
 <body>
 
 <header class="ih-topbar-tenant">
-  <a class="brand" href="index.php">
-    <div class="brand__logo">i</div>
+  <a class="brand" href="/inventario/index.php">
+    <div class="brand__logo"><?= platform_logo_html() ?></div>
     <div class="brand__text">
       <strong>Asset Vault</strong>
       <span>INTELLIHELP · Inventario</span>
     </div>
   </a>
   <div class="topbar-spacer"></div>
-  <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
+  <a class="back" href="/inventario/index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
 </header>
 
 <main style="max-width:1000px;margin:0 auto;padding:24px 16px 60px;">
@@ -134,7 +134,7 @@ $icon = match ($type) {
         seguridad o migrar el inventario a otra instancia sin perder los enlaces
         a los archivos en Google Drive.
       </div>
-      <form method="POST" action="backend/export_full_backup.php">
+      <form method="POST" action="/backend/export_full_backup.php">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
         <button class="ih-btn ih-btn--accent ih-btn--block" type="submit">
           <i class="bi bi-cloud-download-fill"></i> Descargar backup CSV
@@ -152,7 +152,7 @@ $icon = match ($type) {
         Si no, se <strong>crea</strong> un nuevo activo. Las referencias a Drive
         se preservan tal cual están en el CSV.
       </div>
-      <form method="POST" action="backend/import_full_backup.php" enctype="multipart/form-data" id="import-form">
+      <form method="POST" action="/backend/import_full_backup.php" enctype="multipart/form-data" id="import-form">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
         <label class="dropzone" for="csv-file" id="dropzone">

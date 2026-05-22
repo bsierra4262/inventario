@@ -2,11 +2,11 @@
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-require __DIR__ . '/backend/db.php';
-require_once __DIR__ . '/logs/logger.php';
+require __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../logs/logger.php';
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 $user_id     = $_SESSION['user_id'];
@@ -492,7 +492,7 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
     header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
     header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
     header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-    header.ih-topbar-tenant .brand__logo::after { content: ''; position: absolute; right: 4px; bottom: 4px; width: 7px; height: 7px; background: #9CC930; border-radius: 50%; }
+    header.ih-topbar-tenant .brand__logo::after { display: none; }
     header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
     header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
     header.ih-topbar-tenant .topbar-spacer { flex: 1; }
@@ -500,15 +500,15 @@ function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
     header.ih-topbar-tenant a.back:hover { background: #F4F1F9; }
   </style>
   <header class="ih-topbar-tenant">
-    <a class="brand" href="index.php">
-      <div class="brand__logo">i</div>
+    <a class="brand" href="/inventario/index.php">
+      <div class="brand__logo"><?= platform_logo_html() ?></div>
       <div class="brand__text">
         <strong>Asset Vault</strong>
         <span>INTELLIHELP · Reportes</span>
       </div>
     </a>
     <div class="topbar-spacer"></div>
-    <a class="back" href="index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
+    <a class="back" href="/inventario/index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
   </header>
   <div style="height: 24px;"></div>
 

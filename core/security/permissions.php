@@ -110,7 +110,7 @@ if (!function_exists('require_permission')) {
               <div class="ih-auth__card">
                 <div class="ih-auth__header">
                   <div class="ih-auth__brand">
-                    <div class="ih-auth__logo">i</div>
+                    <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
                     <div class="ih-auth__brand-text">
                       <strong>INTELLIHELP</strong>
                       <span>Asset Vault</span>
@@ -124,7 +124,7 @@ if (!function_exists('require_permission')) {
                     <i class="bi bi-shield-x"></i>
                     <div>Esta función requiere un rol superior al tuyo. Pedile al admin del tenant que te asigne más permisos.</div>
                   </div>
-                  <a href="/index.php" class="ih-btn ih-btn--primary ih-btn--block">
+                  <a href="/inventario/index.php" class="ih-btn ih-btn--primary ih-btn--block">
                     <i class="bi bi-arrow-left"></i> Volver al inventario
                   </a>
                 </div>
