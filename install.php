@@ -41,22 +41,62 @@ try {
     $master = new MasterDB();
 
     $master->conn->query("CREATE TABLE IF NOT EXISTS `companies` (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        nombre      VARCHAR(200) NOT NULL,
-        tenant_mode ENUM('prefix','external') NOT NULL DEFAULT 'external',
-        db_host     VARCHAR(200) DEFAULT 'localhost',
-        db_name     VARCHAR(200) DEFAULT NULL,
-        db_user     VARCHAR(200) DEFAULT NULL,
-        db_pass     VARCHAR(255) DEFAULT NULL,
-        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id               INT AUTO_INCREMENT PRIMARY KEY,
+        nombre           VARCHAR(200) NOT NULL,
+        razon_social     VARCHAR(200) DEFAULT '',
+        cuit             VARCHAR(30)  DEFAULT '',
+        provider         ENUM('google','microsoft') NOT NULL DEFAULT 'google',
+        credentials_path VARCHAR(500) DEFAULT NULL,
+        tenant_mode      ENUM('prefix','external') NOT NULL DEFAULT 'external',
+        db_host          VARCHAR(200) DEFAULT 'localhost',
+        db_name          VARCHAR(200) DEFAULT NULL,
+        db_user          VARCHAR(200) DEFAULT NULL,
+        db_pass          VARCHAR(255) DEFAULT NULL,
+        active           TINYINT(1)  NOT NULL DEFAULT 1,
+        created_at       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Add missing columns to existing installations (idempotent)
+    foreach ([
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `razon_social`     VARCHAR(200)  DEFAULT ''",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `cuit`             VARCHAR(30)   DEFAULT ''",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `provider`         ENUM('google','microsoft') NOT NULL DEFAULT 'google'",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `credentials_path` VARCHAR(500)  DEFAULT NULL",
+        "ALTER TABLE `companies` ADD COLUMN IF NOT EXISTS `active`           TINYINT(1)   NOT NULL DEFAULT 1",
+    ] as $_alter) {
+        try { $master->conn->query($_alter); } catch (Throwable $_ae) {}
+    }
+
+    // Tabla de usuarios de plataforma (superadmin / soporte)
+    $master->conn->query("CREATE TABLE IF NOT EXISTS `users_platform` (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        username    VARCHAR(100) NOT NULL,
+        password    VARCHAR(255) NOT NULL,
+        email       VARCHAR(255) DEFAULT NULL,
+        role        ENUM('superadmin','support') NOT NULL DEFAULT 'superadmin',
+        active      TINYINT(1)  NOT NULL DEFAULT 1,
+        created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Seed superadmin bsierra si la tabla está vacía
+    $cntSa = (int)($master->conn->query("SELECT COUNT(*) as c FROM users_platform")->fetch_assoc()['c'] ?? 0);
+    if ($cntSa === 0) {
+        $saUser  = 'bsierra';
+        $saHash  = password_hash('***SECRETO-PURGADO***', PASSWORD_DEFAULT);
+        $saEmail = 'bsierra4262@gmail.com';
+        $saStmt  = $master->conn->prepare("INSERT INTO users_platform (username, password, email, role) VALUES (?, ?, ?, 'superadmin')");
+        $saStmt->bind_param('sss', $saUser, $saHash, $saEmail);
+        $saStmt->execute();
+        $saStmt->close();
+    }
 
     $chk = $master->conn->prepare("SELECT id FROM companies WHERE nombre = 'ITH' LIMIT 1");
     $chk->execute();
     if ($chk->get_result()->num_rows === 0) {
         $ins = $master->conn->prepare(
-            "INSERT INTO companies (nombre, tenant_mode, db_host, db_name, db_user, db_pass)
-             VALUES ('ITH', 'external', 'localhost', 'u566451014_desarrollo', 'u566451014_desarrollo', '***SECRETO-PURGADO***')"
+            "INSERT INTO companies (nombre, razon_social, cuit, provider, tenant_mode, db_host, db_name, db_user, db_pass, active)
+             VALUES ('ITH', 'Informática Tecnológica Horizontal', '', 'google', 'external', 'localhost', 'u566451014_desarrollo', 'u566451014_desarrollo', '***SECRETO-PURGADO***', 1)"
         );
         $ins->execute();
         $ins->close();
