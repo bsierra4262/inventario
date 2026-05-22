@@ -1,0 +1,44 @@
+# =====================================================================
+#  INTELLIHELP Asset Vault — Apache config
+# =====================================================================
+
+# Codificación y charset por defecto
+AddDefaultCharset UTF-8
+
+# Forzar HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Redirigir www → sin-www (URL canónica)
+RewriteCond %{HTTP_HOST} ^www\.intellihelp\.tech [NC]
+RewriteRule ^ https://intellihelp.tech%{REQUEST_URI} [R=301,L]
+
+# ── Seguridad básica ────────────────────────────────────────────────
+
+# Ocultar firma de Apache
+ServerSignature Off
+
+# Bloquear listado de directorios
+Options -Indexes
+
+# Bloquear acceso directo a archivos sensibles
+<FilesMatch "\.(env|log|sql|bak|json|lock|md|gitignore)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger el directorio vendor/ de acceso web directo
+<IfModule mod_rewrite.c>
+    RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^logs/ - [F,L]
+    RewriteRule ^core/ - [F,L]
+    RewriteRule ^secure/ - [F,L]
+</IfModule>
+
+# ── PHP (Hostinger shared hosting) ─────────────────────────────────
+<IfModule mod_php.c>
+    php_value upload_max_filesize 64M
+    php_value post_max_size 64M
+    php_value max_execution_time 120
+</IfModule>
