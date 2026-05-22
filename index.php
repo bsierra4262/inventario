@@ -6,6 +6,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+// Router por rol: si el usuario tiene sesión de superadmin, su lugar es el panel SaaS, no el inventario.
+require_once __DIR__ . '/core/config/platform.php';
+if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
+    header('Location: /dashboard/dashboard_superadmin.php');
+    exit;
+}
+
 require_once __DIR__ . '/backend/db.php';    // $conn + tn() del tenant activo
 require_once __DIR__ . '/logs/logger.php';   // log_event()
 require_once __DIR__ . '/backend/csrf.php';  // generateCsrfToken() — debe cargarse antes del output HTML
@@ -93,12 +100,42 @@ try {
     $offset = ($page - 1) * $per_page;
 
     // Consulta paginada
-    $listSql = "SELECT *, subcategoria 
-                FROM `{$productosTable}` 
-                WHERE archivado = 0 
+    $listSql = "SELECT *, subcategoria
+                FROM `{$productosTable}`
+                WHERE archivado = 0
                 ORDER BY {$sort_sql} {$order}
                 LIMIT {$per_page} OFFSET {$offset}";
     $result = $conn->query($listSql);
+
+    // -----------------------------
+    // KPIs del inventario
+    // -----------------------------
+    $kpi_total       = $totalRows;
+    $kpi_valor_usd   = 0.0;
+    $kpi_archivados  = 0;
+    $kpi_garantia_vence_30d = 0;
+    $kpi_assets_sin_asignar = 0;
+    try {
+        $r = $conn->query("SELECT COALESCE(SUM(valor_usd * cantidad), 0) AS v FROM `{$productosTable}` WHERE archivado = 0");
+        if ($r) { $kpi_valor_usd = (float)($r->fetch_assoc()['v'] ?? 0); }
+
+        $r = $conn->query("SELECT COUNT(*) AS c FROM `{$productosTable}` WHERE archivado = 1");
+        if ($r) { $kpi_archivados = (int)($r->fetch_assoc()['c'] ?? 0); }
+
+        $r = $conn->query("SELECT COUNT(*) AS c FROM `{$productosTable}`
+                           WHERE archivado = 0
+                             AND fecha_garantia IS NOT NULL
+                             AND fecha_garantia >= CURDATE()
+                             AND fecha_garantia <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+        if ($r) { $kpi_garantia_vence_30d = (int)($r->fetch_assoc()['c'] ?? 0); }
+
+        $r = $conn->query("SELECT COUNT(*) AS c FROM `{$productosTable}`
+                           WHERE archivado = 0
+                             AND (asignado_a IS NULL OR asignado_a = '')");
+        if ($r) { $kpi_assets_sin_asignar = (int)($r->fetch_assoc()['c'] ?? 0); }
+    } catch (Throwable $eKpi) {
+        log_event("index.php", "WARN", "No se pudieron calcular KPIs: " . $eKpi->getMessage(), "app");
+    }
 
 } catch (Throwable $e) {
     log_event("sistema", "ERROR", "Error en index.php: " . $e->getMessage(), "app");
@@ -628,6 +665,38 @@ document.addEventListener('click', function(e){
 <!-- Lista de Activos -->
 <div class="tab-content" id="myTabContent">
   <div class="tab-pane fade show active" id="ver-inventario" role="tabpanel">
+
+    <!-- KPIs del inventario -->
+    <div class="ih-stats" style="margin-top:24px;margin-bottom:24px;">
+      <div class="ih-stat">
+        <div class="ih-stat__label">Total activos <i class="bi bi-box-seam"></i></div>
+        <div class="ih-stat__value"><?= number_format((int)$kpi_total, 0, ',', '.') ?></div>
+        <div class="ih-stat__delta">En operación (no archivados)</div>
+      </div>
+      <div class="ih-stat ih-stat--green">
+        <div class="ih-stat__label">Valor del inventario <i class="bi bi-currency-dollar"></i></div>
+        <div class="ih-stat__value">USD <?= number_format((float)$kpi_valor_usd, 0, ',', '.') ?></div>
+        <div class="ih-stat__delta">valor_usd × cantidad</div>
+      </div>
+      <div class="ih-stat ih-stat--warn">
+        <div class="ih-stat__label">Garantía vence <i class="bi bi-shield-exclamation"></i></div>
+        <div class="ih-stat__value"><?= (int)$kpi_garantia_vence_30d ?></div>
+        <div class="ih-stat__delta">Próximos 30 días</div>
+      </div>
+      <div class="ih-stat ih-stat--info">
+        <div class="ih-stat__label">Sin asignar <i class="bi bi-person-dash"></i></div>
+        <div class="ih-stat__value"><?= (int)$kpi_assets_sin_asignar ?></div>
+        <div class="ih-stat__delta">Activos disponibles</div>
+      </div>
+      <div class="ih-stat ih-stat--danger">
+        <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
+        <div class="ih-stat__value"><?= (int)$kpi_archivados ?></div>
+        <div class="ih-stat__delta">
+          <a href="reportes.php?tab=archivados" style="color:inherit;font-weight:600;text-decoration:underline">Ver detalle →</a>
+        </div>
+      </div>
+    </div>
+
     <div class="d-flex justify-content-between align-items-center flex-wrap mt-4 mb-3">
       <h3 class="fw-bold text-uppercase" style="color: #4E247A; font-family: 'Saira', sans-serif;">Lista de Activos</h3>
       <div class="d-flex flex-wrap gap-2">
