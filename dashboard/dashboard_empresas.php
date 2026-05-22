@@ -8,6 +8,10 @@ require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
 superadmin_require_login();
+if (!platform_can('company.create')) {
+    header('Location: /dashboard/dashboard_resumen.php');
+    exit;
+}
 csrf_start();
 
 $err = '';
@@ -22,10 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $provider    = in_array($_POST['provider'] ?? '', PROVIDERS, true) ? $_POST['provider'] : 'google';
     $tenant_mode = (($_POST['tenant_mode'] ?? '') === 'external') ? 'external' : 'prefix';
 
+    // Google fields
     $clientId     = trim($_POST['client_id']     ?? '');
     $clientSecret = trim($_POST['client_secret'] ?? '');
     $redirectUri  = trim($_POST['redirect_uri']  ?? '');
+    // Microsoft fields (nombres propios para evitar colisión)
     $tenantIdMs   = trim($_POST['ms_tenant_id']  ?? '');
+    $msClientId   = trim($_POST['ms_client_id']  ?? '');
+    $msClientSecret = trim($_POST['ms_client_secret'] ?? '');
 
     $dbHost = trim($_POST['db_host'] ?? 'localhost');
     $dbName = trim($_POST['db_name'] ?? '');
@@ -35,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subdomain  = trim((string)($_POST['subdomain']  ?? ''));
     $loginUrl   = trim((string)($_POST['login_url']  ?? ''));
     if ($loginUrl === '' && $subdomain !== '') {
-        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/auth/login.php';
+        $loginUrl = 'https://intellihelp.tech/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
     }
 
     $adminEmail = trim($_POST['admin_email']    ?? '');
@@ -74,7 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $usrTable = $pf . 'users';
 
             // Solo guardar credenciales si las ingresaron (son opcionales)
-            if ($clientId !== '' && $clientSecret !== '') {
+            $hasCredentials = $provider === 'google'
+                ? ($clientId !== '' && $clientSecret !== '')
+                : ($msClientId !== '' && $msClientSecret !== '');
+
+            if ($hasCredentials) {
                 if ($provider === 'google') {
                     $ccStmt = $tconn->prepare(
                         "INSERT INTO `$ccTable` (provider, config_key, config_value) VALUES
@@ -90,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          ('microsoft', 'tenant_id', ?), ('microsoft', 'client_id', ?), ('microsoft', 'client_secret', ?)
                          ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)"
                     );
-                    $ccStmt->bind_param('sss', $tenantIdMs, $clientId, $clientSecret);
+                    $ccStmt->bind_param('sss', $tenantIdMs, $msClientId, $msClientSecret);
                     $ccStmt->execute();
                     $ccStmt->close();
                 }
@@ -231,13 +243,13 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-col-4">
                 <div class="ih-field">
                   <label class="ih-field__label">Client ID (App ID)</label>
-                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($_POST['client_id'] ?? '') ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                  <input class="ih-input" name="ms_client_id" value="<?= htmlspecialchars($_POST['ms_client_id'] ?? '') ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
                 </div>
               </div>
               <div class="ih-col-4">
                 <div class="ih-field">
                   <label class="ih-field__label">Client Secret</label>
-                  <input class="ih-input" name="client_secret" type="password" placeholder="Secret de Azure AD">
+                  <input class="ih-input" name="ms_client_secret" type="password" placeholder="Secret de Azure AD">
                 </div>
               </div>
             </div>
@@ -291,8 +303,8 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">URL completa de login</label>
-                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://cliente.intellihelp.tech/login.php">
-                <div class="ih-field__hint">Si lo dejás vacío, se autocompleta con <code>https://[subdominio].intellihelp.tech/login.php</code>.</div>
+                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://intellihelp.tech/auth/login.php?company=cliente">
+                <div class="ih-field__hint">Si lo dejás vacío y pusiste un subdominio, se autocompleta como <code>https://intellihelp.tech/auth/login.php?company=[subdominio]</code>.</div>
               </div>
             </div>
           </div>

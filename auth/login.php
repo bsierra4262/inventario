@@ -27,7 +27,7 @@ $companies = [];
 $masterDbError = '';
 try {
     $master = new MasterDB();
-    $stmt = $master->pquery('SELECT id, nombre FROM companies WHERE active = 1 ORDER BY nombre ASC');
+    $stmt = $master->pquery('SELECT id, nombre, subdomain FROM companies WHERE active = 1 ORDER BY nombre ASC');
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) { $companies[] = $row; }
 } catch (Throwable $e) {
@@ -81,6 +81,17 @@ if (empty($companies)) {
     <?php
     require __DIR__ . '/../includes/layout/foot.php';
     exit;
+}
+
+// Pre-seleccionar empresa desde ?company=slug (sin subdominio DNS)
+if (!empty($_GET['company']) && empty($_SESSION['company_id'])) {
+    $slug = preg_replace('/[^a-z0-9\-_]/i', '', (string)$_GET['company']);
+    foreach ($companies as $c) {
+        if ((string)$c['id'] === $slug || ($c['subdomain'] ?? '') === $slug) {
+            $_SESSION['company_id'] = (int)$c['id'];
+            break;
+        }
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['company_id']) && ctype_digit($_POST['company_id'])) {

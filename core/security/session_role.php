@@ -37,6 +37,16 @@ function superadmin_require_login(): void {
         header('Location: /auth/superadmin_login.php');
         exit;
     }
+    // Lazy-load del rol para sesiones anteriores al sistema de roles
+    if (empty($_SESSION['superadmin_role']) && !empty($_SESSION['superadmin_user_id'])) {
+        try {
+            $db = new MasterDB();
+            $st = $db->pquery('SELECT role FROM users_platform WHERE id = ? LIMIT 1', 'i', [(int)$_SESSION['superadmin_user_id']]);
+            $row = $st->get_result()->fetch_assoc();
+            $st->close();
+            if ($row) { $_SESSION['superadmin_role'] = (string)$row['role']; }
+        } catch (Throwable) {}
+    }
     // Forzar configuración de SSO solo para superadmin
     if (!empty($_SESSION['pending_sso_setup']) && ($_SESSION['superadmin_role'] ?? '') === 'superadmin') {
         $currentPage = basename($_SERVER['PHP_SELF'] ?? '');

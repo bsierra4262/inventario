@@ -5,6 +5,10 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 
 superadmin_require_login();
+if (!platform_can('logs.view')) {
+    header('Location: /dashboard/dashboard_resumen.php');
+    exit;
+}
 
 $logFile    = LOG_PATH;
 $rows       = [];

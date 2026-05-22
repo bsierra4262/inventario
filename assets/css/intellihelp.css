@@ -272,7 +272,7 @@ img { max-width: 100%; height: auto; display: block; }
   letter-spacing: -.5px;
   flex-shrink: 0;
 }
-.ih-sidebar__logo::after { content: ''; width: 8px; height: 8px; background: var(--ih-green); border-radius: 50%; margin-left: 2px; align-self: flex-end; margin-bottom: 6px; }
+.ih-sidebar__logo::after { display: none; }
 .ih-sidebar__brand-text {
   display: flex; flex-direction: column; min-width: 0;
 }
@@ -679,10 +679,7 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 800; font-size: 22px; letter-spacing: -1px;
   position: relative;
 }
-.ih-auth__logo::after {
-  content: ''; position: absolute; right: 6px; bottom: 6px;
-  width: 10px; height: 10px; background: var(--ih-green); border-radius: 50%;
-}
+.ih-auth__logo::after { display: none; }
 .ih-auth__brand-text { text-align: left; }
 .ih-auth__brand-text strong { display: block; font-size: var(--ih-text-md); color: var(--ih-gray-900); }
 .ih-auth__brand-text span   { font-size: 11px; color: var(--ih-gray-500); text-transform: uppercase; letter-spacing: 1px; }

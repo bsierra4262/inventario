@@ -10,7 +10,7 @@ function ih_sa_active(string $key, string $current): string {
 }
 ?>
 <aside class="ih-sidebar ih-app__sidebar">
-  <a href="/dashboard/dashboard_superadmin.php" class="ih-sidebar__brand">
+  <a href="/dashboard/dashboard_resumen.php" class="ih-sidebar__brand">
     <span class="ih-sidebar__logo"><?= platform_logo_html() ?></span>
     <span class="ih-sidebar__brand-text">
       <strong>Asset Vault</strong>
@@ -22,15 +22,25 @@ function ih_sa_active(string $key, string $current): string {
     <div class="ih-sidebar__group">
       <div class="ih-sidebar__group-title">Plataforma</div>
       <a href="/dashboard/dashboard_resumen.php"    class="ih-sidebar__link<?= ih_sa_active('home',     $page_section) ?>"><i class="bi bi-speedometer2"></i> Resumen</a>
+      <?php if (platform_can('company.view')): ?>
       <a href="/dashboard/dashboard_superadmin.php" class="ih-sidebar__link<?= ih_sa_active('empresas', $page_section) ?>"><i class="bi bi-buildings"></i>     Empresas</a>
+      <?php endif; ?>
+      <?php if (platform_can('company.create')): ?>
       <a href="/dashboard/dashboard_empresas.php"   class="ih-sidebar__link<?= ih_sa_active('nueva',    $page_section) ?>"><i class="bi bi-plus-square"></i>  Nueva empresa</a>
+      <?php endif; ?>
     </div>
 
     <div class="ih-sidebar__group">
       <div class="ih-sidebar__group-title">Administración</div>
+      <?php if (platform_can('platform_user.manage')): ?>
       <a href="/dashboard/superadmin_usuarios.php"      class="ih-sidebar__link<?= ih_sa_active('users',       $page_section) ?>"><i class="bi bi-people"></i>      Usuarios plataforma</a>
+      <?php endif; ?>
+      <?php if (platform_can('integrations.manage')): ?>
       <a href="/dashboard/superadmin_integraciones.php" class="ih-sidebar__link<?= ih_sa_active('integrations',$page_section) ?>"><i class="bi bi-plug"></i>        Integraciones</a>
+      <?php endif; ?>
+      <?php if (platform_can('logs.view')): ?>
       <a href="/dashboard/superadmin_logs.php"          class="ih-sidebar__link<?= ih_sa_active('logs',        $page_section) ?>"><i class="bi bi-list-ul"></i>     Auditoría</a>
+      <?php endif; ?>
     </div>
 
     <div class="ih-sidebar__group">

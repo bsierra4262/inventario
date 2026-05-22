@@ -8,6 +8,10 @@ require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
 superadmin_require_login();
+if (!platform_can('company.edit')) {
+    header('Location: /dashboard/dashboard_resumen.php');
+    exit;
+}
 csrf_start();
 
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
@@ -56,10 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $provider = in_array($_POST['provider'] ?? '', PROVIDERS, true) ? $_POST['provider'] : 'google';
     $active   = isset($_POST['active']) ? 1 : 0;
 
+    // Google fields
     $clientId     = trim($_POST['client_id']     ?? '');
     $clientSecret = trim($_POST['client_secret'] ?? '');
     $redirectUri  = trim($_POST['redirect_uri']  ?? '');
-    $tenantIdMs   = trim($_POST['ms_tenant_id']  ?? '');
+    // Microsoft fields (nombres propios para evitar colisión con Google)
+    $tenantIdMs      = trim($_POST['ms_tenant_id']     ?? '');
+    $msClientId      = trim($_POST['ms_client_id']     ?? '');
+    $msClientSecret  = trim($_POST['ms_client_secret'] ?? '');
 
     $dbHost = trim($_POST['db_host'] ?? $company['db_host'] ?? 'localhost');
     $dbName = trim($_POST['db_name'] ?? $company['db_name'] ?? '');
@@ -69,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subdomain = trim((string)($_POST['subdomain'] ?? ''));
     $loginUrl  = trim((string)($_POST['login_url'] ?? ''));
     if ($loginUrl === '' && $subdomain !== '') {
-        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/login.php';
+        $loginUrl = 'https://intellihelp.tech/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
     }
 
     if ($nombre === '') { $err = 'El nombre es obligatorio.'; }
@@ -90,7 +98,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
 
-            if ($clientId !== '' || $clientSecret !== '') {
+            // Usar los campos correctos según proveedor (nombres separados en el form)
+            $hasCredentials = $provider === 'google'
+                ? ($clientId !== '' || $clientSecret !== '')
+                : ($msClientId !== '' || $msClientSecret !== '');
+
+            if ($hasCredentials) {
                 try {
                     ['conn' => $tconn2, 'prefix' => $pf2] = tenant_conn_by_company($id);
                     $ccTable2 = $pf2 . 'cloud_config';
@@ -104,9 +117,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         $pairs = [
                             ['microsoft', 'tenant_id', $tenantIdMs],
-                            ['microsoft', 'client_id', $clientId],
+                            ['microsoft', 'client_id', $msClientId],
                         ];
-                        if ($clientSecret !== '') $pairs[] = ['microsoft', 'client_secret', $clientSecret];
+                        if ($msClientSecret !== '') $pairs[] = ['microsoft', 'client_secret', $msClientSecret];
                     }
 
                     foreach ($pairs as [$prov, $key, $val]) {
@@ -237,7 +250,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">URL completa de login</label>
-                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($company['login_url'] ?? '') ?>" placeholder="https://cliente.intellihelp.tech/login.php">
+                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($company['login_url'] ?? '') ?>" placeholder="https://intellihelp.tech/auth/login.php?company=cliente">
               </div>
             </div>
           </div>
@@ -269,23 +282,24 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <div id="cred-microsoft" style="display:none;">
             <div class="ih-section-title">Credenciales OAuth — Microsoft</div>
+            <div class="ih-field__hint ih-mb-2">Dejá vacío lo que no quieras modificar.</div>
             <div class="ih-grid">
               <div class="ih-col-4">
                 <div class="ih-field">
-                  <label class="ih-field__label">Tenant ID</label>
-                  <input class="ih-input" name="ms_tenant_id" value="<?= htmlspecialchars($microsoftCC['tenant_id'] ?? '') ?>">
+                  <label class="ih-field__label">Tenant ID (Directory ID)</label>
+                  <input class="ih-input" name="ms_tenant_id" value="<?= htmlspecialchars($microsoftCC['tenant_id'] ?? '') ?>" placeholder="common ó GUID">
                 </div>
               </div>
               <div class="ih-col-4">
                 <div class="ih-field">
-                  <label class="ih-field__label">Client ID</label>
-                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($microsoftCC['client_id'] ?? '') ?>">
+                  <label class="ih-field__label">Client ID (App ID)</label>
+                  <input class="ih-input" name="ms_client_id" value="<?= htmlspecialchars($microsoftCC['client_id'] ?? '') ?>" placeholder="xxxxxxxx-xxxx-...">
                 </div>
               </div>
               <div class="ih-col-4">
                 <div class="ih-field">
                   <label class="ih-field__label">Client Secret</label>
-                  <input class="ih-input" name="client_secret" type="password" placeholder="(sin cambios si está vacío)">
+                  <input class="ih-input" name="ms_client_secret" type="password" placeholder="(sin cambios si está vacío)">
                 </div>
               </div>
             </div>

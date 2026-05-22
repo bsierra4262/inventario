@@ -7,6 +7,10 @@ require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 
 superadmin_require_login();
+if (!platform_can('integrations.manage')) {
+    header('Location: /dashboard/dashboard_resumen.php');
+    exit;
+}
 csrf_start();
 
 $db  = new MasterDB();
