@@ -6,12 +6,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-require_once __DIR__ . '/backend/db.php';          // $conn + tn() del tenant activo
-require_once __DIR__ . '/logs/logger.php';         // log_event()
-
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+require_once __DIR__ . '/backend/db.php';    // $conn + tn() del tenant activo
+require_once __DIR__ . '/logs/logger.php';   // log_event()
+require_once __DIR__ . '/backend/csrf.php';  // generateCsrfToken() — debe cargarse antes del output HTML
 
 try {
     // Aseguramos charset correcto (por si acaso)
@@ -104,15 +101,13 @@ try {
     $result = $conn->query($listSql);
 
 } catch (Throwable $e) {
-    // Cualquier error de DB se registra y se muestra mensaje genérico
     log_event("sistema", "ERROR", "Error en index.php: " . $e->getMessage(), "app");
-    error_log("Error en index.php: " . $e->getMessage());
-    echo "<script>
-            alert('Error de base de datos. El administrador debe revisar el log.');
-            window.location='login.php';
-          </script>";
+    echo "<script>alert('Error de base de datos. El administrador debe revisar el log.');window.location='login.php';</script>";
     exit();
 }
+
+// Token CSRF para exportar CSV — generado antes de cualquier output HTML
+$csrf_export = generateCsrfToken('export_inventario');
 
 // -----------------------------
 // Mapa de iconos por subcategoría
@@ -582,10 +577,6 @@ $iconMap = [
     <div class="d-flex justify-content-between align-items-center flex-wrap mt-4 mb-3">
       <h3 class="fw-bold text-uppercase" style="color: #4E247A; font-family: 'Saira', sans-serif;">Lista de Activos</h3>
       <div class="d-flex flex-wrap gap-2">
-        <?php
-          require_once __DIR__ . '/backend/csrf.php';
-          $csrf_export = generateCsrfToken('export_inventario');
-        ?>
         <a href="backend/export_csv.php?csrf_token=<?= urlencode($csrf_export) ?>" class="btn btn-sm" style="background-color: #86B329; color: white;"><i class="bi bi-file-earmark-arrow-down"></i> Exportar CSV</a>
         <form action="backend/import_csv.php" method="POST" enctype="multipart/form-data" class="d-inline">
           <label class="btn btn-sm btn-outline-secondary mb-0">

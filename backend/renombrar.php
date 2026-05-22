@@ -23,29 +23,53 @@ csrf_or_fail('confirmar_accion', true); // true = un solo uso del token
 $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
 
 // =========================
-// Autenticación Google Drive
-// (SharePoint/OneDrive se puede acoplar con la misma estructura más adelante)
+// Autenticación Google Drive — credenciales desde DB
 // =========================
-$client = new Google\Client();
-$client->setAuthConfig(__DIR__ . '/client_secret.json');
-$client->addScope(Google\Service\Drive::DRIVE);
-$client->setAccessType('offline');
+$googleClientId     = '';
+$googleClientSecret = '';
+$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
 
-if (isset($_SESSION['access_token'])) {
-    $client->setAccessToken($_SESSION['access_token']);
-    if ($client->isAccessTokenExpired()) {
-        $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-        $_SESSION['access_token'] = $client->getAccessToken();
+try {
+    $cfgTable = tn('cloud_config');
+    $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+    if ($cfgRes) {
+        while ($cfgRow = $cfgRes->fetch_assoc()) {
+            match ($cfgRow['config_key']) {
+                'client_id'    => $googleClientId     = $cfgRow['config_value'],
+                'client_secret'=> $googleClientSecret = $cfgRow['config_value'],
+                'redirect_uri' => $googleRedirectUri  = $cfgRow['config_value'],
+                default        => null,
+            };
+        }
     }
-} else {
-    log_event(
-        $user_id,
-        'ERROR',
-        'Acceso denegado: no hay token de Google.',
-        'transaccion'
-    );
+} catch (Throwable $e) {
+    log_event($user_id, 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
+}
+
+if (!$googleClientId || !$googleClientSecret || !isset($_SESSION['access_token'])) {
+    log_event($user_id, 'ERROR', 'Sin credenciales Google o sin token de sesión en renombrar.php', 'transaccion');
     header('Location: resultado.php?status=error&msg=' . urlencode('Error de autenticación. Por favor, inicia sesión de nuevo.'));
     exit();
+}
+
+$client = new Google\Client();
+$client->setClientId($googleClientId);
+$client->setClientSecret($googleClientSecret);
+$client->setRedirectUri($googleRedirectUri);
+$client->addScope(Google\Service\Drive::DRIVE);
+$client->setAccessType('offline');
+$client->setAccessToken($_SESSION['access_token']);
+
+if ($client->isAccessTokenExpired()) {
+    $refresh = $client->getRefreshToken();
+    if ($refresh) {
+        $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+        $_SESSION['access_token'] = $newToken;
+    } else {
+        unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
+        header('Location: ../login.php');
+        exit();
+    }
 }
 
 $service = new Google\Service\Drive($client);
@@ -125,7 +149,7 @@ if (!$formData) {
 // =========================
 $stmt = $conn->prepare("
     SELECT servis_tag, carpeta_raiz_drive
-    FROM productos
+    FROM `" . tn('productos') . "`
     WHERE id = ?
 ");
 $stmt->bind_param('i', $productoId);
@@ -220,7 +244,7 @@ try {
     // REGISTRAR MOVIMIENTO EN producto_movimientos
     // =========================
     $stmt_mov = $conn->prepare("
-        INSERT INTO producto_movimientos (
+        INSERT INTO `" . tn('producto_movimientos') . "` (
             producto_id,
             accion,
             detalle_otros,

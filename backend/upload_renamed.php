@@ -1,80 +1,113 @@
 <?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/db.php';
-    require_once __DIR__ . '/../logs/logger.php';
-    session_start();
+declare(strict_types=1);
 
-    $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
+if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-    if (!isset($_POST['new_name'], $_FILES['archivo']['tmp_name'], $_POST['folder_id'])) {
-        log_event($user_id, "ERROR", "Datos insuficientes para renombrar y subir el archivo", "transaccion");
-        header('Location: resultado.php?status=error&msg=' . urlencode('Error: Datos insuficientes para renombrar y subir el archivo.'));
-        exit();
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/../logs/logger.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    log_event('usuario_desconocido', 'ERROR', 'Solicitud inválida a upload_renamed', 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode('Solicitud inválida.'));
+    exit();
+}
+
+$user_id = (int)($_SESSION['user_id'] ?? 0);
+if (!$user_id) {
+    header('Location: ../login.php');
+    exit();
+}
+
+if (!isset($_POST['new_name'], $_FILES['archivo']['tmp_name'], $_POST['folder_id'])) {
+    log_event((string)$user_id, 'ERROR', 'Datos insuficientes para renombrar y subir el archivo', 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode('Error: Datos insuficientes para renombrar y subir el archivo.'));
+    exit();
+}
+
+$newName  = htmlspecialchars((string)$_POST['new_name'], ENT_QUOTES, 'UTF-8');
+$tempPath = $_FILES['archivo']['tmp_name'];
+$folderId = htmlspecialchars((string)$_POST['folder_id'], ENT_QUOTES, 'UTF-8');
+
+// Credenciales Google desde DB
+$googleClientId     = '';
+$googleClientSecret = '';
+$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+
+try {
+    $cfgTable = tn('cloud_config');
+    $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+    if ($cfgRes) {
+        while ($cfgRow = $cfgRes->fetch_assoc()) {
+            match ($cfgRow['config_key']) {
+                'client_id'    => $googleClientId     = $cfgRow['config_value'],
+                'client_secret'=> $googleClientSecret = $cfgRow['config_value'],
+                'redirect_uri' => $googleRedirectUri  = $cfgRow['config_value'],
+                default        => null,
+            };
+        }
     }
+} catch (Throwable $e) {
+    log_event((string)$user_id, 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
+}
 
-    $newName = htmlspecialchars($_POST['new_name']);
-    $tempPath = $_FILES['archivo']['tmp_name'];
-    $folderId = htmlspecialchars($_POST['folder_id']);
+if (!$googleClientId || !$googleClientSecret || !isset($_SESSION['access_token'])) {
+    log_event((string)$user_id, 'ERROR', 'Sin credenciales Google o sin token de sesión en upload_renamed.php', 'transaccion');
+    header('Location: ../login.php');
+    exit();
+}
 
-    $client = new Google\Client();
-    $client->setAuthConfig(__DIR__ . '/client_secret.json');
-    $client->addScope(Google\Service\Drive::DRIVE);
-    $client->setAccessType('offline');
+$client = new Google\Client();
+$client->setClientId($googleClientId);
+$client->setClientSecret($googleClientSecret);
+$client->setRedirectUri($googleRedirectUri);
+$client->addScope(Google\Service\Drive::DRIVE);
+$client->setAccessType('offline');
+$client->setAccessToken($_SESSION['access_token']);
 
-    if (!isset($_SESSION['access_token'])) {
-        log_event($user_id, "ERROR", "Intento de subir sin autenticación", "transaccion");
+if ($client->isAccessTokenExpired()) {
+    $refresh = $client->getRefreshToken();
+    if ($refresh) {
+        $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+        $_SESSION['access_token'] = $newToken;
+    } else {
+        unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
         header('Location: ../login.php');
         exit();
     }
+}
 
-    $client->setAccessToken($_SESSION['access_token']);
+$service = new Google\Service\Drive($client);
 
-    if ($client->isAccessTokenExpired()) {
-        $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-        $_SESSION['access_token'] = $client->getAccessToken();
+if (!file_exists($tempPath) || filesize($tempPath) === 0) {
+    log_event((string)$user_id, 'ERROR', 'Archivo no existe o está vacío en upload_renamed', 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode('Error: El archivo no existe o está vacío.'));
+    exit();
+}
+
+try {
+    $fileMetadata = new Google\Service\Drive\DriveFile([
+        'name'    => $newName,
+        'parents' => [$folderId],
+    ]);
+    $content = file_get_contents($tempPath);
+    if ($content === false) {
+        throw new Exception('Error al leer el contenido del archivo.');
     }
 
-    $service = new Google\Service\Drive($client);
+    $service->files->create($fileMetadata, [
+        'data'       => $content,
+        'mimeType'   => mime_content_type($tempPath) ?: 'application/octet-stream',
+        'uploadType' => 'multipart',
+        'fields'     => 'id',
+    ]);
 
-    if (!file_exists($tempPath) || filesize($tempPath) === 0) {
-        log_event($user_id, "ERROR", "Archivo no existe o está vacío en upload_renamed", "transaccion");
-        header('Location: resultado.php?status=error&msg=' . urlencode('Error: El archivo no existe o está vacío.'));
-        exit();
-    }
+    log_event((string)$user_id, 'SUBIR RENOMBRADO', "Archivo '$newName' subido y renombrado correctamente en Drive", 'transaccion');
+    header('Location: resultado.php?status=success&msg=' . urlencode('Archivo subido y renombrado correctamente.'));
+    exit();
 
-    try {
-        $fileMetadata = new Google\Service\Drive\DriveFile([
-            'name' => $newName,
-            'parents' => [$folderId]
-        ]);
-        $content = file_get_contents($tempPath);
-
-        if ($content === false) {
-            throw new Exception('Error al leer el contenido del archivo.');
-        }
-
-        $service->files->create(
-            $fileMetadata,
-            [
-                'data' => $content,
-                'mimeType' => mime_content_type($tempPath) ?: 'application/octet-stream',
-                'uploadType' => 'multipart',
-                'fields' => 'id'
-            ]
-        );
-
-        log_event($user_id, "SUBIR RENOMBRADO", "Archivo '$newName' subido y renombrado correctamente en Drive", "transaccion");
-        header('Location: resultado.php?status=success&msg=' . urlencode('Archivo sobrescrito correctamente.'));
-        exit();
-
-    } catch (Exception $e) {
-        log_event($user_id, "ERROR", "Error al sobrescribir archivo: " . $e->getMessage(), "transaccion");
-        header('Location: resultado.php?status=error&msg=' . urlencode('Error al sobrescribir archivo: ' . $e->getMessage()));
-        exit();
-    }
-} else {
-    log_event('usuario_desconocido', "ERROR", "Solicitud inválida a upload_renamed", "transaccion");
-    header('Location: resultado.php?status=error&msg=' . urlencode('Solicitud inválida.'));
+} catch (Throwable $e) {
+    log_event((string)$user_id, 'ERROR', 'Error al subir archivo renombrado: ' . $e->getMessage(), 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode('Error al subir archivo: ' . $e->getMessage()));
     exit();
 }
