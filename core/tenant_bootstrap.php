@@ -28,8 +28,9 @@ function resolve_company_id(): int {
     $rs = $res->get_result();
     while($r = $rs->fetch_assoc()){ $ids[] = (int)$r['id']; }
     if(count($ids) === 0){
-        http_response_code(500);
-        die('No hay empresas cargadas en la plataforma.');
+        // Sin empresas → redirigir a instalación
+        header('Location: /install.php');
+        exit;
     }
     if(count($ids) === 1){
         $_SESSION['company_id'] = $ids[0];

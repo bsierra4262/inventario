@@ -555,7 +555,14 @@ $iconMap = [
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="agregar-tab" data-bs-toggle="tab" data-bs-target="#agregar-producto" type="button" role="tab">Agregar Activo</button>
         </li>
-        <li class="nav-item ms-auto" role="presentation" style="margin-left:auto !important;">
+        <li class="nav-item ms-auto d-flex gap-2 align-items-center" role="presentation" style="margin-left:auto !important;">
+        <?php if (($user['role'] ?? '') === 'admin'): ?>
+        <a class="nav-link d-flex align-items-center gap-2"
+           href="usuarios.php"
+           style="background: #fff; color: #4E247A; border: 1.5px solid #4E247A; border-radius: 6px; font-weight: 600; min-width:120px; justify-content: center;">
+            <i class="bi bi-people"></i>
+            Usuarios</a>
+        <?php endif; ?>
         <a class="nav-link d-flex align-items-center gap-2"
            href="reportes.php"
            style="background: #fff; color: #663399; border: 1.5px solid #86B329; border-radius: 6px; font-weight: 600; min-width:120px; justify-content: center;">

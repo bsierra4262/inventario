@@ -4,8 +4,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-include __DIR__ . '/backend/db.php';  // Usar ruta relativa para incluir la configuración de la base de datos
-require_once __DIR__ . '/logs/logger.php';  // Incluir el logger para auditoría
+// register.php es un legado. El alta de usuarios ahora se hace desde usuarios.php (admin).
+// Por seguridad, solo admins logueados pueden acceder.
+if (empty($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+include __DIR__ . '/backend/db.php';
+require_once __DIR__ . '/logs/logger.php';
+
+// Verificar rol admin
+$_chkStmt = $conn->prepare("SELECT role FROM " . tn('users') . " WHERE id = ?");
+$_chkId = (int)$_SESSION['user_id'];
+$_chkStmt->bind_param('i', $_chkId);
+$_chkStmt->execute();
+$_chkUser = $_chkStmt->get_result()->fetch_assoc();
+$_chkStmt->close();
+
+if (!$_chkUser || $_chkUser['role'] !== 'admin') {
+    header('Location: index.php');
+    exit();
+}
 
 // Manejo de la lógica de registro cuando el formulario se envía
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

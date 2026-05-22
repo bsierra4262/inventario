@@ -100,9 +100,14 @@ try {
 }
 ?>
 
+    <div class='alert alert-info mt-3'>
+        ✅ <strong>Reset completo.</strong> Redirigiendo a la instalación en 3 segundos...
+    </div>
+
     </div>
   </div>
   <footer>© 2025 ITH - Herramienta de Reinicio de Tenant</footer>
 </div>
+<script>setTimeout(() => window.location.href = 'install.php', 3000);</script>
 </body>
 </html>

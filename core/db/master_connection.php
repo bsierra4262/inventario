@@ -8,7 +8,7 @@ class MasterDB {
         $this->conn = @new mysqli(MASTER_DB_HOST, MASTER_DB_USER, MASTER_DB_PASS, MASTER_DB_NAME);
         if($this->conn->connect_errno){
             platform_log('ERROR DB MASTER: '.$this->conn->connect_error);
-            die('No se puede conectar a la DB master');
+            throw new RuntimeException('No se puede conectar a la DB master: '.$this->conn->connect_error);
         }
         $this->conn->set_charset('utf8mb4');
     }

@@ -1,0 +1,26 @@
+# Instalación — no se commitea para no bloquear reinstalación en el servidor
+install.lock
+
+# Logs — se regeneran solos en el servidor
+logs/audit.log
+logs/*.log
+backend/debug.log
+*.log
+
+# Credenciales Google OAuth — NUNCA en git
+auth/credentials.json
+
+# Archivos de entorno locales
+.env
+.env.local
+
+# Claude Code (config local)
+.claude/
+
+# Sistema operativo / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~

@@ -23,16 +23,23 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/core/config/platform.php';
 require_once __DIR__ . '/core/db/master_connection.php';
 
-$master = new MasterDB();
 $companies = [];
 try {
+    $master = new MasterDB();
     $stmt = $master->pquery('SELECT id, nombre FROM companies ORDER BY nombre ASC');
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) { $companies[] = $row; }
 } catch (Throwable $e) {
-    log_event('login.php', 'ERROR', 'No se pudieron leer empresas de MASTER: '.$e->getMessage(), 'auth');
-    http_response_code(500);
-    die('Error leyendo empresas desde la DB master.');
+    log_event('login.php', 'ERROR', 'Master DB no disponible o sin empresas: '.$e->getMessage(), 'auth');
+    // Sin master DB o sin tabla companies → redirigir a instalación
+    header('Location: install.php');
+    exit();
+}
+
+if (empty($companies)) {
+    // La tabla existe pero no hay empresas registradas → instalar
+    header('Location: install.php');
+    exit();
 }
 
 // Si viene selección por POST, fijamos el tenant elegido

@@ -23,10 +23,9 @@ class TenantDB {
         $mdb = new MasterDB();
         $stmt = $mdb->pquery('SELECT tenant_mode, db_host, db_name, db_user, db_pass FROM companies WHERE id=?', 'i', [$companyId]);
         $row  = $stmt->get_result()->fetch_assoc();
-        if(!$row){ 
+        if(!$row){
             platform_log("TenantDB: empresa $companyId no encontrada");
-            http_response_code(500);
-            die('Empresa no encontrada');
+            throw new RuntimeException('Empresa no encontrada en master DB');
         }
 
         $this->mode = ($row['tenant_mode'] === 'prefix') ? 'prefix' : 'external';
@@ -40,8 +39,7 @@ class TenantDB {
             $cx = @new mysqli($host, $user, $pass, $name);
             if($cx->connect_errno){
                 platform_log('TenantDB external connect error: '.$cx->connect_error);
-                http_response_code(500);
-                die('No se puede conectar a la base de datos del cliente');
+                throw new RuntimeException('No se puede conectar a la base de datos del tenant');
             }
             $cx->set_charset('utf8mb4');
             $this->conn = $cx;

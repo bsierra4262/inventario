@@ -39,6 +39,42 @@ if (file_exists(__DIR__ . '/install.lock')) {
     exit;
 }
 
+// -----------------------------------------
+// 3b) Bootstrap de la DB master (companies)
+// -----------------------------------------
+try {
+    require_once __DIR__ . '/core/config/platform.php';
+    require_once __DIR__ . '/core/db/master_connection.php';
+    $master = new MasterDB();
+
+    // Crear tabla companies si no existe
+    $master->conn->query("CREATE TABLE IF NOT EXISTS `companies` (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(200) NOT NULL,
+        tenant_mode ENUM('prefix','external') NOT NULL DEFAULT 'external',
+        db_host     VARCHAR(200) DEFAULT 'localhost',
+        db_name     VARCHAR(200) DEFAULT NULL,
+        db_user     VARCHAR(200) DEFAULT NULL,
+        db_pass     VARCHAR(255) DEFAULT NULL,
+        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Registrar empresa ITH si no existe
+    $chk = $master->conn->prepare("SELECT id FROM companies WHERE nombre = 'ITH' LIMIT 1");
+    $chk->execute();
+    if ($chk->get_result()->num_rows === 0) {
+        $ins = $master->conn->prepare(
+            "INSERT INTO companies (nombre, tenant_mode, db_host, db_name, db_user, db_pass)
+             VALUES ('ITH', 'external', 'localhost', 'u566451014_desarrollo', 'u566451014_desarrollo', '***SECRETO-PURGADO***')"
+        );
+        $ins->execute();
+    }
+    $chk->close();
+} catch (Throwable $e) {
+    // No es fatal — el tenant puede instalarse igual. Mostrar advertencia.
+    log_event("install.php", "ADVERTENCIA", "No se pudo configurar DB master: ".$e->getMessage(), "instalacion");
+}
+
 // Crear base si no existe
 $sql_create_db = "CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
 ?>
@@ -162,6 +198,9 @@ CREATE TABLE IF NOT EXISTS productos (
     detalle_otros       VARCHAR(255) NULL,
     subsoftware         VARCHAR(50) NULL,
     subsoftware_otros   VARCHAR(255) NULL,
+    fecha_compra        DATE NULL,
+    fecha_baja          DATE NULL,
+    fecha_carga         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                          ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -170,13 +209,12 @@ CREATE TABLE IF NOT EXISTS productos (
 "users" => "
 CREATE TABLE IF NOT EXISTS users (
     id          INT(11) AUTO_INCREMENT PRIMARY KEY,
-    username    VARCHAR(50)  NOT NULL,
+    username    VARCHAR(120) NOT NULL,
     password    VARCHAR(255) NOT NULL,
-    email       VARCHAR(255) NOT NULL,
+    email       VARCHAR(255) NULL,
     role        ENUM('admin','user') NOT NULL DEFAULT 'user',
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(username),
-    UNIQUE(email)
+    UNIQUE(username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ",
 
@@ -219,6 +257,8 @@ CREATE TABLE IF NOT EXISTS producto_movimientos (
     detalle_otros       VARCHAR(255) NULL,
     subsoftware         VARCHAR(50) NULL,
     subsoftware_otros   VARCHAR(255) NULL,
+    fecha_compra        DATE NULL,
+    fecha_baja          DATE NULL,
     fecha_modificacion  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                          ON UPDATE CURRENT_TIMESTAMP,
     INDEX(producto_id)
@@ -292,7 +332,9 @@ try {
          OLD.detalle_repuesto    <=> NEW.detalle_repuesto AND
          OLD.detalle_otros       <=> NEW.detalle_otros AND
          OLD.subsoftware         <=> NEW.subsoftware AND
-         OLD.subsoftware_otros   <=> NEW.subsoftware_otros
+         OLD.subsoftware_otros   <=> NEW.subsoftware_otros AND
+         OLD.fecha_compra        <=> NEW.fecha_compra AND
+         OLD.fecha_baja          <=> NEW.fecha_baja
       ) THEN
         INSERT INTO producto_movimientos (
           producto_id, accion, realizado_por,
@@ -307,7 +349,8 @@ try {
           bobina_categoria, bobina_ubicacion, bobina_longitud,
           conectores_tipo, detalle_conectores, cintas_generacion,
           detalle_repuesto, detalle_otros,
-          subsoftware, subsoftware_otros
+          subsoftware, subsoftware_otros,
+          fecha_compra, fecha_baja
         )
         VALUES (
           NEW.id,
@@ -324,7 +367,8 @@ try {
           NEW.bobina_categoria, NEW.bobina_ubicacion, NEW.bobina_longitud,
           NEW.conectores_tipo, NEW.detalle_conectores, NEW.cintas_generacion,
           NEW.detalle_repuesto, NEW.detalle_otros,
-          NEW.subsoftware, NEW.subsoftware_otros
+          NEW.subsoftware, NEW.subsoftware_otros,
+          NEW.fecha_compra, NEW.fecha_baja
         );
       END IF;
     END;

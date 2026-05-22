@@ -46,6 +46,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Insertar empresa en MASTER
             $master = new MasterDB();
 
+            // Crear tabla companies si no existe
+            $master->conn->query("CREATE TABLE IF NOT EXISTS `companies` (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                nombre      VARCHAR(200) NOT NULL,
+                tenant_mode ENUM('prefix','external') NOT NULL DEFAULT 'external',
+                db_host     VARCHAR(200) DEFAULT 'localhost',
+                db_name     VARCHAR(200) DEFAULT NULL,
+                db_user     VARCHAR(200) DEFAULT NULL,
+                db_pass     VARCHAR(255) DEFAULT NULL,
+                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
             // Verificar si ya existe la empresa
             $stmt = $master->pquery("SELECT id FROM companies WHERE nombre = ?", 's', [$empresa_nombre]);
             $exists = $stmt->get_result()->fetch_assoc();
