@@ -144,7 +144,9 @@ require __DIR__ . '/../includes/layout/head.php';
               <tr style="<?= $isActive ? '' : 'opacity:.55;' ?>">
                 <td><strong>#<?= (int)$c['id'] ?></strong></td>
                 <td>
-                  <div class="ih-fw-700"><?= htmlspecialchars($c['nombre']) ?></div>
+                  <a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" class="ih-fw-700" style="color:inherit;text-decoration:none">
+                    <?= htmlspecialchars($c['nombre']) ?>
+                  </a>
                   <?php if (!empty($c['razon_social'])): ?>
                     <div class="ih-text-xs ih-text-muted"><?= htmlspecialchars($c['razon_social']) ?></div>
                   <?php endif; ?>

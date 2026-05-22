@@ -259,9 +259,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-            log_event($user['email'], "LOGIN LOCAL", "Acceso exitoso IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
+            log_event($user['email'] ?? "id:{$user['id']}", "LOGIN LOCAL", "Acceso exitoso IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
-            if ($user['role'] === 'admin' && password_verify('admin', $user['password'])) {
+            // Verificar si debe cambiar contraseña obligatoriamente
+            $mustChange = false;
+            try {
+                $mcStmt = $conn->prepare("SELECT must_change_password FROM " . tn('users') . " WHERE id = ?");
+                $mcStmt->bind_param('i', (int)$user['id']);
+                $mcStmt->execute();
+                $mcRow = $mcStmt->get_result()->fetch_assoc();
+                $mcStmt->close();
+                $mustChange = !empty($mcRow['must_change_password']);
+            } catch (Throwable) {
+                // Columna no existe aún (tenant viejo) → no forzar
+            }
+
+            if ($mustChange) {
+                $_SESSION['force_password_change'] = true;
                 header('Location: change_password.php');
                 exit();
             }

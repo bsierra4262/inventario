@@ -97,9 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $adminHash = password_hash($adminPass, PASSWORD_DEFAULT);
             $usrStmt = $tconn->prepare(
-                "INSERT INTO `$usrTable` (username, password, email, role)
-                 VALUES (?, ?, ?, 'admin')
-                 ON DUPLICATE KEY UPDATE password = VALUES(password), email = VALUES(email)"
+                "INSERT INTO `$usrTable` (username, password, email, role, must_change_password)
+                 VALUES (?, ?, ?, 'admin', 1)
+                 ON DUPLICATE KEY UPDATE password = VALUES(password), email = VALUES(email), must_change_password = 1"
             );
             $adminUser = 'admin';
             $usrStmt->bind_param('sss', $adminUser, $adminHash, $adminEmail);

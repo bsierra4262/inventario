@@ -78,6 +78,15 @@ try {
 }
 
 // ============================================================
+// Guard: cambio de contraseña obligatorio (solo check de sesión)
+// ============================================================
+$_excluded_from_force = ['login.php', 'select_empresa.php', 'change_password.php', 'logout.php'];
+if (!in_array($current_file, $_excluded_from_force, true) && !empty($_SESSION['force_password_change'])) {
+    header('Location: /change_password.php');
+    exit();
+}
+
+// ============================================================
 // Verificación de estructura básica (fuera de install/login/select_empresa)
 // ============================================================
 if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
@@ -108,15 +117,13 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
         $conn->set_charset("utf8mb4");
         log_event("db.php", "APP", "Charset utf8mb4 aplicado (tenant)", "bootstrap");
 
-        // Migración silenciosa: expandir ENUM de roles si está en la versión vieja
-        // Antes: ENUM('admin','user') → Ahora: ENUM('admin','manager','user','viewer')
-        // Es idempotente: si ya está expandido, MySQL no protesta.
+        // Migraciones silenciosas idempotentes
         try {
             @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` ENUM('admin','manager','user','viewer') NOT NULL DEFAULT 'user'");
             @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1");
+            @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `must_change_password` TINYINT(1) NOT NULL DEFAULT 0");
         } catch (Throwable $eAlter) {
-            // Silencioso — si la versión de MySQL no soporta IF NOT EXISTS en ADD COLUMN,
-            // el segundo ALTER puede fallar. No es bloqueante.
+            // Silencioso
         }
 
     } catch (Throwable $e) {

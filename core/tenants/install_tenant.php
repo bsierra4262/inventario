@@ -36,13 +36,14 @@ function install_tenant_schema(int $companyId, string $mode, array $externalDb):
     // Roles soportados: admin (full), manager (CRUD activos + reportes),
     // user (ver/crear/editar), viewer (solo lectura).
     $sql[] = "CREATE TABLE IF NOT EXISTS `{$pf}users` (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        username    VARCHAR(120) NOT NULL,
-        password    VARCHAR(255) NOT NULL,
-        email       VARCHAR(255) UNIQUE DEFAULT NULL,
-        role        ENUM('admin','manager','user','viewer') NOT NULL DEFAULT 'user',
-        active      TINYINT(1) NOT NULL DEFAULT 1,
-        created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        id                   INT AUTO_INCREMENT PRIMARY KEY,
+        username             VARCHAR(120) NOT NULL,
+        password             VARCHAR(255) NOT NULL,
+        email                VARCHAR(255) UNIQUE DEFAULT NULL,
+        role                 ENUM('admin','manager','user','viewer') NOT NULL DEFAULT 'user',
+        active               TINYINT(1) NOT NULL DEFAULT 1,
+        must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+        created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uk_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 

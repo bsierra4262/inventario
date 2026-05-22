@@ -67,9 +67,10 @@ $csrf_token = $_SESSION['csrf_token'];
 // -----------------------------
 // POST: Cambiar contraseña
 // -----------------------------
+$isForced = !empty($_SESSION['force_password_change']);
 $msg_html = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validar CSRF
     $posted_token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($csrf_token, $posted_token)) {
         log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "CSRF token inválido", "auth");
@@ -78,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_password     = (string)($_POST['new_password'] ?? '');
         $confirm_password = (string)($_POST['confirm_password'] ?? '');
 
-        // Política mínima: 8+ caracteres, al menos una letra y un número
         $policy_ok = (strlen($new_password) >= 8)
                       && preg_match('/[A-Za-z]/', $new_password)
                       && preg_match('/[0-9]/', $new_password);
@@ -93,35 +93,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
-                $sql_update = "UPDATE `{$usersTable}` SET password = ? WHERE id = ?";
+                // Actualizar contraseña y limpiar flag
+                $sql_update = "UPDATE `{$usersTable}` SET password = ?, must_change_password = 0 WHERE id = ?";
                 $stmt_update = $conn->prepare($sql_update);
                 $stmt_update->bind_param('si', $hashed_password, $user_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
-                // Auditoría OK
                 log_event(
                     $user['email'] ?? ("UsuarioID:$user_id"),
                     "CAMBIO CONTRASEÑA",
-                    "Contraseña cambiada correctamente",
+                    $isForced ? "Contraseña obligatoria configurada" : "Contraseña cambiada correctamente",
                     "auth"
                 );
 
-                // Cerrar sesión COMPLETA (local, multiempresa y Google)
-                $accessToken = $_SESSION['access_token']['access_token'] ?? null;
-                if ($accessToken) {
-                    $revokeUrl = 'https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken);
-                    @file_get_contents($revokeUrl);
+                if ($isForced) {
+                    // Modo forzado: limpiar flag de sesión y continuar al inventario
+                    unset($_SESSION['force_password_change']);
+                    header('Location: index.php');
+                    exit;
                 }
 
-                // Limpiar sesión
+                // Modo voluntario: cerrar sesión completa y volver al login
+                $accessToken = $_SESSION['access_token']['access_token'] ?? null;
+                if ($accessToken) {
+                    @file_get_contents('https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken));
+                }
                 $_SESSION = [];
-                unset(
-                    $_SESSION['company_id'],
-                    $_SESSION['tenant'],
-                    $_SESSION['tenant_id'],
-                    $_SESSION['google_authenticated']
-                );
                 if (ini_get("session.use_cookies")) {
                     setcookie(session_name(), '', [
                         'expires'  => time() - 42000,
@@ -134,7 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 session_destroy();
 
-                // Aviso y redirect a login
                 echo '<script>
                     alert("Contraseña cambiada exitosamente. Por favor, iniciá sesión nuevamente.");
                     window.location.href = "login.php";
@@ -170,15 +167,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span>Asset Vault</span>
         </div>
       </div>
-      <h2 class="ih-auth__title">Cambiar contraseña</h2>
-      <p class="ih-auth__subtitle">Por seguridad, definí una contraseña personal</p>
+      <h2 class="ih-auth__title"><?= $isForced ? 'Contraseña obligatoria' : 'Cambiar contraseña' ?></h2>
+      <p class="ih-auth__subtitle"><?= $isForced ? 'Necesitás configurar tu contraseña antes de continuar' : 'Por seguridad, definí una contraseña personal' ?></p>
     </div>
 
     <div class="ih-auth__body">
 
+      <?php if ($isForced && empty($msg_html)): ?>
+        <div class="ih-alert ih-alert--warning" style="margin-bottom:1rem">
+          <i class="bi bi-key-fill"></i>
+          <div>Tu cuenta requiere una contraseña nueva. Completá el formulario para acceder al inventario.</div>
+        </div>
+      <?php endif; ?>
+
       <?php
         if (!empty($msg_html)) {
-          // Adaptar HTML legacy de alertas a estilo ih-alert
           $clean = str_replace(
             ['<div class="alert alert-danger">', '<div class="alert alert-success">'],
             ['<div class="ih-alert ih-alert--danger"><i class="bi bi-exclamation-triangle-fill"></i><div>', '<div class="ih-alert ih-alert--success"><i class="bi bi-check-circle-fill"></i><div>'],
@@ -211,7 +214,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
 
       <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
-        Después de cambiarla se cerrará la sesión y deberás volver a ingresar.
+        <?= $isForced
+          ? 'Una vez configurada vas a acceder directo al inventario.'
+          : 'Después de cambiarla se cerrará la sesión y deberás volver a ingresar.'
+        ?>
       </p>
     </div>
 
