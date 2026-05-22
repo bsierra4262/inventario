@@ -19,7 +19,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // Ya autenticado
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
-    header('Location: /dashboard/dashboard_superadmin.php');
+    header('Location: /dashboard/dashboard_resumen.php');
     exit;
 }
 
@@ -99,22 +99,23 @@ try {
             sa_cb_error("Solo cuentas @{$hd} pueden acceder al panel SuperAdmin. Usaste: {$email}");
         }
 
-        $st = $db->conn->prepare("SELECT id, active FROM users_platform WHERE (google_sub = ? OR email = ?) AND role = 'superadmin' LIMIT 1");
+        $st = $db->conn->prepare("SELECT id, active, role FROM users_platform WHERE (google_sub = ? OR email = ?) LIMIT 1");
         $st->bind_param('ss', $sub, $email);
         $st->execute();
-        $st->bind_result($uid, $active);
+        $st->bind_result($uid, $active, $role);
         $found = $st->fetch();
         $st->close();
 
-        if (!$found) { sa_cb_error("Tu cuenta Google ({$email}) no está autorizada como superadmin."); }
-        if (!(int)$active) { sa_cb_error('Tu cuenta de superadmin está desactivada.'); }
+        if (!$found) { sa_cb_error("La cuenta {$email} no tiene acceso a este panel. Si deberías tener acceso, pedile al SuperAdmin que cree tu usuario con ese correo."); }
+        if (!(int)$active) { sa_cb_error('Tu cuenta está desactivada. Contactá al SuperAdmin.'); }
 
+        // Auto-vincular sub de Google si es la primera vez
         $st = $db->conn->prepare("UPDATE users_platform SET google_sub = ?, google_pic = ?, last_login = NOW() WHERE id = ?");
         $st->bind_param('ssi', $sub, $pic, $uid);
         $st->execute();
         $st->close();
 
-        superadmin_login((int)$uid);
+        superadmin_login((int)$uid, $role);
         $_SESSION['superadmin_email'] = $email;
         $_SESSION['superadmin_name']  = $name ?: $email;
         $_SESSION['superadmin_pic']   = $pic;
@@ -160,22 +161,23 @@ try {
             sa_cb_error("Solo cuentas @{$hd} pueden acceder al panel SuperAdmin. Usaste: {$email}");
         }
 
-        $st = $db->conn->prepare("SELECT id, active FROM users_platform WHERE (ms_sub = ? OR email = ?) AND role = 'superadmin' LIMIT 1");
+        $st = $db->conn->prepare("SELECT id, active, role FROM users_platform WHERE (ms_sub = ? OR email = ?) LIMIT 1");
         $st->bind_param('ss', $sub, $email);
         $st->execute();
-        $st->bind_result($uid, $active);
+        $st->bind_result($uid, $active, $role);
         $found = $st->fetch();
         $st->close();
 
-        if (!$found) { sa_cb_error("Tu cuenta Microsoft ({$email}) no está autorizada como superadmin."); }
-        if (!(int)$active) { sa_cb_error('Tu cuenta de superadmin está desactivada.'); }
+        if (!$found) { sa_cb_error("La cuenta {$email} no tiene acceso a este panel. Si deberías tener acceso, pedile al SuperAdmin que cree tu usuario con ese correo."); }
+        if (!(int)$active) { sa_cb_error('Tu cuenta está desactivada. Contactá al SuperAdmin.'); }
 
+        // Auto-vincular sub de Microsoft si es la primera vez
         $st = $db->conn->prepare("UPDATE users_platform SET ms_sub = ?, last_login = NOW() WHERE id = ?");
         $st->bind_param('si', $sub, $uid);
         $st->execute();
         $st->close();
 
-        superadmin_login((int)$uid);
+        superadmin_login((int)$uid, $role);
         $_SESSION['superadmin_email'] = $email;
         $_SESSION['superadmin_name']  = $name ?: $email;
 
@@ -183,7 +185,7 @@ try {
         sa_cb_error('Proveedor OAuth desconocido.');
     }
 
-    header('Location: /dashboard/dashboard_superadmin.php');
+    header('Location: /dashboard/dashboard_resumen.php');
     exit;
 
 } catch (Throwable $e) {

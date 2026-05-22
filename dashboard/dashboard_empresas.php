@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subdomain  = trim((string)($_POST['subdomain']  ?? ''));
     $loginUrl   = trim((string)($_POST['login_url']  ?? ''));
     if ($loginUrl === '' && $subdomain !== '') {
-        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/login.php';
+        $loginUrl = 'https://' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain) . '.intellihelp.tech/auth/login.php';
     }
 
     $adminEmail = trim($_POST['admin_email']    ?? '');
@@ -43,8 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($nombre === '') {
         $err = 'El nombre de la empresa es obligatorio.';
-    } elseif ($clientId === '' || $clientSecret === '') {
-        $err = 'Las credenciales OAuth (Client ID y Client Secret) son obligatorias.';
     } elseif ($tenant_mode === 'external' && ($dbName === '' || $dbUser === '')) {
         $err = 'Completá los datos de la DB externa (nombre y usuario).';
     } elseif ($adminEmail === '' || $adminPass === '') {
@@ -75,24 +73,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ccTable  = $pf . 'cloud_config';
             $usrTable = $pf . 'users';
 
-            if ($provider === 'google') {
-                $ccStmt = $tconn->prepare(
-                    "INSERT INTO `$ccTable` (provider, config_key, config_value) VALUES
-                     ('google', 'client_id', ?), ('google', 'client_secret', ?), ('google', 'redirect_uri', ?)
-                     ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)"
-                );
-                $ccStmt->bind_param('sss', $clientId, $clientSecret, $redirectUri);
-                $ccStmt->execute();
-                $ccStmt->close();
-            } else {
-                $ccStmt = $tconn->prepare(
-                    "INSERT INTO `$ccTable` (provider, config_key, config_value) VALUES
-                     ('microsoft', 'tenant_id', ?), ('microsoft', 'client_id', ?), ('microsoft', 'client_secret', ?)
-                     ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)"
-                );
-                $ccStmt->bind_param('sss', $tenantIdMs, $clientId, $clientSecret);
-                $ccStmt->execute();
-                $ccStmt->close();
+            // Solo guardar credenciales si las ingresaron (son opcionales)
+            if ($clientId !== '' && $clientSecret !== '') {
+                if ($provider === 'google') {
+                    $ccStmt = $tconn->prepare(
+                        "INSERT INTO `$ccTable` (provider, config_key, config_value) VALUES
+                         ('google', 'client_id', ?), ('google', 'client_secret', ?), ('google', 'redirect_uri', ?)
+                         ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)"
+                    );
+                    $ccStmt->bind_param('sss', $clientId, $clientSecret, $redirectUri);
+                    $ccStmt->execute();
+                    $ccStmt->close();
+                } else {
+                    $ccStmt = $tconn->prepare(
+                        "INSERT INTO `$ccTable` (provider, config_key, config_value) VALUES
+                         ('microsoft', 'tenant_id', ?), ('microsoft', 'client_id', ?), ('microsoft', 'client_secret', ?)
+                         ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)"
+                    );
+                    $ccStmt->bind_param('sss', $tenantIdMs, $clientId, $clientSecret);
+                    $ccStmt->execute();
+                    $ccStmt->close();
+                }
             }
 
             $adminHash = password_hash($adminPass, PASSWORD_DEFAULT);
@@ -192,25 +193,25 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <!-- Google -->
           <div id="cred-google">
-            <div class="ih-section-title">Credenciales OAuth — Google</div>
+            <div class="ih-section-title">Credenciales OAuth — Google <span style="font-weight:400;color:#71717A;font-size:12px">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
             <div class="ih-grid">
               <div class="ih-col-6">
                 <div class="ih-field">
-                  <label class="ih-field__label">Client ID <span class="req">*</span></label>
-                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($_POST['client_id'] ?? '') ?>">
+                  <label class="ih-field__label">Client ID</label>
+                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($_POST['client_id'] ?? '') ?>" placeholder="xxxxx.apps.googleusercontent.com">
                   <div class="ih-field__hint">Google Cloud Console → APIs &amp; Services → Credentials</div>
                 </div>
               </div>
               <div class="ih-col-6">
                 <div class="ih-field">
-                  <label class="ih-field__label">Client Secret <span class="req">*</span></label>
-                  <input class="ih-input" name="client_secret" type="password" value="<?= htmlspecialchars($_POST['client_secret'] ?? '') ?>">
+                  <label class="ih-field__label">Client Secret</label>
+                  <input class="ih-input" name="client_secret" type="password" value="<?= htmlspecialchars($_POST['client_secret'] ?? '') ?>" placeholder="GOCSPX-...">
                 </div>
               </div>
               <div class="ih-col-12">
                 <div class="ih-field">
                   <label class="ih-field__label">Redirect URI</label>
-                  <input class="ih-input" name="redirect_uri" placeholder="https://cliente.intellihelp.tech/login.php" value="<?= htmlspecialchars($_POST['redirect_uri'] ?? '') ?>">
+                  <input class="ih-input" name="redirect_uri" placeholder="https://cliente.intellihelp.tech/auth/login.php" value="<?= htmlspecialchars($_POST['redirect_uri'] ?? '') ?>">
                   <div class="ih-field__hint">Debe coincidir exactamente con la URI configurada en Google Cloud Console.</div>
                 </div>
               </div>
@@ -219,24 +220,24 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <!-- Microsoft -->
           <div id="cred-microsoft" style="display:none;">
-            <div class="ih-section-title">Credenciales OAuth — Microsoft</div>
+            <div class="ih-section-title">Credenciales OAuth — Microsoft <span style="font-weight:400;color:#71717A;font-size:12px">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
             <div class="ih-grid">
               <div class="ih-col-4">
                 <div class="ih-field">
                   <label class="ih-field__label">Tenant ID (Directory ID)</label>
-                  <input class="ih-input" name="ms_tenant_id" value="<?= htmlspecialchars($_POST['ms_tenant_id'] ?? '') ?>">
+                  <input class="ih-input" name="ms_tenant_id" value="<?= htmlspecialchars($_POST['ms_tenant_id'] ?? '') ?>" placeholder="common ó GUID del directorio">
                 </div>
               </div>
               <div class="ih-col-4">
                 <div class="ih-field">
-                  <label class="ih-field__label">Client ID (App ID) <span class="req">*</span></label>
-                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($_POST['client_id'] ?? '') ?>">
+                  <label class="ih-field__label">Client ID (App ID)</label>
+                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($_POST['client_id'] ?? '') ?>" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
                 </div>
               </div>
               <div class="ih-col-4">
                 <div class="ih-field">
-                  <label class="ih-field__label">Client Secret <span class="req">*</span></label>
-                  <input class="ih-input" name="client_secret" type="password">
+                  <label class="ih-field__label">Client Secret</label>
+                  <input class="ih-input" name="client_secret" type="password" placeholder="Secret de Azure AD">
                 </div>
               </div>
             </div>

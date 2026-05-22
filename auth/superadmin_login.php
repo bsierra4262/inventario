@@ -9,9 +9,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 csrf_start(); // arranca sesión
 
-// Ya autenticado → directo al dashboard
+// Ya autenticado → directo al resumen
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
-    header('Location: /dashboard/dashboard_superadmin.php');
+    header('Location: /dashboard/dashboard_resumen.php');
     exit;
 }
 
@@ -183,22 +183,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
     try {
         if (!$db) $db = new MasterDB();
         $stmt = $db->pquery(
-            'SELECT id, password, email FROM users_platform WHERE username = ? AND active = 1 AND role = "superadmin" LIMIT 1',
+            'SELECT id, password, email, role FROM users_platform WHERE username = ? AND active = 1 LIMIT 1',
             's', [$user]
         );
-        $stmt->bind_result($uid, $hash, $email);
+        $stmt->bind_result($uid, $hash, $email, $role);
         if ($stmt->fetch() && $hash && password_verify($pass, $hash)) {
             $stmt->close();
             $db->pquery('UPDATE users_platform SET last_login = NOW() WHERE id = ?', 'i', [$uid]);
-            superadmin_login($uid);
+            superadmin_login($uid, $role);
             $_SESSION['superadmin_email'] = $email;
             $_SESSION['superadmin_name']  = $user;
-            if (!$ssoConfigured) {
-                // Forzar configuración de SSO antes de continuar
+            if (!$ssoConfigured && $role === 'superadmin') {
                 $_SESSION['pending_sso_setup'] = true;
                 header('Location: /dashboard/superadmin_integraciones.php');
             } else {
-                header('Location: /dashboard/dashboard_superadmin.php');
+                header('Location: /dashboard/dashboard_resumen.php');
             }
             exit;
         }

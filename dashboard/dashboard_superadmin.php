@@ -191,6 +191,9 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?= htmlspecialchars(substr((string)($c['created_at'] ?? ''), 0, 10)) ?>
                 </td>
                 <td class="ih-text-center">
+                  <a href="/dashboard/empresa_usuarios.php?id=<?= (int)$c['id'] ?>" class="ih-btn ih-btn--outline ih-btn--sm" title="Gestionar usuarios del tenant">
+                    <i class="bi bi-people"></i>
+                  </a>
                   <a href="/dashboard/empresa_editar.php?id=<?= (int)$c['id'] ?>" class="ih-btn ih-btn--outline ih-btn--sm">
                     <i class="bi bi-pencil"></i> Editar
                   </a>
