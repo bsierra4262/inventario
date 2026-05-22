@@ -130,10 +130,12 @@ try {
     $master->conn->query("CREATE TABLE IF NOT EXISTS `users_platform` (
         id          INT AUTO_INCREMENT PRIMARY KEY,
         username    VARCHAR(100) NOT NULL,
-        password    VARCHAR(255) NOT NULL,
+        password    VARCHAR(255) DEFAULT NULL,
         email       VARCHAR(255) DEFAULT NULL,
         google_sub  VARCHAR(64)  DEFAULT NULL,
         google_pic  VARCHAR(500) DEFAULT NULL,
+        ms_sub      VARCHAR(64)  DEFAULT NULL,
+        ms_pic      VARCHAR(500) DEFAULT NULL,
         role        ENUM('superadmin','support') NOT NULL DEFAULT 'superadmin',
         active      TINYINT(1)  NOT NULL DEFAULT 1,
         last_login  DATETIME    DEFAULT NULL,

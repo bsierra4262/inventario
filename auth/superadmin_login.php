@@ -7,7 +7,7 @@ require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
-csrf_start();
+csrf_start(); // arranca sesión
 
 // Ya autenticado → directo al dashboard
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
@@ -20,9 +20,9 @@ $bootstrapError = '';
 $err            = '';
 $db             = null;
 
-// -----------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // 1) Bootstrap users_platform / seed superadmin bsierra
-// -----------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 try {
     $db = new MasterDB();
 
@@ -33,6 +33,8 @@ try {
         email       VARCHAR(255) DEFAULT NULL,
         google_sub  VARCHAR(64)  DEFAULT NULL,
         google_pic  VARCHAR(500) DEFAULT NULL,
+        ms_sub      VARCHAR(64)  DEFAULT NULL,
+        ms_pic      VARCHAR(500) DEFAULT NULL,
         role        ENUM('superadmin','support') NOT NULL DEFAULT 'superadmin',
         active      TINYINT(1)  NOT NULL DEFAULT 1,
         last_login  DATETIME    DEFAULT NULL,
@@ -40,13 +42,14 @@ try {
         UNIQUE KEY uk_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    // Asegurar columnas SSO en instalaciones previas
     foreach ([
         "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `google_sub` VARCHAR(64) DEFAULT NULL",
         "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `google_pic` VARCHAR(500) DEFAULT NULL",
+        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_sub`     VARCHAR(64) DEFAULT NULL",
+        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_pic`     VARCHAR(500) DEFAULT NULL",
         "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `last_login` DATETIME DEFAULT NULL",
         "ALTER TABLE `users_platform` MODIFY COLUMN `password` VARCHAR(255) DEFAULT NULL",
-    ] as $a) { try { $db->conn->query($a); } catch (Throwable $e) {} }
+    ] as $a) { try { $db->conn->query($a); } catch (Throwable) {} }
 
     $cnt = (int)($db->conn->query("SELECT COUNT(*) AS c FROM users_platform")->fetch_assoc()['c'] ?? 0);
     if ($cnt === 0) {
@@ -59,7 +62,6 @@ try {
         $st->execute();
         $st->close();
     } else {
-        // Migrar email legacy si sigue con el valor viejo
         try {
             $db->conn->query("UPDATE users_platform SET email = 'bsierra@intellihelp.tech' WHERE username = 'bsierra' AND email = 'bsierra4262@gmail.com'");
         } catch (Throwable) {}
@@ -68,13 +70,21 @@ try {
     $bootstrapError = $be->getMessage();
 }
 
-// -----------------------------------------------------
-// 2) Configurar Google SSO desde platform_config (master)
-// -----------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 2) URI de callback único (registrar esta URI en Google Console / Azure)
+// ─────────────────────────────────────────────────────────────────────────────
+$callbackUri = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3) Cargar config SSO (Google + Microsoft) desde platform_config
+// ─────────────────────────────────────────────────────────────────────────────
 $googleClientId     = '';
 $googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_login.php';
-$googleHd           = ''; // dominio de Workspace requerido (vacío = sin restricción)
+$googleHd           = '';
+$msClientId         = '';
+$msClientSecret     = '';
+$msTenantId         = 'common';
+$msHd               = '';
 
 try {
     if ($db) {
@@ -85,106 +95,86 @@ try {
             updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        $res = $db->conn->query("SELECT config_key, config_value FROM platform_config WHERE config_key IN ('sa_google_client_id','sa_google_client_secret','sa_google_redirect_uri','sa_google_hd')");
+        $res = $db->conn->query("SELECT config_key, config_value FROM platform_config WHERE config_key IN (
+            'sa_google_client_id','sa_google_client_secret','sa_google_hd',
+            'sa_ms_client_id','sa_ms_client_secret','sa_ms_tenant_id','sa_ms_hd'
+        )");
         if ($res) {
             while ($r = $res->fetch_assoc()) {
-                if ($r['config_key'] === 'sa_google_client_id')     $googleClientId     = $r['config_value'];
-                if ($r['config_key'] === 'sa_google_client_secret') $googleClientSecret = $r['config_value'];
-                if ($r['config_key'] === 'sa_google_redirect_uri')  $googleRedirectUri  = $r['config_value'];
-                if ($r['config_key'] === 'sa_google_hd')            $googleHd           = $r['config_value'];
+                match ($r['config_key']) {
+                    'sa_google_client_id'     => $googleClientId     = $r['config_value'],
+                    'sa_google_client_secret' => $googleClientSecret = $r['config_value'],
+                    'sa_google_hd'            => $googleHd           = $r['config_value'],
+                    'sa_ms_client_id'         => $msClientId         = $r['config_value'],
+                    'sa_ms_client_secret'     => $msClientSecret     = $r['config_value'],
+                    'sa_ms_tenant_id'         => $msTenantId         = $r['config_value'],
+                    'sa_ms_hd'                => $msHd               = $r['config_value'],
+                    default                   => null,
+                };
             }
         }
     }
-} catch (Throwable $e) {}
+} catch (Throwable) {}
 
 $googleConfigured = ($googleClientId !== '' && $googleClientSecret !== '');
-$googleAuthUrl    = null;
+$msConfigured     = ($msClientId     !== '' && $msClientSecret     !== '');
+$ssoConfigured    = $googleConfigured || $msConfigured;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 4) Generar state OAuth y URLs de autenticación
+// ─────────────────────────────────────────────────────────────────────────────
+$oauthRand = bin2hex(random_bytes(16));
+$_SESSION['oauth_state_rand'] = $oauthRand;
+
+$googleAuthUrl = null;
 if ($googleConfigured) {
     try {
         $client = new Google_Client();
         $client->setClientId($googleClientId);
         $client->setClientSecret($googleClientSecret);
-        $client->setRedirectUri($googleRedirectUri);
+        $client->setRedirectUri($callbackUri);
         $client->addScope(['email', 'profile', 'openid']);
         $client->setAccessType('online');
         $client->setPrompt('select_account');
-        if ($googleHd !== '') {
-            $client->setHostedDomain($googleHd); // Google prefiltra la cuenta a ese dominio
-        }
+        if ($googleHd !== '') { $client->setHostedDomain($googleHd); }
+        $client->setState('g:' . $oauthRand);
         $googleAuthUrl = $client->createAuthUrl();
-    } catch (Throwable $e) {
+    } catch (Throwable) {
         $googleConfigured = false;
     }
 }
 
-// -----------------------------------------------------
-// 3) Callback Google
-// -----------------------------------------------------
-if ($googleConfigured && isset($_GET['code']) && $_GET['code'] !== '' && $db) {
+$msAuthUrl = null;
+if ($msConfigured) {
     try {
-        $client = new Google_Client();
-        $client->setClientId($googleClientId);
-        $client->setClientSecret($googleClientSecret);
-        $client->setRedirectUri($googleRedirectUri);
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-        if (isset($token['error'])) {
-            throw new Exception($token['error_description'] ?? 'Google OAuth error');
-        }
-        $client->setAccessToken($token);
-
-        $oauth2 = new Google_Service_Oauth2($client);
-        $info = $oauth2->userinfo->get();
-
-        $sub   = (string)($info->id    ?? '');
-        $email = strtolower((string)($info->email ?? ''));
-        $name  = (string)($info->name  ?? '');
-        $pic   = (string)($info->picture ?? '');
-
-        if ($email === '') {
-            throw new Exception('Google no devolvió email.');
-        }
-
-        // Verificar dominio Workspace si está configurado
-        if ($googleHd !== '' && !str_ends_with($email, '@' . strtolower($googleHd))) {
-            $err = "Solo cuentas @{$googleHd} pueden acceder al panel SuperAdmin. Usaste: {$email}";
-            goto show_login_page;
-        }
-
-        // Buscar usuario superadmin por google_sub o por email
-        $st = $db->conn->prepare("SELECT id, active FROM users_platform WHERE (google_sub = ? OR email = ?) AND role = 'superadmin' LIMIT 1");
-        $st->bind_param('ss', $sub, $email);
-        $st->execute();
-        $st->bind_result($uid, $active);
-        $found = $st->fetch();
-        $st->close();
-
-        if (!$found) {
-            $err = "Tu cuenta Google ($email) no está autorizada como superadmin. Contactá al administrador para vincularla.";
-        } elseif (!(int)$active) {
-            $err = 'Tu cuenta de superadmin está desactivada.';
-        } else {
-            // Vincular el sub Google si aún no estaba seteado
-            $st = $db->conn->prepare("UPDATE users_platform SET google_sub = ?, google_pic = ?, last_login = NOW() WHERE id = ?");
-            $st->bind_param('ssi', $sub, $pic, $uid);
-            $st->execute();
-            $st->close();
-
-            superadmin_login($uid);
-            $_SESSION['superadmin_email'] = $email;
-            $_SESSION['superadmin_name']  = $name ?: $email;
-            $_SESSION['superadmin_pic']   = $pic;
-            header('Location: /dashboard/dashboard_superadmin.php');
-            exit;
-        }
-    } catch (Throwable $e) {
-        $err = 'Error con Google: ' . $e->getMessage();
+        $tenantSlug = ($msTenantId !== '' ? $msTenantId : 'common');
+        $msParams   = [
+            'client_id'     => $msClientId,
+            'response_type' => 'code',
+            'redirect_uri'  => $callbackUri,
+            'scope'         => 'openid profile email User.Read',
+            'response_mode' => 'query',
+            'state'         => 'm:' . $oauthRand,
+            'prompt'        => 'select_account',
+        ];
+        if ($msHd !== '') { $msParams['domain_hint'] = $msHd; }
+        $msAuthUrl = "https://login.microsoftonline.com/{$tenantSlug}/oauth2/v2.0/authorize?" . http_build_query($msParams);
+    } catch (Throwable) {
+        $msConfigured = false;
     }
 }
 
-// -----------------------------------------------------
-// 4) Login local (usuario/contraseña)
-// -----------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// 5) Flash error proveniente del callback
+// ─────────────────────────────────────────────────────────────────────────────
+if (!empty($_SESSION['sa_login_error'])) {
+    $err = $_SESSION['sa_login_error'];
+    unset($_SESSION['sa_login_error']);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6) Login local (usuario/contraseña) — solo disponible cuando NO hay SSO
+// ─────────────────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
     csrf_validate();
     $user = trim($_POST['username'] ?? '');
@@ -203,7 +193,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
             superadmin_login($uid);
             $_SESSION['superadmin_email'] = $email;
             $_SESSION['superadmin_name']  = $user;
-            header('Location: /dashboard/dashboard_superadmin.php');
+            if (!$ssoConfigured) {
+                // Forzar configuración de SSO antes de continuar
+                $_SESSION['pending_sso_setup'] = true;
+                header('Location: /dashboard/superadmin_integraciones.php');
+            } else {
+                header('Location: /dashboard/dashboard_superadmin.php');
+            }
             exit;
         }
         $stmt->close();
@@ -215,7 +211,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
 
 $page_title = 'Acceso SuperAdmin';
 require __DIR__ . '/../includes/layout/head.php';
-show_login_page:
 ?>
 
 <div class="ih-auth">
@@ -251,7 +246,7 @@ show_login_page:
             <div class="ih-alert__title">Primera ejecución</div>
             Se creó el superadmin inicial:<br>
             Usuario: <code>bsierra</code> · Contraseña: <code>***SECRETO-PURGADO***</code><br>
-            <small>Cambiala apenas ingreses.</small>
+            <small>Al ingresar serás redirigido a configurar SSO.</small>
           </div>
         </div>
       <?php endif; ?>
@@ -263,6 +258,16 @@ show_login_page:
         </div>
       <?php endif; ?>
 
+      <?php if (!empty($_GET['sso_configured'])): ?>
+        <div class="ih-alert ih-alert--success">
+          <i class="bi bi-shield-check-fill"></i>
+          <div>
+            <strong>SSO configurado correctamente.</strong><br>
+            Ingresá con tu cuenta corporativa.
+          </div>
+        </div>
+      <?php endif; ?>
+
       <?php if ($err): ?>
         <div class="ih-alert ih-alert--danger">
           <i class="bi bi-x-circle-fill"></i>
@@ -270,18 +275,28 @@ show_login_page:
         </div>
       <?php endif; ?>
 
-      <?php if ($googleConfigured): ?>
-        <!-- Google SSO configurado: SOLO acceso por Google Workspace -->
-        <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
-          <i class="bi bi-google"></i> Continuar con Google Workspace
-        </a>
-        <?php if ($googleHd !== ''): ?>
-          <p class="ih-text-xs ih-text-muted ih-text-center" style="margin-top:10px">
-            <i class="bi bi-shield-check"></i> Solo cuentas <strong>@<?= htmlspecialchars($googleHd) ?></strong>
-          </p>
-        <?php endif; ?>
+      <?php if ($ssoConfigured): ?>
+        <!-- SSO configurado: solo acceso con botones corporativos -->
+        <div class="ih-flex ih-flex-col ih-gap-3">
+          <?php if ($googleConfigured && $googleAuthUrl): ?>
+            <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
+              <i class="bi bi-google"></i> Continuar con Google Workspace
+              <?php if ($googleHd !== ''): ?>
+                <span class="ih-text-xs" style="margin-left:6px;opacity:.75">(@<?= htmlspecialchars($googleHd) ?>)</span>
+              <?php endif; ?>
+            </a>
+          <?php endif; ?>
+          <?php if ($msConfigured && $msAuthUrl): ?>
+            <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($msAuthUrl) ?>">
+              <i class="bi bi-microsoft"></i> Continuar con Microsoft 365
+              <?php if ($msHd !== ''): ?>
+                <span class="ih-text-xs" style="margin-left:6px;opacity:.75">(@<?= htmlspecialchars($msHd) ?>)</span>
+              <?php endif; ?>
+            </a>
+          <?php endif; ?>
+        </div>
       <?php else: ?>
-        <!-- Sin Google SSO configurado: login local -->
+        <!-- Sin SSO: formulario local (solo hasta que se configure SSO) -->
         <form method="post" autocomplete="off">
           <?php csrf_input(); ?>
           <div class="ih-field">
@@ -297,10 +312,11 @@ show_login_page:
           </button>
         </form>
         <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
-          <i class="bi bi-info-circle"></i>
-          Configurá Google Workspace SSO desde <em>Integraciones</em> para reemplazar este formulario.
+          <i class="bi bi-shield-exclamation"></i>
+          Al ingresar se te pedirá configurar Google Workspace o Microsoft 365 SSO.
         </p>
       <?php endif; ?>
+
     </div>
 
     <div class="ih-auth__footer">
