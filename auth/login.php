@@ -1,6 +1,13 @@
 <?php
 declare(strict_types=1);
 
+// Logging de errores a archivo (no display) — para debug en producción
+@ini_set('display_errors', '0');
+@ini_set('log_errors', '1');
+$_errLog = __DIR__ . '/../logs/php_errors.log';
+@ini_set('error_log', $_errLog);
+error_reporting(E_ALL);
+
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // -----------------------------
@@ -15,7 +22,12 @@ if (is_file($loggerPath)) {
     }
 }
 
-require_once __DIR__ . '/../vendor/autoload.php';
+$vendorAutoload = __DIR__ . '/../vendor/autoload.php';
+if (is_file($vendorAutoload)) {
+    require_once $vendorAutoload;
+} else {
+    error_log('login.php: vendor/autoload.php no existe en ' . $vendorAutoload);
+}
 
 // -----------------------------
 // 1) Resolver empresa antes del tenant
@@ -83,11 +95,12 @@ if (empty($companies)) {
     exit;
 }
 
-// Pre-seleccionar empresa desde ?company=slug (sin subdominio DNS)
+// Pre-seleccionar empresa desde ?company=slug (sin subdominio DNS, case-insensitive)
 if (!empty($_GET['company']) && empty($_SESSION['company_id'])) {
     $slug = preg_replace('/[^a-z0-9\-_]/i', '', (string)$_GET['company']);
     foreach ($companies as $c) {
-        if ((string)$c['id'] === $slug || ($c['subdomain'] ?? '') === $slug) {
+        if ((string)$c['id'] === $slug
+            || strcasecmp((string)($c['subdomain'] ?? ''), $slug) === 0) {
             $_SESSION['company_id'] = (int)$c['id'];
             break;
         }
@@ -108,11 +121,70 @@ if (empty($_SESSION['company_id'])) {
 }
 
 // -----------------------------
-// 2) Conexión tenant
+// 2) Conexión tenant (defensiva: no crashea si la DB no está)
 // -----------------------------
-require_once __DIR__ . '/../backend/db.php';
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-try { $conn->set_charset('utf8mb4'); } catch (Throwable $e) {}
+$conn = null;
+$tenantDbError = '';
+if (!empty($_SESSION['company_id'])) {
+    try {
+        require_once __DIR__ . '/../backend/db.php';
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        if (isset($conn) && $conn instanceof mysqli) {
+            @$conn->set_charset('utf8mb4');
+        }
+    } catch (Throwable $e) {
+        $tenantDbError = $e->getMessage();
+        log_event('login.php', 'ERROR', 'Tenant DB no disponible: '.$tenantDbError, 'auth');
+        error_log('login.php: tenant DB error: ' . $tenantDbError);
+        $conn = null;
+    }
+}
+
+// Si el tenant DB falló, mostrar pantalla de error amistosa (NO 500)
+if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
+    $page_title = 'Empresa no disponible';
+    require __DIR__ . '/../includes/layout/head.php';
+    ?>
+    <div class="ih-auth">
+      <div class="ih-auth__card ih-anim-fade">
+        <div class="ih-auth__header">
+          <div class="ih-auth__brand">
+            <div class="ih-auth__logo"><?= function_exists('platform_logo_html') ? platform_logo_html() : 'i' ?></div>
+            <div class="ih-auth__brand-text">
+              <strong>INTELLIHELP</strong>
+              <span>Asset Vault</span>
+            </div>
+          </div>
+          <h2 class="ih-auth__title">Empresa sin configurar</h2>
+          <p class="ih-auth__subtitle">La base de datos del tenant no está disponible todavía</p>
+        </div>
+        <div class="ih-auth__body">
+          <div class="ih-alert ih-alert--warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+              Esta empresa fue creada pero su base de datos del tenant no está accesible.
+              Pedile al SuperAdmin que complete los datos de conexión (host, nombre, usuario, contraseña)
+              desde <strong>Editar empresa</strong>.
+              <?php if ($tenantDbError): ?>
+                <div class="ih-text-xs ih-text-muted" style="margin-top:8px">
+                  Detalle: <?= htmlspecialchars($tenantDbError) ?>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+          <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary ih-btn--block">
+            <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
+          </a>
+        </div>
+        <div class="ih-auth__footer">
+          © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
+        </div>
+      </div>
+    </div>
+    <?php
+    require __DIR__ . '/../includes/layout/foot.php';
+    exit;
+}
 
 // -----------------------------
 // 3) Configuración Google Client
