@@ -1,3 +1,6 @@
+# Dependencias PHP — instalar con "composer install" en el servidor
+vendor/
+
 # Logs — se regeneran solos en el servidor
 logs/audit.log
 logs/*.log

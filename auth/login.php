@@ -24,7 +24,13 @@ if (is_file($loggerPath)) {
 
 $vendorAutoload = __DIR__ . '/../vendor/autoload.php';
 if (is_file($vendorAutoload)) {
-    require_once $vendorAutoload;
+    try {
+        require_once $vendorAutoload;
+    } catch (Throwable $vendorErr) {
+        // vendor/autoload.php existe pero las dependencias no están instaladas en el servidor
+        // Google OAuth no estará disponible hasta que se ejecute "composer install" en el servidor
+        error_log('login.php: vendor/autoload.php broken (composer install needed): ' . $vendorErr->getMessage());
+    }
 } else {
     error_log('login.php: vendor/autoload.php no existe en ' . $vendorAutoload);
 }
