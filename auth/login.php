@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// Logging de errores a archivo (no display) — para debug en producción
 @ini_set('display_errors', '0');
 @ini_set('log_errors', '1');
 $_errLog = __DIR__ . '/../logs/php_errors.log';
@@ -10,34 +9,25 @@ error_reporting(E_ALL);
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-// -----------------------------
-// 0) Logger opcional y vendor
-// -----------------------------
+// ── Logger y vendor ───────────────────────────────────────────────────────────
 $loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath;
 } else {
     if (!function_exists('log_event')) {
-        function log_event($origin, $type, $msg, $tag = 'app') { /* silencioso */ }
+        function log_event($origin, $type, $msg, $tag = 'app') {}
     }
 }
 
 $vendorAutoload = __DIR__ . '/../vendor/autoload.php';
 if (is_file($vendorAutoload)) {
-    try {
-        require_once $vendorAutoload;
-    } catch (Throwable $vendorErr) {
-        // vendor/autoload.php existe pero las dependencias no están instaladas en el servidor
-        // Google OAuth no estará disponible hasta que se ejecute "composer install" en el servidor
-        error_log('login.php: vendor/autoload.php broken (composer install needed): ' . $vendorErr->getMessage());
-    }
+    try { require_once $vendorAutoload; }
+    catch (Throwable $ve) { error_log('login.php: vendor broken: ' . $ve->getMessage()); }
 } else {
-    error_log('login.php: vendor/autoload.php no existe en ' . $vendorAutoload);
+    error_log('login.php: vendor/autoload.php no existe');
 }
 
-// -----------------------------
-// 1) Resolver empresa antes del tenant
-// -----------------------------
+// ── 1) Resolver empresa ───────────────────────────────────────────────────────
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 
@@ -45,22 +35,19 @@ $companies = [];
 $masterDbError = '';
 try {
     $master = new MasterDB();
-    $stmt = $master->pquery('SELECT id, nombre, subdomain FROM companies WHERE active = 1 ORDER BY nombre ASC');
-    $res = $stmt->get_result();
+    $stmt   = $master->pquery('SELECT id, nombre, subdomain FROM companies WHERE active = 1 ORDER BY nombre ASC');
+    $res    = $stmt->get_result();
     while ($row = $res->fetch_assoc()) { $companies[] = $row; }
 } catch (Throwable $e) {
-    log_event('login.php', 'ERROR', 'Master DB no disponible: '.$e->getMessage(), 'auth');
+    log_event('login.php', 'ERROR', 'Master DB: ' . $e->getMessage(), 'auth');
     $masterDbError = $e->getMessage();
 }
 
-// Si master DB no responde → mandar a install (asume primera ejecución)
 if ($masterDbError !== '') {
     header('Location: /install.php');
     exit();
 }
 
-// Si no hay empresas activas → MOSTRAR pantalla de bloqueo (no enviar a install)
-// El install no debe ser accesible para usuarios finales del tenant.
 if (empty($companies)) {
     $page_title = 'Acceso restringido';
     require __DIR__ . '/../includes/layout/head.php';
@@ -70,30 +57,21 @@ if (empty($companies)) {
         <div class="ih-auth__header">
           <div class="ih-auth__brand">
             <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
-            <div class="ih-auth__brand-text">
-              <strong>INTELLIHELP</strong>
-              <span>Asset Vault</span>
-            </div>
+            <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
           </div>
           <h2 class="ih-auth__title">Sin empresas activas</h2>
-          <p class="ih-auth__subtitle">Aún no hay ningún cliente habilitado en esta plataforma</p>
+          <p class="ih-auth__subtitle">El SuperAdmin debe crear al menos una empresa cliente</p>
         </div>
         <div class="ih-auth__body">
           <div class="ih-alert ih-alert--info">
             <i class="bi bi-info-circle-fill"></i>
-            <div>
-              El SuperAdmin debe crear primero una empresa cliente desde el
-              <strong>Panel SuperAdmin → Nueva empresa</strong>. Ahí se define el
-              admin del tenant con email y contraseña.
-            </div>
+            <div>El SuperAdmin debe habilitar una empresa desde <strong>Panel SuperAdmin → Nueva empresa</strong>.</div>
           </div>
           <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary ih-btn--block">
             <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
           </a>
         </div>
-        <div class="ih-auth__footer">
-          © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
-        </div>
+        <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
       </div>
     </div>
     <?php
@@ -101,12 +79,11 @@ if (empty($companies)) {
     exit;
 }
 
-// Pre-seleccionar empresa desde ?company=slug (sin subdominio DNS, case-insensitive)
+// Pre-seleccionar empresa desde ?company=id o subdomain
 if (!empty($_GET['company']) && empty($_SESSION['company_id'])) {
     $slug = preg_replace('/[^a-z0-9\-_]/i', '', (string)$_GET['company']);
     foreach ($companies as $c) {
-        if ((string)$c['id'] === $slug
-            || strcasecmp((string)($c['subdomain'] ?? ''), $slug) === 0) {
+        if ((string)$c['id'] === $slug || strcasecmp((string)($c['subdomain'] ?? ''), $slug) === 0) {
             $_SESSION['company_id'] = (int)$c['id'];
             break;
         }
@@ -126,27 +103,21 @@ if (empty($_SESSION['company_id'])) {
     }
 }
 
-// -----------------------------
-// 2) Conexión tenant (defensiva: no crashea si la DB no está)
-// -----------------------------
+// ── 2) Conexión tenant ────────────────────────────────────────────────────────
 $conn = null;
 $tenantDbError = '';
 if (!empty($_SESSION['company_id'])) {
     try {
         require_once __DIR__ . '/../backend/db.php';
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-        if (isset($conn) && $conn instanceof mysqli) {
-            @$conn->set_charset('utf8mb4');
-        }
+        if (isset($conn) && $conn instanceof mysqli) { @$conn->set_charset('utf8mb4'); }
     } catch (Throwable $e) {
         $tenantDbError = $e->getMessage();
-        log_event('login.php', 'ERROR', 'Tenant DB no disponible: '.$tenantDbError, 'auth');
-        error_log('login.php: tenant DB error: ' . $tenantDbError);
+        log_event('login.php', 'ERROR', 'Tenant DB: ' . $tenantDbError, 'auth');
         $conn = null;
     }
 }
 
-// Si el tenant DB falló, mostrar pantalla de error amistosa (NO 500)
 if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
     $page_title = 'Empresa no disponible';
     require __DIR__ . '/../includes/layout/head.php';
@@ -156,25 +127,19 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
         <div class="ih-auth__header">
           <div class="ih-auth__brand">
             <div class="ih-auth__logo"><?= function_exists('platform_logo_html') ? platform_logo_html() : 'i' ?></div>
-            <div class="ih-auth__brand-text">
-              <strong>INTELLIHELP</strong>
-              <span>Asset Vault</span>
-            </div>
+            <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
           </div>
           <h2 class="ih-auth__title">Empresa sin configurar</h2>
-          <p class="ih-auth__subtitle">La base de datos del tenant no está disponible todavía</p>
+          <p class="ih-auth__subtitle">La base de datos del tenant no está disponible</p>
         </div>
         <div class="ih-auth__body">
           <div class="ih-alert ih-alert--warning">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <div>
-              Esta empresa fue creada pero su base de datos del tenant no está accesible.
-              Pedile al SuperAdmin que complete los datos de conexión (host, nombre, usuario, contraseña)
-              desde <strong>Editar empresa</strong>.
+              Esta empresa fue creada pero su base de datos no está accesible.
+              Pedile al SuperAdmin que complete los datos de conexión.
               <?php if ($tenantDbError): ?>
-                <div class="ih-text-xs ih-text-muted" style="margin-top:8px">
-                  Detalle: <?= htmlspecialchars($tenantDbError) ?>
-                </div>
+                <div class="ih-text-xs ih-text-muted" style="margin-top:8px">Detalle: <?= htmlspecialchars($tenantDbError) ?></div>
               <?php endif; ?>
             </div>
           </div>
@@ -182,9 +147,7 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
             <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
           </a>
         </div>
-        <div class="ih-auth__footer">
-          © <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault
-        </div>
+        <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
       </div>
     </div>
     <?php
@@ -192,176 +155,125 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
     exit;
 }
 
-// -----------------------------
-// 3) Configuración Google Client
-// -----------------------------
+// ── 3) Leer config OAuth del tenant ──────────────────────────────────────────
+// Callback unificado: UNA SOLA URI registrada en Google Console y Azure
+$callbackUri = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php';
+
+// --- Google ---
 $googleClientId     = '';
 $googleClientSecret = '';
-// La redirect_uri SIEMPRE apunta al callback unificado (registrado en Google Cloud Console)
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php';
+
+// --- Microsoft ---
+$msClientId         = '';
+$msClientSecret     = '';
+$msTenantId         = 'common';  // puede ser 'common' o el tenant-id de Azure AD
 
 if ($conn instanceof mysqli) {
     try {
         $cfgTable = tn('cloud_config');
-        $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+        $cfgRes   = $conn->query("SELECT provider, config_key, config_value FROM `{$cfgTable}` WHERE provider IN ('google','microsoft')");
         if ($cfgRes) {
             while ($cfgRow = $cfgRes->fetch_assoc()) {
-                if ($cfgRow['config_key'] === 'client_id')     $googleClientId     = (string)$cfgRow['config_value'];
-                if ($cfgRow['config_key'] === 'client_secret') $googleClientSecret = (string)$cfgRow['config_value'];
-                // redirect_uri ya no se lee de la DB — siempre usamos superadmin_callback.php
+                match ([$cfgRow['provider'], $cfgRow['config_key']]) {
+                    ['google',    'client_id']     => $googleClientId     = (string)$cfgRow['config_value'],
+                    ['google',    'client_secret'] => $googleClientSecret = (string)$cfgRow['config_value'],
+                    ['microsoft', 'client_id']     => $msClientId         = (string)$cfgRow['config_value'],
+                    ['microsoft', 'client_secret'] => $msClientSecret     = (string)$cfgRow['config_value'],
+                    ['microsoft', 'tenant_id']     => $msTenantId         = (string)$cfgRow['config_value'],
+                    default => null,
+                };
             }
         }
     } catch (Throwable $e) {
-        log_event('login.php', 'ERROR', 'Lectura cloud_config: '.$e->getMessage(), 'auth');
+        log_event('login.php', 'ERROR', 'Lectura cloud_config: ' . $e->getMessage(), 'auth');
     }
 }
 
 $googleConfigured = ($googleClientId !== '' && $googleClientSecret !== '');
-$client = null;
+$msConfigured     = ($msClientId !== '' && $msClientSecret !== '');
+$ssoConfigured    = $googleConfigured || $msConfigured;
+$companyId        = (int)($_SESSION['company_id'] ?? 0);
+
+// ── Generar URL de autorización Google ───────────────────────────────────────
 $googleAuthUrl = null;
-
-if ($googleConfigured) {
+if ($googleConfigured && !$must_choose_company) {
     try {
-        $client = new Google_Client();
-        $client->setClientId($googleClientId);
-        $client->setClientSecret($googleClientSecret);
-        $client->setRedirectUri($googleRedirectUri);
-        $client->addScope([
-            Google_Service_Drive::DRIVE,
-            Google_Service_Drive::DRIVE_FILE,
-            Google_Service_Drive::DRIVE_METADATA_READONLY,
-            Google_Service_Drive::DRIVE_APPDATA,
-            'email',
-            'profile'
-        ]);
-        $client->setAccessType('offline');
-        $client->setPrompt('select_account consent');
-        // State OAuth — codifica el company_id para que el callback sepa a qué tenant pertenece
-        $oauthRand = bin2hex(random_bytes(16));
-        $_SESSION['tenant_oauth_state_rand'] = $oauthRand;
-        $client->setState('tg:' . $oauthRand . ':' . (int)($_SESSION['company_id'] ?? 0));
-        $googleAuthUrl = $client->createAuthUrl();
+        $gClient = new Google_Client();
+        $gClient->setClientId($googleClientId);
+        $gClient->setClientSecret($googleClientSecret);
+        $gClient->setRedirectUri($callbackUri);
+        $gClient->addScope(['email', 'profile', Google_Service_Drive::DRIVE, Google_Service_Drive::DRIVE_FILE]);
+        $gClient->setAccessType('offline');
+        $gClient->setPrompt('select_account consent');
+
+        // State: tg:{random32}:{company_id}
+        $gRand = bin2hex(random_bytes(16));
+        $_SESSION['tenant_oauth_state_rand'] = $gRand;
+        $gClient->setState('tg:' . $gRand . ':' . $companyId);
+
+        $googleAuthUrl = $gClient->createAuthUrl();
     } catch (Throwable $e) {
-        log_event('login.php', 'ERROR', 'Google client init: '.$e->getMessage(), 'auth');
-        error_log('login.php: Google client init failed: ' . $e->getMessage());
+        log_event('login.php', 'ERROR', 'Google client init: ' . $e->getMessage(), 'auth');
         $googleConfigured = false;
-        $client = null;
-        $googleAuthUrl = null;
     }
 }
 
-// -----------------------------
-// 4) GOOGLE LOGIN CALLBACK
-// -----------------------------
-$error_msg = '';
-
-if ($googleConfigured && isset($_GET['code']) && $_GET['code'] !== '') {
+// ── Generar URL de autorización Microsoft ─────────────────────────────────────
+$msAuthUrl = null;
+if ($msConfigured && !$must_choose_company) {
     try {
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-        if (!isset($token['error'])) {
-            $_SESSION['access_token'] = $token;
-            $client->setAccessToken($token);
+        // State: tm:{random32}:{company_id}
+        $mRand = bin2hex(random_bytes(16));
+        $_SESSION['tenant_ms_oauth_state_rand'] = $mRand;
+        $msState = 'tm:' . $mRand . ':' . $companyId;
 
-            $oauth2 = new Google_Service_Oauth2($client);
-            $userInfo = $oauth2->userinfo->get();
-
-            $_SESSION['google_authenticated'] = true;
-            $_SESSION['user_email']   = $userInfo->email;
-            $_SESSION['user_name']    = $userInfo->name;
-            $_SESSION['user_picture'] = $userInfo->picture;
-
-            $device_hash = hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . ($_SERVER['REMOTE_ADDR'] ?? ''));
-            $correo = $userInfo->email;
-
-            if (empty($_SESSION['company_id']) && count($companies) === 1) {
-                $_SESSION['company_id'] = (int)$companies[0]['id'];
-            }
-            if (empty($_SESSION['company_id'])) {
-                $error_msg = 'Seleccioná una empresa para continuar.';
-            } else {
-                if (!empty($_SESSION['user_id'])) {
-                    $sql = "UPDATE " . tn('users') . " SET email = ? WHERE id = ? AND email = 'admin@inventario.local'";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->bind_param('si', $correo, $_SESSION['user_id']);
-                    $stmt->execute();
-                    $stmt->close();
-                    log_event($correo, "LOGIN GOOGLE", "Correo asociado a user_id existente.", 'auth');
-                } else {
-                    $sql = "SELECT id FROM " . tn('users') . " WHERE email = ?";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->bind_param('s', $correo);
-                    $stmt->execute();
-                    $stmt->bind_result($user_id);
-                    if ($stmt->fetch()) {
-                        $_SESSION['user_id'] = (int)$user_id;
-                        $stmt->close();
-                    } else {
-                        $stmt->close();
-                        $username = explode('@', $correo)[0];
-                        $rand_pass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-                        $sql = "INSERT INTO " . tn('users') . " (username, password, email, role) VALUES (?, ?, ?, 'user')";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param('sss', $username, $rand_pass, $correo);
-                        $stmt->execute();
-                        $_SESSION['user_id'] = (int)$stmt->insert_id;
-                        $stmt->close();
-                        log_event($correo, "LOGIN GOOGLE", "Nuevo usuario creado.", 'auth');
-                    }
-                }
-
-                $devicesTable = tn('user_devices');
-                $checkUD = $conn->query("SHOW TABLES LIKE '" . $conn->real_escape_string($devicesTable) . "'");
-                if ($checkUD && $checkUD->num_rows > 0) {
-                    $sql = "INSERT IGNORE INTO " . $devicesTable . " (user_id, google_email, device_hash) VALUES (?, ?, ?)";
-                    $stmt = $conn->prepare($sql);
-                    $uid = (int)$_SESSION['user_id'];
-                    $stmt->bind_param('iss', $uid, $correo, $device_hash);
-                    $stmt->execute();
-                    $stmt->close();
-                }
-
-                log_event($correo, "LOGIN GOOGLE", "Acceso desde IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
-                header('Location: /inventario/index.php');
-                exit();
-            }
-        } else {
-            $error_msg = 'Error de autenticación con Google: ' . ($token['error_description'] ?? 'desconocido');
-            log_event("usuario_desconocido", "ERROR", "Google fetch token: " . json_encode($token), 'auth');
-        }
+        $msAuthUrl = 'https://login.microsoftonline.com/' . urlencode($msTenantId) . '/oauth2/v2.0/authorize?' . http_build_query([
+            'client_id'     => $msClientId,
+            'response_type' => 'code',
+            'redirect_uri'  => $callbackUri,
+            'response_mode' => 'query',
+            'scope'         => 'openid profile email User.Read',
+            'state'         => $msState,
+            'prompt'        => 'select_account',
+        ]);
     } catch (Throwable $e) {
-        $error_msg = 'Error de autenticación con Google. El administrador debe revisar el log.';
-        log_event("usuario_desconocido", "ERROR", "Excepción Google: " . $e->getMessage(), 'auth');
+        log_event('login.php', 'ERROR', 'MS client init: ' . $e->getMessage(), 'auth');
+        $msConfigured = false;
     }
 }
 
-// -----------------------------
-// 5) LOGIN LOCAL
-// -----------------------------
+// Recalcular tras posibles errores
+$ssoConfigured = ($googleAuthUrl !== null) || ($msAuthUrl !== null);
+
+// ── 5) LOGIN LOCAL (solo si SSO no está configurado o ?local=1) ───────────────
+$error_msg  = '';
+$show_local = !$ssoConfigured || !empty($_GET['local']); // ?local=1 → fallback para admin
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['username'], $_POST['password'])
-    && !isset($_GET['code'])
 ) {
     if ($must_choose_company && empty($_POST['company_id'])) {
         $error_msg = 'Seleccioná una empresa para continuar.';
+    } elseif (!($conn instanceof mysqli)) {
+        $error_msg = 'La empresa no está disponible en este momento.';
     } else {
         $username = trim((string)$_POST['username']);
         $password = (string)$_POST['password'];
 
         $user = null;
         try {
-            $sql = "SELECT id, password, role, email FROM " . tn('users') . " WHERE username = ?";
-            $stmt = $conn->prepare($sql);
+            $stmt = $conn->prepare("SELECT id, password, role, email FROM " . tn('users') . " WHERE username = ?");
             $stmt->bind_param('s', $username);
             $stmt->execute();
             $user = $stmt->get_result()->fetch_assoc();
             $stmt->close();
         } catch (Throwable $e) {
             $error_msg = 'Error interno al verificar credenciales.';
-            log_event('login.php', 'ERROR', 'DB login local: '.$e->getMessage(), 'auth');
+            log_event('login.php', 'ERROR', 'DB login local: ' . $e->getMessage(), 'auth');
         }
 
         if ($user && password_verify($password, $user['password'])) {
-            // Cambiar contexto: limpiar sesión superadmin si había una activa
+            // Limpiar cualquier sesión superadmin residual
             unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
             session_regenerate_id(true);
 
@@ -369,9 +281,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-            log_event($user['email'] ?? "id:{$user['id']}", "LOGIN LOCAL", "Acceso exitoso IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
+            log_event($user['email'] ?? "id:{$user['id']}", "LOGIN LOCAL", "IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
-            // Verificar si debe cambiar contraseña obligatoriamente
+            // Verificar cambio de contraseña obligatorio
             $mustChange = false;
             try {
                 $mcStmt = $conn->prepare("SELECT must_change_password FROM " . tn('users') . " WHERE id = ?");
@@ -380,9 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                 $mcRow = $mcStmt->get_result()->fetch_assoc();
                 $mcStmt->close();
                 $mustChange = !empty($mcRow['must_change_password']);
-            } catch (Throwable) {
-                // Columna no existe aún (tenant viejo) → no forzar
-            }
+            } catch (Throwable) {}
 
             if ($mustChange) {
                 $_SESSION['force_password_change'] = true;
@@ -390,14 +300,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                 exit();
             }
 
-            if ($googleConfigured && !isset($_SESSION['google_authenticated'])) {
-                header('Location: ' . $googleAuthUrl);
-                exit();
-            }
-
             header('Location: /inventario/index.php');
             exit();
-        } else if (!$error_msg) {
+
+        } elseif (!$error_msg) {
             $error_msg = 'Credenciales inválidas.';
             log_event("Usuario: $username", "LOGIN FALLIDO", "IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
         }
@@ -409,7 +315,13 @@ if (!empty($_GET['err']) && $error_msg === '') {
     $error_msg = (string)$_GET['err'];
 }
 
-$page_title = 'Iniciar sesión';
+// ── Nombre de la empresa seleccionada ────────────────────────────────────────
+$companyName = '';
+foreach ($companies as $c) {
+    if ((int)$c['id'] === $companyId) { $companyName = $c['nombre']; break; }
+}
+
+$page_title = 'Iniciar sesión' . ($companyName ? " · {$companyName}" : '');
 require __DIR__ . '/../includes/layout/head.php';
 ?>
 
@@ -420,7 +332,7 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
         <div class="ih-auth__brand-text">
           <strong>INTELLIHELP</strong>
-          <span>Asset Vault</span>
+          <span><?= $companyName ? htmlspecialchars($companyName) : 'Asset Vault' ?></span>
         </div>
       </div>
       <h2 class="ih-auth__title">Bienvenido</h2>
@@ -443,48 +355,110 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       <?php endif; ?>
 
-      <form method="post" autocomplete="off" novalidate>
-        <?php if ($must_choose_company): ?>
+      <!-- ── Selector de empresa (solo si hay varias y no se eligió) ── -->
+      <?php if ($must_choose_company): ?>
+        <form method="post" autocomplete="off">
           <div class="ih-field">
-            <label class="ih-field__label" for="company_id">Empresa <span class="req">*</span></label>
-            <select class="ih-select" id="company_id" name="company_id" required>
-              <option value="" disabled selected>Seleccioná tu empresa…</option>
+            <label class="ih-field__label" for="company_id">Elegí tu empresa para continuar</label>
+            <select class="ih-select" id="company_id" name="company_id" required
+                    onchange="this.form.submit()">
+              <option value="" disabled selected>Seleccioná…</option>
               <?php foreach ($companies as $c): ?>
-                <option value="<?= (int)$c['id'] ?>" <?= (isset($_POST['company_id']) && (int)$_POST['company_id'] === (int)$c['id']) ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($c['nombre']) ?>
-                </option>
+                <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
-        <?php endif; ?>
+        </form>
 
-        <div class="ih-field">
-          <label class="ih-field__label" for="username">Usuario</label>
-          <input class="ih-input" type="text" id="username" name="username" placeholder="admin" required autofocus>
+      <?php elseif ($ssoConfigured && !$show_local): ?>
+        <!-- ── SSO configurado: SOLO botones de proveedor ── -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+          <?php if ($googleAuthUrl): ?>
+            <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block"
+               href="<?= htmlspecialchars($googleAuthUrl) ?>">
+              <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+              Continuar con Google
+            </a>
+          <?php endif; ?>
+
+          <?php if ($msAuthUrl): ?>
+            <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block"
+               href="<?= htmlspecialchars($msAuthUrl) ?>">
+              <svg width="18" height="18" viewBox="0 0 23 23" style="flex-shrink:0;"><path fill="#f25022" d="M0 0h11v11H0z"/><path fill="#00a4ef" d="M12 0h11v11H12z"/><path fill="#7fba00" d="M0 12h11v11H0z"/><path fill="#ffb900" d="M12 12h11v11H12z"/></svg>
+              Continuar con Microsoft
+            </a>
+          <?php endif; ?>
+
         </div>
 
-        <div class="ih-field">
-          <label class="ih-field__label" for="password">Contraseña</label>
-          <input class="ih-input" type="password" id="password" name="password" placeholder="••••••••" required>
-        </div>
-
-        <button class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" type="submit">
-          <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
-        </button>
-      </form>
-
-      <?php if ($googleConfigured): ?>
-        <div class="ih-auth__divider">o</div>
-        <?php if ($must_choose_company && empty($_SESSION['company_id'])): ?>
-          <button class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" disabled>
-            <i class="bi bi-google"></i> Elegí empresa primero
-          </button>
-        <?php else: ?>
-          <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
-            <i class="bi bi-google"></i> Continuar con Google
+        <!-- Opción fallback local (oculta, para emergencias de admin) -->
+        <p class="ih-text-xs ih-text-muted" style="text-align:center;margin-top:20px;">
+          <a href="?<?= $companyId ? 'company='.$companyId.'&' : '' ?>local=1"
+             style="color:var(--ih-gray-400);text-decoration:none;">
+            ··· acceso alternativo
           </a>
+        </p>
+
+      <?php else: ?>
+        <!-- ── Sin SSO o ?local=1: formulario usuario/contraseña ── -->
+
+        <?php if ($ssoConfigured): ?>
+          <div class="ih-alert ih-alert--info" style="margin-bottom:16px;">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>Acceso alternativo — normalmente usá el botón SSO de tu empresa.</div>
+          </div>
         <?php endif; ?>
+
+        <form method="post" autocomplete="off" novalidate>
+          <?php if ($must_choose_company): ?>
+            <div class="ih-field">
+              <label class="ih-field__label" for="company_id">Empresa <span class="req">*</span></label>
+              <select class="ih-select" id="company_id" name="company_id" required>
+                <option value="" disabled selected>Seleccioná tu empresa…</option>
+                <?php foreach ($companies as $c): ?>
+                  <option value="<?= (int)$c['id'] ?>" <?= (isset($_POST['company_id']) && (int)$_POST['company_id'] === (int)$c['id']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($c['nombre']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
+
+          <div class="ih-field">
+            <label class="ih-field__label" for="username">Usuario</label>
+            <input class="ih-input" type="text" id="username" name="username"
+                   placeholder="admin" required autofocus
+                   value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+          </div>
+
+          <div class="ih-field">
+            <label class="ih-field__label" for="password">Contraseña</label>
+            <input class="ih-input" type="password" id="password" name="password"
+                   placeholder="••••••••" required>
+          </div>
+
+          <button class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" type="submit">
+            <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+          </button>
+        </form>
+
+        <?php if ($googleAuthUrl || $msAuthUrl): ?>
+          <div class="ih-auth__divider">o</div>
+          <?php if ($googleAuthUrl): ?>
+            <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
+              <i class="bi bi-google"></i> Continuar con Google
+            </a>
+          <?php endif; ?>
+          <?php if ($msAuthUrl): ?>
+            <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($msAuthUrl) ?>">
+              <i class="bi bi-microsoft"></i> Continuar con Microsoft
+            </a>
+          <?php endif; ?>
+        <?php endif; ?>
+
       <?php endif; ?>
+
     </div>
 
     <div class="ih-auth__footer">

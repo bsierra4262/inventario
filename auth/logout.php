@@ -40,6 +40,9 @@ if (is_file($loggerPath)) {
 $usuario_log = $_SESSION['user_email'] ?? ($_SESSION['user_id'] ?? 'usuario_desconocido');
 log_event($usuario_log, 'LOGOUT', 'Cierre de sesión desde IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
+// Guardar company_id antes de destruir la sesión para redirigir de vuelta a la misma empresa
+$company_id_logout = (int)($_SESSION['company_id'] ?? 0);
+
 // Revocar token de Google si existe
 if (!empty($_SESSION['access_token']['access_token'])) {
     $accessToken = $_SESSION['access_token']['access_token'];
@@ -71,5 +74,10 @@ session_start();
 session_regenerate_id(true);
 $_SESSION = [];
 
-header('Location: /auth/login.php?bye=1');
+// Redirigir a la misma empresa para que el usuario pueda volver a ingresar
+$loginUrl = '/auth/login.php?bye=1';
+if ($company_id_logout > 0) {
+    $loginUrl .= '&company=' . $company_id_logout;
+}
+header('Location: ' . $loginUrl);
 exit;

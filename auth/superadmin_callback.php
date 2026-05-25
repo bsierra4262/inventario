@@ -7,7 +7,11 @@ declare(strict_types=1);
  * URI a registrar en Google Cloud Console / Azure:
  *   https://[tu-dominio]/auth/superadmin_callback.php
  *
- * El parámetro ?state= codifica el proveedor: "g:{random}" = Google, "m:{random}" = Microsoft.
+ * Formatos del parámetro ?state=:
+ *   g:{rand32}              → Superadmin con Google
+ *   m:{rand32}              → Superadmin con Microsoft
+ *   tg:{rand32}:{company}  → Tenant con Google
+ *   tm:{rand32}:{company}  → Tenant con Microsoft
  */
 
 require_once __DIR__ . '/../core/config/platform.php';
@@ -17,10 +21,10 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-// Ya autenticado como superadmin — SOLO si NO viene del flujo tenant (state comienza con 'tg:')
-// Si es flujo tenant, se permite continuar aunque haya sesión superadmin activa
+// Ya autenticado como superadmin — SOLO si NO viene de un flujo tenant (tg: o tm:)
 $_incomingState = $_GET['state'] ?? '';
-if (!str_starts_with($_incomingState, 'tg:')
+$_isTenantState = str_starts_with($_incomingState, 'tg:') || str_starts_with($_incomingState, 'tm:');
+if (!$_isTenantState
     && !empty($_SESSION[SESSION_SUPERADMIN_FLAG])
     && $_SESSION[SESSION_SUPERADMIN_FLAG] === true
 ) {
@@ -37,29 +41,39 @@ function sa_cb_error(string $msg): never {
 }
 
 // ── Validar state ─────────────────────────────────────────────────────────────
-// Formatos soportados:
-//   Superadmin Google:    g:{rand32}
-//   Superadmin Microsoft: m:{rand32}
-//   Tenant Google:        tg:{rand32}:{company_id}
 $stateParam      = $_GET['state'] ?? '';
 $tenantCompanyId = 0;
 $isTenantFlow    = false;
+$tenantProvider  = '';  // 'google' | 'microsoft' (solo para flujos tenant)
 
 if (preg_match('/^tg:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
-    // Flujo tenant (empresa cliente con Google)
+    // Tenant — Google
     $providerCode    = 'g';
     $randPart        = $sm[1];
     $tenantCompanyId = (int)$sm[2];
     $isTenantFlow    = true;
+    $tenantProvider  = 'google';
+    $stateKey        = 'tenant_oauth_state_rand';
+
+} elseif (preg_match('/^tm:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
+    // Tenant — Microsoft
+    $providerCode    = 'm';
+    $randPart        = $sm[1];
+    $tenantCompanyId = (int)$sm[2];
+    $isTenantFlow    = true;
+    $tenantProvider  = 'microsoft';
+    $stateKey        = 'tenant_ms_oauth_state_rand';
+
 } elseif (preg_match('/^([gm]):([a-f0-9]{32})$/', $stateParam, $sm)) {
-    // Flujo superadmin
+    // Superadmin
     $providerCode = $sm[1];
     $randPart     = $sm[2];
+    $stateKey     = 'oauth_state_rand';
+
 } else {
     sa_cb_error('Estado OAuth inválido. Intentá de nuevo.');
 }
 
-$stateKey = $isTenantFlow ? 'tenant_oauth_state_rand' : 'oauth_state_rand';
 if (empty($_SESSION[$stateKey]) || !hash_equals($_SESSION[$stateKey], $randPart)) {
     sa_cb_error('Estado OAuth expirado o inválido. Intentá de nuevo.');
 }
@@ -76,7 +90,7 @@ if (empty($_GET['code'])) {
     sa_cb_error("Autenticación cancelada o rechazada: {$desc}");
 }
 
-// ── Flujo tenant: empresa cliente con Google ──────────────────────────────────
+// ── Flujo tenant: empresa cliente (Google o Microsoft) ───────────────────────
 if ($isTenantFlow) {
     $tenantCbError = function(string $msg) use ($tenantCompanyId): never {
         header('Location: /auth/login.php?company=' . $tenantCompanyId . '&err=' . urlencode($msg));
@@ -91,57 +105,114 @@ if ($isTenantFlow) {
         require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
         ['conn' => $tconn, 'prefix' => $pf] = tenant_conn_by_company($tenantCompanyId);
-        $ccTable = $pf . 'cloud_config';
+        $ccTable    = $pf . 'cloud_config';
+        $usersTable = $pf . 'users';
 
-        $tenantClientId = '';
-        $tenantClientSecret = '';
-        $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'google'");
-        if ($res) {
-            while ($row = $res->fetch_assoc()) {
+        // ── Tenant Google ─────────────────────────────────────────────
+        if ($tenantProvider === 'google') {
+            $tenantClientId = $tenantClientSecret = '';
+            $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'google'");
+            if ($res) while ($row = $res->fetch_assoc()) {
                 if ($row['config_key'] === 'client_id')     $tenantClientId     = (string)$row['config_value'];
                 if ($row['config_key'] === 'client_secret') $tenantClientSecret = (string)$row['config_value'];
             }
+
+            if ($tenantClientId === '' || $tenantClientSecret === '') {
+                $tenantCbError('La empresa no tiene credenciales Google configuradas. Contactá al administrador.');
+            }
+
+            $gClient = new Google_Client();
+            $gClient->setClientId($tenantClientId);
+            $gClient->setClientSecret($tenantClientSecret);
+            $gClient->setRedirectUri($callbackUri);
+
+            $token = $gClient->fetchAccessTokenWithAuthCode($_GET['code']);
+            if (isset($token['error'])) {
+                throw new Exception($token['error_description'] ?? 'Google error: ' . $token['error']);
+            }
+            $gClient->setAccessToken($token);
+
+            $oauth2   = new Google_Service_Oauth2($gClient);
+            $userInfo = $oauth2->userinfo->get();
+
+            $email = strtolower((string)($userInfo->email   ?? ''));
+            $name  = (string)($userInfo->name    ?? '');
+            $pic   = (string)($userInfo->picture ?? '');
+
+            if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
+
+            // Limpiar sesión superadmin y establecer contexto tenant
+            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
+            session_regenerate_id(true);
+
+            $_SESSION['company_id']           = $tenantCompanyId;
+            $_SESSION['google_authenticated'] = true;
+            $_SESSION['user_email']           = $email;
+            $_SESSION['user_name']            = $name;
+            $_SESSION['user_picture']         = $pic;
+            $_SESSION['access_token']         = $token;
+
+        // ── Tenant Microsoft ──────────────────────────────────────────
+        } elseif ($tenantProvider === 'microsoft') {
+            $tenantMsClientId     = '';
+            $tenantMsClientSecret = '';
+            $tenantMsTenantId     = 'common';
+            $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'microsoft'");
+            if ($res) while ($row = $res->fetch_assoc()) {
+                if ($row['config_key'] === 'client_id')     $tenantMsClientId     = (string)$row['config_value'];
+                if ($row['config_key'] === 'client_secret') $tenantMsClientSecret = (string)$row['config_value'];
+                if ($row['config_key'] === 'tenant_id')     $tenantMsTenantId     = (string)$row['config_value'];
+            }
+
+            if ($tenantMsClientId === '' || $tenantMsClientSecret === '') {
+                $tenantCbError('La empresa no tiene credenciales Microsoft configuradas. Contactá al administrador.');
+            }
+
+            $http      = new GuzzleHttp\Client(['http_errors' => false, 'timeout' => 15]);
+            $tokenRes  = $http->post("https://login.microsoftonline.com/{$tenantMsTenantId}/oauth2/v2.0/token", [
+                'form_params' => [
+                    'client_id'     => $tenantMsClientId,
+                    'client_secret' => $tenantMsClientSecret,
+                    'code'          => $_GET['code'],
+                    'redirect_uri'  => $callbackUri,
+                    'grant_type'    => 'authorization_code',
+                    'scope'         => 'openid profile email User.Read',
+                ]
+            ]);
+            $tokenData   = json_decode((string)$tokenRes->getBody(), true);
+            if (isset($tokenData['error'])) {
+                throw new Exception($tokenData['error_description'] ?? 'Microsoft OAuth error');
+            }
+            $accessToken = $tokenData['access_token'] ?? '';
+            if ($accessToken === '') throw new Exception('No se recibió access token de Microsoft.');
+
+            $meRes  = $http->get('https://graph.microsoft.com/v1.0/me', [
+                'headers' => ['Authorization' => 'Bearer ' . $accessToken]
+            ]);
+            $meData = json_decode((string)$meRes->getBody(), true);
+
+            $email = strtolower((string)($meData['mail'] ?? $meData['userPrincipalName'] ?? ''));
+            $name  = trim((string)($meData['displayName'] ?? ''));
+            $pic   = '';
+
+            if ($email === '') { $tenantCbError('Microsoft no devolvió un email válido.'); }
+
+            // Limpiar sesión superadmin y establecer contexto tenant
+            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
+            session_regenerate_id(true);
+
+            $_SESSION['company_id']              = $tenantCompanyId;
+            $_SESSION['ms_authenticated']        = true;
+            $_SESSION['user_email']              = $email;
+            $_SESSION['user_name']               = $name;
+            $_SESSION['user_picture']            = '';
+            $_SESSION['ms_access_token']         = $accessToken;
+
+        } else {
+            $tenantCbError('Proveedor OAuth desconocido para este tenant.');
         }
 
-        if ($tenantClientId === '' || $tenantClientSecret === '') {
-            $tenantCbError('La empresa no tiene credenciales Google configuradas. Contactá al administrador.');
-        }
-
-        $client = new Google_Client();
-        $client->setClientId($tenantClientId);
-        $client->setClientSecret($tenantClientSecret);
-        $client->setRedirectUri($callbackUri);
-
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-        if (isset($token['error'])) {
-            throw new Exception($token['error_description'] ?? 'Google error: ' . $token['error']);
-        }
-        $client->setAccessToken($token);
-
-        $oauth2   = new Google_Service_Oauth2($client);
-        $userInfo = $oauth2->userinfo->get();
-
-        $email = strtolower((string)($userInfo->email   ?? ''));
-        $name  = (string)($userInfo->name    ?? '');
-        $pic   = (string)($userInfo->picture ?? '');
-
-        if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
-
-        // Cambiar contexto: limpiar sesión superadmin si había una activa
-        // (superadmin y tenant no pueden coexistir en la misma sesión)
-        unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
-        session_regenerate_id(true);
-
-        // Sesión de tenant
-        $_SESSION['company_id']           = $tenantCompanyId;
-        $_SESSION['google_authenticated'] = true;
-        $_SESSION['user_email']           = $email;
-        $_SESSION['user_name']            = $name;
-        $_SESSION['user_picture']         = $pic;
-        $_SESSION['access_token']         = $token;
-
-        // Buscar o crear usuario en la DB del tenant
-        $usersTable = $pf . 'users';
+        // ── Buscar o crear usuario en la DB del tenant ────────────────
         $stmt = $tconn->prepare("SELECT id FROM `$usersTable` WHERE email = ? LIMIT 1");
         $stmt->bind_param('s', $email);
         $stmt->execute();
