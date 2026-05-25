@@ -191,7 +191,8 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
 // -----------------------------
 $googleClientId     = '';
 $googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/login.php';
+// La redirect_uri SIEMPRE apunta al callback unificado (registrado en Google Cloud Console)
+$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php';
 
 if ($conn instanceof mysqli) {
     try {
@@ -201,13 +202,7 @@ if ($conn instanceof mysqli) {
             while ($cfgRow = $cfgRes->fetch_assoc()) {
                 if ($cfgRow['config_key'] === 'client_id')     $googleClientId     = (string)$cfgRow['config_value'];
                 if ($cfgRow['config_key'] === 'client_secret') $googleClientSecret = (string)$cfgRow['config_value'];
-                if ($cfgRow['config_key'] === 'redirect_uri') {
-                    $dbUri = trim((string)$cfgRow['config_value']);
-                    // Solo sobreescribir el default si la DB tiene una URL absoluta válida
-                    if ($dbUri !== '' && preg_match('#^https?://#i', $dbUri)) {
-                        $googleRedirectUri = $dbUri;
-                    }
-                }
+                // redirect_uri ya no se lee de la DB — siempre usamos superadmin_callback.php
             }
         }
     } catch (Throwable $e) {
@@ -235,6 +230,10 @@ if ($googleConfigured) {
         ]);
         $client->setAccessType('offline');
         $client->setPrompt('select_account consent');
+        // State OAuth — codifica el company_id para que el callback sepa a qué tenant pertenece
+        $oauthRand = bin2hex(random_bytes(16));
+        $_SESSION['tenant_oauth_state_rand'] = $oauthRand;
+        $client->setState('tg:' . $oauthRand . ':' . (int)($_SESSION['company_id'] ?? 0));
         $googleAuthUrl = $client->createAuthUrl();
     } catch (Throwable $e) {
         log_event('login.php', 'ERROR', 'Google client init: '.$e->getMessage(), 'auth');
@@ -393,6 +392,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             log_event("Usuario: $username", "LOGIN FALLIDO", "IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
         }
     }
+}
+
+// Errores reenviados desde el callback OAuth
+if (!empty($_GET['err']) && $error_msg === '') {
+    $error_msg = (string)$_GET['err'];
 }
 
 $page_title = 'Iniciar sesión';

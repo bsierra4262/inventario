@@ -32,26 +32,134 @@ function sa_cb_error(string $msg): never {
 }
 
 // ── Validar state ─────────────────────────────────────────────────────────────
-$stateParam = $_GET['state'] ?? '';
-if (!preg_match('/^([gm]):([a-f0-9]{32})$/', $stateParam, $sm)) {
+// Formatos soportados:
+//   Superadmin Google:    g:{rand32}
+//   Superadmin Microsoft: m:{rand32}
+//   Tenant Google:        tg:{rand32}:{company_id}
+$stateParam      = $_GET['state'] ?? '';
+$tenantCompanyId = 0;
+$isTenantFlow    = false;
+
+if (preg_match('/^tg:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
+    // Flujo tenant (empresa cliente con Google)
+    $providerCode    = 'g';
+    $randPart        = $sm[1];
+    $tenantCompanyId = (int)$sm[2];
+    $isTenantFlow    = true;
+} elseif (preg_match('/^([gm]):([a-f0-9]{32})$/', $stateParam, $sm)) {
+    // Flujo superadmin
+    $providerCode = $sm[1];
+    $randPart     = $sm[2];
+} else {
     sa_cb_error('Estado OAuth inválido. Intentá de nuevo.');
 }
-$providerCode = $sm[1];
-$randPart     = $sm[2];
 
-if (empty($_SESSION['oauth_state_rand']) || !hash_equals($_SESSION['oauth_state_rand'], $randPart)) {
+$stateKey = $isTenantFlow ? 'tenant_oauth_state_rand' : 'oauth_state_rand';
+if (empty($_SESSION[$stateKey]) || !hash_equals($_SESSION[$stateKey], $randPart)) {
     sa_cb_error('Estado OAuth expirado o inválido. Intentá de nuevo.');
 }
-unset($_SESSION['oauth_state_rand']);
+unset($_SESSION[$stateKey]);
 
 $provider = $providerCode === 'g' ? 'google' : 'microsoft';
 
 if (empty($_GET['code'])) {
     $desc = htmlspecialchars($_GET['error_description'] ?? $_GET['error'] ?? 'Sin código de autorización');
+    if ($isTenantFlow) {
+        header('Location: /auth/login.php?company=' . $tenantCompanyId . '&err=' . urlencode("Autenticación cancelada: {$desc}"));
+        exit;
+    }
     sa_cb_error("Autenticación cancelada o rechazada: {$desc}");
 }
 
-// ── Procesar callback ─────────────────────────────────────────────────────────
+// ── Flujo tenant: empresa cliente con Google ──────────────────────────────────
+if ($isTenantFlow) {
+    $tenantCbError = function(string $msg) use ($tenantCompanyId): never {
+        header('Location: /auth/login.php?company=' . $tenantCompanyId . '&err=' . urlencode($msg));
+        exit;
+    };
+
+    if ($tenantCompanyId <= 0) {
+        $tenantCbError('No hay empresa seleccionada. Intentá de nuevo.');
+    }
+
+    try {
+        require_once __DIR__ . '/../core/tenants/install_tenant.php';
+
+        ['conn' => $tconn, 'prefix' => $pf] = tenant_conn_by_company($tenantCompanyId);
+        $ccTable = $pf . 'cloud_config';
+
+        $tenantClientId = '';
+        $tenantClientSecret = '';
+        $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'google'");
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                if ($row['config_key'] === 'client_id')     $tenantClientId     = (string)$row['config_value'];
+                if ($row['config_key'] === 'client_secret') $tenantClientSecret = (string)$row['config_value'];
+            }
+        }
+
+        if ($tenantClientId === '' || $tenantClientSecret === '') {
+            $tenantCbError('La empresa no tiene credenciales Google configuradas. Contactá al administrador.');
+        }
+
+        $client = new Google_Client();
+        $client->setClientId($tenantClientId);
+        $client->setClientSecret($tenantClientSecret);
+        $client->setRedirectUri($callbackUri);
+
+        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+        if (isset($token['error'])) {
+            throw new Exception($token['error_description'] ?? 'Google error: ' . $token['error']);
+        }
+        $client->setAccessToken($token);
+
+        $oauth2   = new Google_Service_Oauth2($client);
+        $userInfo = $oauth2->userinfo->get();
+
+        $email = strtolower((string)($userInfo->email   ?? ''));
+        $name  = (string)($userInfo->name    ?? '');
+        $pic   = (string)($userInfo->picture ?? '');
+
+        if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
+
+        // Sesión de tenant
+        $_SESSION['company_id']           = $tenantCompanyId;
+        $_SESSION['google_authenticated'] = true;
+        $_SESSION['user_email']           = $email;
+        $_SESSION['user_name']            = $name;
+        $_SESSION['user_picture']         = $pic;
+        $_SESSION['access_token']         = $token;
+
+        // Buscar o crear usuario en la DB del tenant
+        $usersTable = $pf . 'users';
+        $stmt = $tconn->prepare("SELECT id FROM `$usersTable` WHERE email = ? LIMIT 1");
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $stmt->bind_result($uid);
+        $found = $stmt->fetch();
+        $stmt->close();
+
+        if ($found) {
+            $_SESSION['user_id'] = (int)$uid;
+        } else {
+            $username = explode('@', $email)[0];
+            $randPass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
+            $ins = $tconn->prepare("INSERT INTO `$usersTable` (username, password, email, role) VALUES (?, ?, ?, 'user')");
+            $ins->bind_param('sss', $username, $randPass, $email);
+            $ins->execute();
+            $_SESSION['user_id'] = (int)$ins->insert_id;
+            $ins->close();
+        }
+
+        header('Location: /inventario/index.php');
+        exit;
+
+    } catch (Throwable $te) {
+        $tenantCbError('Error de autenticación: ' . $te->getMessage());
+    }
+}
+
+// ── Procesar callback superadmin ──────────────────────────────────────────────
 try {
     $db = new MasterDB();
 

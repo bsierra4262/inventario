@@ -80,9 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($loginUrl === '' && $subdomain !== '') {
         $loginUrl = $baseUrl . '/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
     }
-    // Auto-generar redirect_uri si está vacío (solo para Google)
+    // Auto-generar redirect_uri si está vacío (siempre apunta al callback unificado)
     if ($redirectUri === '' && $provider === 'google') {
-        $redirectUri = $baseUrl . '/auth/login.php';
+        $redirectUri = $baseUrl . '/auth/superadmin_callback.php';
     }
 
     if ($nombre === '') { $err = 'El nombre es obligatorio.'; }
