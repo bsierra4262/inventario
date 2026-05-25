@@ -1,39 +1,32 @@
 # =====================================================================
 #  INTELLIHELP Asset Vault — Apache config
+#  Funciona igual en cualquier dominio/subdominio donde se aloje.
 # =====================================================================
 
-# Codificación y charset por defecto
 AddDefaultCharset UTF-8
-
-# Forzar HTTPS
 RewriteEngine On
+
+# ── Forzar HTTPS (cualquier dominio) ───────────────────────────────
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-# Redirigir www → sin-www (URL canónica)
-RewriteCond %{HTTP_HOST} ^www\.intellihelp\.tech [NC]
-RewriteRule ^ https://intellihelp.tech%{REQUEST_URI} [R=301,L]
-
 # ── Seguridad básica ────────────────────────────────────────────────
-
-# Ocultar firma de Apache
-ServerSignature Off
 
 # Bloquear listado de directorios
 Options -Indexes
 
-# Bloquear acceso directo a archivos sensibles
-<FilesMatch "\.(env|log|sql|bak|json|lock|md|gitignore)$">
+# Bloquear acceso web directo a archivos sensibles
+<FilesMatch "\.(env|log|sql|bak|lock|md|gitignore)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-# Proteger el directorio vendor/ de acceso web directo
+# Bloquear acceso web directo a carpetas internas (PHP interno las usa vía require, no URL)
 <IfModule mod_rewrite.c>
-    RewriteRule ^vendor/ - [F,L]
-    RewriteRule ^logs/ - [F,L]
-    RewriteRule ^core/ - [F,L]
-    RewriteRule ^secure/ - [F,L]
+    RewriteRule ^vendor(/|$) - [F,L]
+    RewriteRule ^logs(/|$)   - [F,L]
+    RewriteRule ^core(/|$)   - [F,L]
+    RewriteRule ^secure(/|$) - [F,L]
 </IfModule>
 
 # ── PHP (Hostinger shared hosting) ─────────────────────────────────

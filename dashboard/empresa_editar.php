@@ -77,7 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subdomain = trim((string)($_POST['subdomain'] ?? ''));
     $loginUrl  = trim((string)($_POST['login_url'] ?? ''));
     if ($loginUrl === '' && $subdomain !== '') {
-        $loginUrl = 'https://intellihelp.tech/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
+        $baseUrl  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $loginUrl = $baseUrl . '/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
     }
 
     if ($nombre === '') { $err = 'El nombre es obligatorio.'; }

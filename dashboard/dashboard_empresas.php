@@ -43,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subdomain  = trim((string)($_POST['subdomain']  ?? ''));
     $loginUrl   = trim((string)($_POST['login_url']  ?? ''));
     if ($loginUrl === '' && $subdomain !== '') {
-        $loginUrl = 'https://intellihelp.tech/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
+        $baseUrl  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $loginUrl = $baseUrl . '/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
     }
 
     $adminEmail = trim($_POST['admin_email']    ?? '');
@@ -303,8 +304,8 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">URL completa de login</label>
-                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://intellihelp.tech/auth/login.php?company=cliente">
-                <div class="ih-field__hint">Si lo dejás vacío y pusiste un subdominio, se autocompleta como <code>https://intellihelp.tech/auth/login.php?company=[subdominio]</code>.</div>
+                <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://desarrollo.intellihelp.tech/auth/login.php?company=cliente">
+                <div class="ih-field__hint">Si lo dejás vacío, se autogenera con el dominio actual + <code>/auth/login.php?company=[subdominio]</code>.</div>
               </div>
             </div>
           </div>
