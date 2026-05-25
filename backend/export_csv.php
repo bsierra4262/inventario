@@ -58,60 +58,41 @@ if (!checkCsrfToken('export_inventario', $csrf_token)) {
 // -----------------------------------------------------
 // 3. PREPARAR RESPUESTA CSV
 // -----------------------------------------------------
-$filename   = 'inventario_' . date('Ymd_His') . '.csv';
-$clean_name = str_replace(['"', "\r", "\n"], ['','', ''], $filename);
+// Parámetros del export
+$productosTable     = tn('productos');
+$incluirArchivados  = !empty($_POST['incluir_archivados']) && (int)$_POST['incluir_archivados'] === 1;
+$whereArchivado     = $incluirArchivados ? '' : 'WHERE p.archivado = 0';
+
+$exportFilename = $incluirArchivados
+    ? ('inventario_completo_' . date('Ymd_His') . '.csv')
+    : ('inventario_activos_'  . date('Ymd_His') . '.csv');
+$exportFilename = str_replace(['"', "\r", "\n"], '', $exportFilename);
 
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename="'.$clean_name.'"');
+header('Content-Disposition: attachment; filename="' . $exportFilename . '"');
 
 $output = fopen('php://output', 'w');
 
-// Encabezados
-fputcsv($output, [
-    'ID',
-    'Asignado a',
-    'Nombre/Modelo',
-    'Marca',
-    'Descripcion',
-    'S/N Service Tag',
-    'Cantidad',
-    'Valor de Compra en USD',
-    'Estado',
-    'Categoria',
-    'Subcategoria',
-    'Garantia (meses)',
-    'Fecha Garantia',
-    'Fecha Recepcion',
-    'Fecha Compra',
-    'Ubicacion',
-    'Fecha Carga',
-    'patchcord_tipo',
-    'patchcord_longitud',
-    'switch_gestion',
-    'antenas_tipo',
-    'bobina_categoria',
-    'bobina_ubicacion',
-    'bobina_longitud',
-    'conectores_tipo',
-    'detalle_conectores',
-    'cintas_generacion',
-    'detalle_repuesto',
-    'detalle_otros',
-    'subsoftware',
-    'subsoftware_otros'
-]);
+// BOM UTF-8 para que Excel abra correctamente
+fwrite($output, "\xEF\xBB\xBF");
+
+// Encabezados del CSV
+fputcsv($output, array_filter([
+    'ID', 'Asignado a', 'Nombre/Modelo', 'Marca', 'Descripcion',
+    'S/N Service Tag', 'Cantidad', 'Valor USD', 'Estado',
+    'Categoria', 'Subcategoria', 'Garantia (meses)', 'Inicio Garantia',
+    'Fecha Recepcion', 'Fecha Compra', 'Ubicacion', 'Fecha Carga',
+    $incluirArchivados ? 'Archivado' : null,
+    'Patchcord tipo', 'Patchcord longitud', 'Switch gestion', 'Antenas tipo',
+    'Bobina categoria', 'Bobina ubicacion', 'Bobina longitud',
+    'Conectores tipo', 'Detalle conectores', 'Cintas generacion',
+    'Detalle repuesto', 'Detalle otros', 'Software', 'Software detalle',
+]));
 
 // -----------------------------------------------------
 // 4. CONSULTA A BD
 // -----------------------------------------------------
-// Ahora mismo tu query trae TODOS los productos no archivados.
-// Lo voy a reescribir usando alias p.* por claridad y dejar el hook tenant.
-//
-// IMPORTANTE: asumo que 'productos' tiene columna 'archivado' y que
-// vas a agregar (o ya agregaste) 'tenant_id' o similar para aislar clientes.
-// Si NO la tenés todavía, dejá comentada esa parte del WHERE.
-//
-$productosTable = tn('productos');
+
 $sql = "
     SELECT
         p.id,
@@ -131,6 +112,7 @@ $sql = "
         p.fecha_compra,
         p.ubicacion,
         COALESCE(p.fecha_carga, p.fecha_modificacion) AS fecha_carga,
+        p.archivado,
         p.patchcord_tipo,
         p.patchcord_longitud,
         p.switch_gestion,
@@ -146,7 +128,7 @@ $sql = "
         p.subsoftware,
         p.subsoftware_otros
     FROM `{$productosTable}` p
-    WHERE p.archivado = 0
+    {$whereArchivado}
     ORDER BY p.id ASC
 ";
 
@@ -178,19 +160,18 @@ function convertir_fecha(?string $fecha): ?string {
 // -----------------------------------------------------
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
+        // Normalizar fechas
+        $row['fecha_garantia'] = convertir_fecha($row['fecha_garantia'] ?? null);
+        $row['fecha_ingreso']  = convertir_fecha($row['fecha_ingreso']  ?? null);
+        $row['fecha_compra']   = convertir_fecha($row['fecha_compra']   ?? null);
 
-        // normalizamos fechas
-        $row['fecha_garantia'] = convertir_fecha($row['fecha_garantia'] ?? '');
-        $row['fecha_ingreso']  = convertir_fecha($row['fecha_ingreso']  ?? '');
-        $row['fecha_compra']   = convertir_fecha($row['fecha_compra']   ?? '');
+        // Quitar columna archivado si no fue pedida
+        if (!$incluirArchivados) unset($row['archivado']);
 
-        // garantizamos string vacío en null
-        $data = [];
-        foreach ($row as $k => $value) {
-            $data[] = is_null($value) ? '' : $value;
-        }
+        // String vacío en nulls
+        $data = array_map(fn($v) => $v ?? '', $row);
 
-        fputcsv($output, $data);
+        fputcsv($output, array_values($data));
     }
 } else {
     fputcsv($output, ['No hay datos disponibles']);

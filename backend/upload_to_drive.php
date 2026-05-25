@@ -6,11 +6,26 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/csrf.php';
 
 // --- Guardia de sesión ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    header('Location: ../login.php');
+    header('Location: /auth/login.php');
+    exit();
+}
+
+// --- Guardia CSRF ---
+if (!verifyCsrfToken(null, 'upload_producto')) {
+    log_event((string)$user_id, 'CSRF_BLOCK', 'Token CSRF inválido en upload_to_drive.php', 'transaccion');
+    header('Location: /inventario/agregar.php?err=' . urlencode('Formulario expirado. Por favor intentá de nuevo.'));
+    exit();
+}
+
+// Función helper para errores de agregar — vuelve al form con el error visible
+function agregar_error(string $msg): never {
+    $_SESSION['form_data'] = $_SESSION['form_data'] ?? [];
+    header('Location: /inventario/agregar.php?err=' . urlencode($msg));
     exit();
 }
 
@@ -36,13 +51,11 @@ try {
     }
 } catch (Throwable $e) {
     log_event((string)$user_id, 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
-    header('Location: resultado.php?status=error&msg=' . urlencode('Google Drive no está configurado. Contactá al administrador.') . '&origen=agregar');
-    exit();
+    agregar_error('Google Drive no está configurado. Contactá al administrador.');
 }
 
 if (!$googleClientId || !$googleClientSecret) {
-    header('Location: resultado.php?status=error&msg=' . urlencode('Google Drive no está configurado. Configuralo en Integración > Google Drive.') . '&origen=agregar');
-    exit();
+    agregar_error('Google Drive no está configurado. Configuralo en Integración → Google Drive.');
 }
 
 // --- Inicializar cliente Google con token de sesión ---
@@ -62,7 +75,7 @@ $client->setPrompt('select_account consent');
 if (!isset($_SESSION['access_token'])) {
     // Sin token: redirigir a login para que haga OAuth
     log_event((string)$user_id, 'ERROR', 'Intento de subir archivo sin token de Drive activo', 'transaccion');
-    header('Location: ../login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -76,7 +89,7 @@ if ($client->isAccessTokenExpired()) {
     } else {
         // No hay refresh token, forzar re-login
         unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        header('Location: ../login.php');
+        header('Location: /auth/login.php');
         exit();
     }
 }
@@ -87,14 +100,13 @@ if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
 
 // --- Solo procesar POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../index.php');
+    header('Location: /inventario/index.php');
     exit();
 }
 
 $modelo             = trim(htmlspecialchars($_POST['nombre']      ?? ''));
 if ($modelo === '') {
-    header('Location: resultado.php?status=error&msg=' . urlencode('El nombre/modelo es obligatorio.') . '&origen=agregar');
-    exit();
+    agregar_error('El nombre/modelo es obligatorio.');
 }
 
 $marca              = trim(htmlspecialchars($_POST['marca']               ?? ''));
@@ -341,22 +353,17 @@ try {
     }
 
     if (!empty($archivos_rechazados)) {
-        $msg = '<div style="text-align:left"><strong>Archivos rechazados:</strong><ul>';
-        foreach ($archivos_rechazados as $r) {
-            $msg .= '<li>' . htmlspecialchars($r) . '</li>';
-        }
-        $msg .= '</ul><p>Verificá formato y tamaño (máx. 5MB).</p></div>';
-        echo "<script>location.href='resultado.php?status=error&origen=agregar&msg=" . rawurlencode($msg) . "';</script>";
+        $rechazadosMsg = implode(', ', $archivos_rechazados);
+        header('Location: /inventario/index.php?ok=1&warn=' . urlencode("Activo guardado. Archivos rechazados: {$rechazadosMsg}"));
         exit();
     }
 
     unset($_SESSION['form_data']);
-    header('Location: resultado.php?status=success&msg=' . urlencode('Producto agregado correctamente.') . '&origen=agregar');
+    header('Location: /inventario/index.php?ok=1&msg=' . urlencode("Activo '{$modelo}' agregado correctamente."));
     exit();
 
 } catch (Throwable $e) {
     $conn->rollback();
     log_event((string)$user_id, 'ERROR', $e->getMessage(), 'transaccion');
-    header('Location: resultado.php?status=error&msg=' . urlencode('Error al agregar producto: ' . $e->getMessage()) . '&origen=agregar');
-    exit();
+    agregar_error('Error al guardar el activo: ' . $e->getMessage());
 }
