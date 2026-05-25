@@ -42,9 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $subdomain  = trim((string)($_POST['subdomain']  ?? ''));
     $loginUrl   = trim((string)($_POST['login_url']  ?? ''));
+    $baseUrl    = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     if ($loginUrl === '' && $subdomain !== '') {
-        $baseUrl  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $loginUrl = $baseUrl . '/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
+    }
+    // Auto-generar redirect_uri si está vacío (solo para Google)
+    if ($redirectUri === '' && $provider === 'google') {
+        $redirectUri = $baseUrl . '/auth/login.php';
     }
 
     $adminEmail = trim($_POST['admin_email']    ?? '');
@@ -224,8 +228,8 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-col-12">
                 <div class="ih-field">
                   <label class="ih-field__label">Redirect URI</label>
-                  <input class="ih-input" name="redirect_uri" placeholder="https://cliente.intellihelp.tech/auth/login.php" value="<?= htmlspecialchars($_POST['redirect_uri'] ?? '') ?>">
-                  <div class="ih-field__hint">Debe coincidir exactamente con la URI configurada en Google Cloud Console.</div>
+                  <input class="ih-input" name="redirect_uri" placeholder="(se autogenera: https://[dominio]/auth/login.php)" value="<?= htmlspecialchars($_POST['redirect_uri'] ?? '') ?>">
+                  <div class="ih-field__hint">Si lo dejás vacío, se autogenera con el dominio actual. Debe coincidir exactamente con la URI configurada en Google Cloud Console.</div>
                 </div>
               </div>
             </div>

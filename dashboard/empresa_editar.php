@@ -76,9 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $subdomain = trim((string)($_POST['subdomain'] ?? ''));
     $loginUrl  = trim((string)($_POST['login_url'] ?? ''));
+    $baseUrl   = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     if ($loginUrl === '' && $subdomain !== '') {
-        $baseUrl  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $loginUrl = $baseUrl . '/auth/login.php?company=' . preg_replace('/[^a-z0-9\-]/i', '', $subdomain);
+    }
+    // Auto-generar redirect_uri si está vacío (solo para Google)
+    if ($redirectUri === '' && $provider === 'google') {
+        $redirectUri = $baseUrl . '/auth/login.php';
     }
 
     if ($nombre === '') { $err = 'El nombre es obligatorio.'; }
@@ -275,7 +279,8 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-col-12">
                 <div class="ih-field">
                   <label class="ih-field__label">Redirect URI</label>
-                  <input class="ih-input" name="redirect_uri" value="<?= htmlspecialchars($googleCC['redirect_uri'] ?? '') ?>">
+                  <input class="ih-input" name="redirect_uri" value="<?= htmlspecialchars($googleCC['redirect_uri'] ?? '') ?>" placeholder="(se autogenera: https://[dominio]/auth/login.php)">
+                  <div class="ih-field__hint">Si lo dejás vacío al guardar credenciales, se autogenera con el dominio actual. Debe coincidir con Google Cloud Console.</div>
                 </div>
               </div>
             </div>
