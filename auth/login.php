@@ -193,38 +193,56 @@ $googleClientId     = '';
 $googleClientSecret = '';
 $googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/login.php';
 
-try {
-    $cfgTable = tn('cloud_config');
-    $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
-    if ($cfgRes) {
-        while ($cfgRow = $cfgRes->fetch_assoc()) {
-            if ($cfgRow['config_key'] === 'client_id')     $googleClientId     = $cfgRow['config_value'];
-            if ($cfgRow['config_key'] === 'client_secret') $googleClientSecret = $cfgRow['config_value'];
-            if ($cfgRow['config_key'] === 'redirect_uri')  $googleRedirectUri  = $cfgRow['config_value'];
+if ($conn instanceof mysqli) {
+    try {
+        $cfgTable = tn('cloud_config');
+        $cfgRes = $conn->query("SELECT config_key, config_value FROM `{$cfgTable}` WHERE provider = 'google'");
+        if ($cfgRes) {
+            while ($cfgRow = $cfgRes->fetch_assoc()) {
+                if ($cfgRow['config_key'] === 'client_id')     $googleClientId     = (string)$cfgRow['config_value'];
+                if ($cfgRow['config_key'] === 'client_secret') $googleClientSecret = (string)$cfgRow['config_value'];
+                if ($cfgRow['config_key'] === 'redirect_uri') {
+                    $dbUri = trim((string)$cfgRow['config_value']);
+                    // Solo sobreescribir el default si la DB tiene una URL absoluta válida
+                    if ($dbUri !== '' && preg_match('#^https?://#i', $dbUri)) {
+                        $googleRedirectUri = $dbUri;
+                    }
+                }
+            }
         }
+    } catch (Throwable $e) {
+        log_event('login.php', 'ERROR', 'Lectura cloud_config: '.$e->getMessage(), 'auth');
     }
-} catch (Throwable $e) {}
+}
 
 $googleConfigured = ($googleClientId !== '' && $googleClientSecret !== '');
 $client = null;
 $googleAuthUrl = null;
 
 if ($googleConfigured) {
-    $client = new Google_Client();
-    $client->setClientId($googleClientId);
-    $client->setClientSecret($googleClientSecret);
-    $client->setRedirectUri($googleRedirectUri);
-    $client->addScope([
-        Google_Service_Drive::DRIVE,
-        Google_Service_Drive::DRIVE_FILE,
-        Google_Service_Drive::DRIVE_METADATA_READONLY,
-        Google_Service_Drive::DRIVE_APPDATA,
-        'email',
-        'profile'
-    ]);
-    $client->setAccessType('offline');
-    $client->setPrompt('select_account consent');
-    $googleAuthUrl = $client->createAuthUrl();
+    try {
+        $client = new Google_Client();
+        $client->setClientId($googleClientId);
+        $client->setClientSecret($googleClientSecret);
+        $client->setRedirectUri($googleRedirectUri);
+        $client->addScope([
+            Google_Service_Drive::DRIVE,
+            Google_Service_Drive::DRIVE_FILE,
+            Google_Service_Drive::DRIVE_METADATA_READONLY,
+            Google_Service_Drive::DRIVE_APPDATA,
+            'email',
+            'profile'
+        ]);
+        $client->setAccessType('offline');
+        $client->setPrompt('select_account consent');
+        $googleAuthUrl = $client->createAuthUrl();
+    } catch (Throwable $e) {
+        log_event('login.php', 'ERROR', 'Google client init: '.$e->getMessage(), 'auth');
+        error_log('login.php: Google client init failed: ' . $e->getMessage());
+        $googleConfigured = false;
+        $client = null;
+        $googleAuthUrl = null;
+    }
 }
 
 // -----------------------------
