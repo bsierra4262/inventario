@@ -1,11 +1,34 @@
 # =====================================================================
-#  INTELLIHELP Asset Vault — Apache/LiteSpeed config
-#  Sintaxis Apache 2.4 compatible con LiteSpeed (Hostinger)
+#  INTELLIHELP Asset Vault — .htaccess (subdominio desarrollo)
+#
+#  Este subdominio vive DENTRO de un WordPress + Wordfence en el dominio
+#  padre. Necesitamos anular directivas heredadas que rompen el app.
 # =====================================================================
 
-# Forzar HTTPS (cualquier dominio donde se aloje)
+# ── CRÍTICO: Anular Wordfence WAF heredado ────────────────────────
+# El WP padre setea auto_prepend_file = wordfence-waf.php → causa 500
+# en cada .php de nuestro app porque Wordfence asume contexto WP.
+<IfModule LiteSpeed>
+    php_value auto_prepend_file none
+</IfModule>
+<IfModule lsapi_module>
+    php_value auto_prepend_file none
+</IfModule>
+<IfModule mod_php.c>
+    php_value auto_prepend_file none
+</IfModule>
+<IfModule mod_php7.c>
+    php_value auto_prepend_file none
+</IfModule>
+<IfModule mod_php8.c>
+    php_value auto_prepend_file none
+</IfModule>
+
+# ── Reset de RewriteEngine para no heredar reglas de WordPress ───
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Forzar HTTPS
     RewriteCond %{HTTPS} !=on
     RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 </IfModule>
