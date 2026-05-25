@@ -361,6 +361,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         }
 
         if ($user && password_verify($password, $user['password'])) {
+            // Cambiar contexto: limpiar sesión superadmin si había una activa
+            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
+            session_regenerate_id(true);
+
             $_SESSION['user_id']    = (int)$user['id'];
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

@@ -17,8 +17,13 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
-// Ya autenticado
-if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
+// Ya autenticado como superadmin — SOLO si NO viene del flujo tenant (state comienza con 'tg:')
+// Si es flujo tenant, se permite continuar aunque haya sesión superadmin activa
+$_incomingState = $_GET['state'] ?? '';
+if (!str_starts_with($_incomingState, 'tg:')
+    && !empty($_SESSION[SESSION_SUPERADMIN_FLAG])
+    && $_SESSION[SESSION_SUPERADMIN_FLAG] === true
+) {
     header('Location: /dashboard/dashboard_resumen.php');
     exit;
 }
@@ -121,6 +126,11 @@ if ($isTenantFlow) {
         $pic   = (string)($userInfo->picture ?? '');
 
         if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
+
+        // Cambiar contexto: limpiar sesión superadmin si había una activa
+        // (superadmin y tenant no pueden coexistir en la misma sesión)
+        unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
+        session_regenerate_id(true);
 
         // Sesión de tenant
         $_SESSION['company_id']           = $tenantCompanyId;
