@@ -141,9 +141,10 @@ if ($isTenantFlow) {
 
             if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
 
-            // Limpiar sesión superadmin y establecer contexto tenant
-            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
-            session_regenerate_id(true);
+            // Limpiar TODA la sesión (quita flag SA y datos previos) sin regenerar ID
+            // session_regenerate_id(true) tiene un bug en algunos hostings shared:
+            // envía Set-Cookie con nuevo ID pero no escribe el archivo → sesión vacía en el redirect.
+            session_unset();
 
             $_SESSION['company_id']           = $tenantCompanyId;
             $_SESSION['google_authenticated'] = true;
@@ -197,9 +198,8 @@ if ($isTenantFlow) {
 
             if ($email === '') { $tenantCbError('Microsoft no devolvió un email válido.'); }
 
-            // Limpiar sesión superadmin y establecer contexto tenant
-            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
-            session_regenerate_id(true);
+            // Limpiar TODA la sesión sin regenerar ID (ver nota en flujo Google)
+            session_unset();
 
             $_SESSION['company_id']              = $tenantCompanyId;
             $_SESSION['ms_authenticated']        = true;

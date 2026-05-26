@@ -273,10 +273,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         }
 
         if ($user && password_verify($password, $user['password'])) {
-            // Limpiar cualquier sesión superadmin residual
-            unset($_SESSION[SESSION_SUPERADMIN_FLAG]);
-            session_regenerate_id(true);
+            // Preservar company_id y limpiar el resto de la sesión sin regenerar ID.
+            // session_regenerate_id(true) en algunos hostings shared envía cookie con nuevo
+            // ID pero no escribe el archivo → sesión vacía en el siguiente request.
+            $cid_login = (int)($_SESSION['company_id'] ?? 0);
+            session_unset();
 
+            if ($cid_login > 0) $_SESSION['company_id'] = $cid_login;
             $_SESSION['user_id']    = (int)$user['id'];
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
