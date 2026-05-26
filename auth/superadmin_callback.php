@@ -110,7 +110,9 @@ if ($isTenantFlow) {
 
         // ── Tenant Google ─────────────────────────────────────────────
         if ($tenantProvider === 'google') {
-            $tenantClientId = $tenantClientSecret = '';
+            // Plataforma como primario, tenant override vía cloud_config
+            $tenantClientId     = GOOGLE_CLIENT_ID;
+            $tenantClientSecret = GOOGLE_CLIENT_SECRET;
             $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'google'");
             if ($res) while ($row = $res->fetch_assoc()) {
                 if ($row['config_key'] === 'client_id')     $tenantClientId     = (string)$row['config_value'];
@@ -118,7 +120,7 @@ if ($isTenantFlow) {
             }
 
             if ($tenantClientId === '' || $tenantClientSecret === '') {
-                $tenantCbError('La empresa no tiene credenciales Google configuradas. Contactá al administrador.');
+                $tenantCbError('Google no está configurado. Contactá al administrador del sistema.');
             }
 
             $gClient = new Google_Client();
@@ -155,9 +157,10 @@ if ($isTenantFlow) {
 
         // ── Tenant Microsoft ──────────────────────────────────────────
         } elseif ($tenantProvider === 'microsoft') {
-            $tenantMsClientId     = '';
-            $tenantMsClientSecret = '';
-            $tenantMsTenantId     = 'common';
+            // Plataforma como primario, tenant override vía cloud_config
+            $tenantMsClientId     = MS_CLIENT_ID;
+            $tenantMsClientSecret = MS_CLIENT_SECRET;
+            $tenantMsTenantId     = MS_TENANT_ID ?: 'common';
             $res = $tconn->query("SELECT config_key, config_value FROM `$ccTable` WHERE provider = 'microsoft'");
             if ($res) while ($row = $res->fetch_assoc()) {
                 if ($row['config_key'] === 'client_id')     $tenantMsClientId     = (string)$row['config_value'];
@@ -166,7 +169,7 @@ if ($isTenantFlow) {
             }
 
             if ($tenantMsClientId === '' || $tenantMsClientSecret === '') {
-                $tenantCbError('La empresa no tiene credenciales Microsoft configuradas. Contactá al administrador.');
+                $tenantCbError('Microsoft no está configurado. Contactá al administrador del sistema.');
             }
 
             $http      = new GuzzleHttp\Client(['http_errors' => false, 'timeout' => 15]);
@@ -212,16 +215,17 @@ if ($isTenantFlow) {
             $tenantCbError('Proveedor OAuth desconocido para este tenant.');
         }
 
-        // ── Buscar o crear usuario en la DB del tenant ────────────────
-        $stmt = $tconn->prepare("SELECT id FROM `$usersTable` WHERE email = ? LIMIT 1");
+        // ── Buscar usuario en la DB del tenant ───────────────────────
+        $stmt = $tconn->prepare("SELECT id, role FROM `$usersTable` WHERE email = ? LIMIT 1");
         $stmt->bind_param('s', $email);
         $stmt->execute();
-        $stmt->bind_result($uid);
-        $found = $stmt->fetch();
+        $userRow = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+        $found = $userRow !== null;
 
         if ($found) {
-            $_SESSION['user_id'] = (int)$uid;
+            $_SESSION['user_id'] = (int)$userRow['id'];
+            $_SESSION['role']    = $userRow['role'] ?? 'viewer';
         } else {
             // Sin acceso: el usuario debe estar pre-registrado por el admin del tenant
             $tenantCbError(

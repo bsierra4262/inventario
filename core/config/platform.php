@@ -21,6 +21,20 @@ defined('LOG_PATH')              || define('LOG_PATH',              __DIR__ . '/
 // === Proveedores soportados ===
 defined('PROVIDERS')             || define('PROVIDERS',             ['google', 'microsoft']);
 
+// === OAuth Google — credenciales de plataforma ===
+// Completar en el servidor editando este archivo (o vía variable de entorno).
+// Si están vacías el sistema usa las credenciales por tenant (cloud_config).
+defined('GOOGLE_CLIENT_ID')     || define('GOOGLE_CLIENT_ID',     getenv('GOOGLE_CLIENT_ID')     ?: '');
+defined('GOOGLE_CLIENT_SECRET') || define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
+// URI de callback registrada en Google Cloud Console — dejar vacío para auto-detectar
+defined('GOOGLE_REDIRECT_URI')  || define('GOOGLE_REDIRECT_URI',  getenv('GOOGLE_REDIRECT_URI')  ?: '');
+
+// === OAuth Microsoft — credenciales de plataforma ===
+defined('MS_CLIENT_ID')         || define('MS_CLIENT_ID',     getenv('MS_CLIENT_ID')     ?: '');
+defined('MS_CLIENT_SECRET')     || define('MS_CLIENT_SECRET', getenv('MS_CLIENT_SECRET') ?: '');
+defined('MS_TENANT_ID')         || define('MS_TENANT_ID',     getenv('MS_TENANT_ID')     ?: 'common');
+defined('MS_REDIRECT_URI')      || define('MS_REDIRECT_URI',  getenv('MS_REDIRECT_URI')  ?: '');
+
 // === Modo de alta de empresa ===
 defined('DEFAULT_TENANT_MODE')   || define('DEFAULT_TENANT_MODE',   'prefix');
 

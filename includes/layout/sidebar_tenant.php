@@ -30,6 +30,19 @@ function ih_tn_active(string $key, string $current): string {
       <a href="/inventario/importar.php"        class="ih-sidebar__link<?= ih_tn_active('importar',  $page_section) ?>"><i class="bi bi-upload"></i>      Importar CSV</a>
     </div>
 
+    <?php
+    // Solo mostrar config de integración a admin / manager
+    $sidebar_role = $_SESSION['role'] ?? '';
+    if ($sidebar_role === 'admin'):
+    ?>
+    <div class="ih-sidebar__group">
+      <div class="ih-sidebar__group-title">Configuración</div>
+      <a href="/inventario/configurar_integracion.php" class="ih-sidebar__link<?= ih_tn_active('integracion',$page_section) ?>">
+        <i class="bi bi-cloud-arrow-up"></i> Drive / Cloud
+      </a>
+    </div>
+    <?php endif; ?>
+
     <div class="ih-sidebar__group">
       <div class="ih-sidebar__group-title">Cuenta</div>
       <a href="/auth/change_password.php" class="ih-sidebar__link"><i class="bi bi-key"></i> Cambiar contraseña</a>

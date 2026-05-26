@@ -12,7 +12,7 @@ require_once __DIR__ . '/../logs/logger.php';
 // --- Solo admins ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    header('Location: ../login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 $usersTable = tn('users');
@@ -28,7 +28,7 @@ if (!$me || $me['role'] !== 'admin') {
 
 // --- Solo POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../configurar_integracion.php');
+    header('Location: /inventario/configurar_integracion.php');
     exit();
 }
 
@@ -69,7 +69,7 @@ function load_config(mysqli $conn, string $table, string $provider): array {
 }
 
 function redirect_cfg(string $msg, string $type = 'success'): never {
-    header('Location: ../configurar_integracion.php?msg=' . urlencode($msg) . '&type=' . $type);
+    header('Location: /inventario/configurar_integracion.php?msg=' . urlencode($msg) . '&type=' . $type);
     exit();
 }
 

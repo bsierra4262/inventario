@@ -157,16 +157,17 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
 
 // ── 3) Leer config OAuth del tenant ──────────────────────────────────────────
 // Callback unificado: UNA SOLA URI registrada en Google Console y Azure
-$callbackUri = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php';
+$callbackUri = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php');
 
-// --- Google ---
-$googleClientId     = '';
-$googleClientSecret = '';
+// --- Google: empezar con credenciales de plataforma, override por tenant ---
+$googleClientId     = GOOGLE_CLIENT_ID;
+$googleClientSecret = GOOGLE_CLIENT_SECRET;
 
-// --- Microsoft ---
-$msClientId         = '';
-$msClientSecret     = '';
-$msTenantId         = 'common';  // puede ser 'common' o el tenant-id de Azure AD
+// --- Microsoft: empezar con credenciales de plataforma, override por tenant ---
+$msClientId         = MS_CLIENT_ID;
+$msClientSecret     = MS_CLIENT_SECRET;
+$msTenantId         = MS_TENANT_ID ?: 'common';
+$msCallbackUri      = MS_REDIRECT_URI ?: $callbackUri;
 
 if ($conn instanceof mysqli) {
     try {
@@ -177,9 +178,11 @@ if ($conn instanceof mysqli) {
                 match ([$cfgRow['provider'], $cfgRow['config_key']]) {
                     ['google',    'client_id']     => $googleClientId     = (string)$cfgRow['config_value'],
                     ['google',    'client_secret'] => $googleClientSecret = (string)$cfgRow['config_value'],
+                    ['google',    'redirect_uri']  => $callbackUri        = (string)$cfgRow['config_value'],
                     ['microsoft', 'client_id']     => $msClientId         = (string)$cfgRow['config_value'],
                     ['microsoft', 'client_secret'] => $msClientSecret     = (string)$cfgRow['config_value'],
                     ['microsoft', 'tenant_id']     => $msTenantId         = (string)$cfgRow['config_value'],
+                    ['microsoft', 'redirect_uri']  => $msCallbackUri      = (string)$cfgRow['config_value'],
                     default => null,
                 };
             }
@@ -230,7 +233,7 @@ if ($msConfigured && !$must_choose_company) {
         $msAuthUrl = 'https://login.microsoftonline.com/' . urlencode($msTenantId) . '/oauth2/v2.0/authorize?' . http_build_query([
             'client_id'     => $msClientId,
             'response_type' => 'code',
-            'redirect_uri'  => $callbackUri,
+            'redirect_uri'  => $msCallbackUri,
             'response_mode' => 'query',
             'scope'         => 'openid profile email User.Read',
             'state'         => $msState,

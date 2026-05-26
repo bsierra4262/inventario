@@ -29,10 +29,11 @@ function agregar_error(string $msg): never {
     exit();
 }
 
-// --- Leer credenciales Google y root_folder_id desde DB ---
-$googleClientId     = '';
-$googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+// --- Credenciales: plataforma como primario, tenant override vía cloud_config ---
+require_once __DIR__ . '/../core/config/platform.php';
+$googleClientId     = GOOGLE_CLIENT_ID;
+$googleClientSecret = GOOGLE_CLIENT_SECRET;
+$googleRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php');
 $parentFolderId     = '';
 
 try {
@@ -50,53 +51,56 @@ try {
         }
     }
 } catch (Throwable $e) {
-    log_event((string)$user_id, 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
-    agregar_error('Google Drive no está configurado. Contactá al administrador.');
+    log_event((string)$user_id, 'WARN', 'cloud_config no disponible: ' . $e->getMessage(), 'transaccion');
 }
 
-if (!$googleClientId || !$googleClientSecret) {
-    agregar_error('Google Drive no está configurado. Configuralo en Integración → Google Drive.');
-}
+// Drive habilitado si hay credenciales Y token de sesión activo
+$driveEnabled    = $googleClientId !== '' && $googleClientSecret !== '' && isset($_SESSION['access_token']);
+$service         = null;
+$subcarpeta_drive_id = null;
 
-// --- Inicializar cliente Google con token de sesión ---
-$client = new Google\Client();
-$client->setClientId($googleClientId);
-$client->setClientSecret($googleClientSecret);
-$client->setRedirectUri($googleRedirectUri);
-$client->addScope([
-    Google\Service\Drive::DRIVE,
-    Google\Service\Drive::DRIVE_FILE,
-    Google\Service\Drive::DRIVE_METADATA_READONLY,
-    Google\Service\Drive::DRIVE_APPDATA,
-]);
-$client->setAccessType('offline');
-$client->setPrompt('select_account consent');
+if ($driveEnabled) {
+    try {
+        $client = new Google\Client();
+        $client->setClientId($googleClientId);
+        $client->setClientSecret($googleClientSecret);
+        $client->setRedirectUri($googleRedirectUri);
+        $client->addScope([
+            Google\Service\Drive::DRIVE,
+            Google\Service\Drive::DRIVE_FILE,
+            Google\Service\Drive::DRIVE_METADATA_READONLY,
+            Google\Service\Drive::DRIVE_APPDATA,
+        ]);
+        $client->setAccessType('offline');
+        $client->setPrompt('select_account consent');
+        $client->setAccessToken($_SESSION['access_token']);
 
-if (!isset($_SESSION['access_token'])) {
-    // Sin token: redirigir a login para que haga OAuth
-    log_event((string)$user_id, 'ERROR', 'Intento de subir archivo sin token de Drive activo', 'transaccion');
-    header('Location: /auth/login.php');
-    exit();
-}
+        if ($client->isAccessTokenExpired()) {
+            $refreshToken = $client->getRefreshToken();
+            if ($refreshToken) {
+                $newToken = $client->fetchAccessTokenWithRefreshToken($refreshToken);
+                $_SESSION['access_token'] = $newToken;
+                log_event((string)$user_id, 'AUTENTICACIÓN', 'Token Drive refrescado', 'transaccion');
+            } else {
+                // Token expirado sin refresh → guardar sin Drive
+                unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
+                $driveEnabled = false;
+                log_event((string)$user_id, 'WARN', 'Token Drive expirado, guardando activo sin Drive', 'transaccion');
+            }
+        }
 
-$client->setAccessToken($_SESSION['access_token']);
-if ($client->isAccessTokenExpired()) {
-    $refreshToken = $client->getRefreshToken();
-    if ($refreshToken) {
-        $newToken = $client->fetchAccessTokenWithRefreshToken($refreshToken);
-        $_SESSION['access_token'] = $newToken;
-        log_event((string)$user_id, 'AUTENTICACIÓN', 'Token Drive refrescado', 'transaccion');
-    } else {
-        // No hay refresh token, forzar re-login
-        unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        header('Location: /auth/login.php');
-        exit();
+        if ($driveEnabled) {
+            $service = new Google\Service\Drive($client);
+            $tempDir = __DIR__ . '/temp';
+            if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
+        }
+    } catch (Throwable $e) {
+        $driveEnabled = false;
+        log_event((string)$user_id, 'WARN', 'Error al inicializar Drive, guardando sin Drive: ' . $e->getMessage(), 'transaccion');
     }
+} else {
+    log_event((string)$user_id, 'INFO', 'Drive no configurado o sin token — activo se guardará solo en DB', 'transaccion');
 }
-
-$service    = new Google\Service\Drive($client);
-$tempDir    = __DIR__ . '/temp';
-if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
 
 // --- Solo procesar POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -153,7 +157,7 @@ $_SESSION['form_data'] = compact(
     'fecha_compra', 'asignado_a', 'cantidad'
 );
 
-$carpeta_raiz_drive = null;
+$carpeta_raiz_drive  = null;
 
 try {
     $conn->begin_transaction();
@@ -190,8 +194,8 @@ try {
     $producto_id = $stmt->insert_id;
     $stmt->close();
 
-    // Crear carpeta raíz en Drive
-    if ($parentFolderId) {
+    // Crear carpeta raíz en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)
+    if ($driveEnabled && $service && $parentFolderId) {
         $folderName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^\w\s\-]/u', '', "$modelo - $marca")));
         $existing = $service->files->listFiles([
             'q'      => "name = " . json_encode($folderName) . " and mimeType = 'application/vnd.google-apps.folder' and '{$parentFolderId}' in parents and trashed = false",
@@ -289,7 +293,7 @@ try {
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ];
 
-    if (!empty($_FILES['archivo']['name'][0]) && isset($subcarpeta_drive_id)) {
+    if (!empty($_FILES['archivo']['name'][0]) && $subcarpeta_drive_id !== null) {
         foreach ($_FILES['archivo']['name'] as $index => $fileName) {
             $tmpPath  = $_FILES['archivo']['tmp_name'][$index];
             $fileSize = @filesize($tmpPath);
@@ -359,7 +363,13 @@ try {
     }
 
     unset($_SESSION['form_data']);
-    header('Location: /inventario/index.php?ok=1&msg=' . urlencode("Activo '{$modelo}' agregado correctamente."));
+    $okMsg = "Activo '{$modelo}' agregado correctamente.";
+    if (!$driveEnabled) {
+        $okMsg .= ' Drive no configurado — podés configurarlo en Integración.';
+    } elseif (!$parentFolderId) {
+        $okMsg .= ' Sin carpeta Drive asignada — configurá el ID de carpeta en Integración.';
+    }
+    header('Location: /inventario/index.php?ok=1&msg=' . urlencode($okMsg));
     exit();
 
 } catch (Throwable $e) {
