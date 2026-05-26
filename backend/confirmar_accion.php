@@ -8,10 +8,22 @@ declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
+require_once __DIR__ . '/../core/config/platform.php';
+if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
+    header('Location: /dashboard/dashboard_superadmin.php'); exit;
+}
+
+$user_id = (int)($_SESSION['user_id'] ?? 0);
+if (!$user_id) {
+    $cid = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid ? '?company=' . $cid : ''));
+    exit;
+}
+
 // --- Conexión del tenant (multiempresa)
 require_once __DIR__ . '/../backend/db.php';
 
-// --- Logger opcional (no rompe si falta)
+// --- Logger
 $loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {
     require_once $loggerPath;
@@ -21,15 +33,11 @@ if (is_file($loggerPath)) {
     }
 }
 
-// --- CSRF centralizado
+// --- CSRF
 require_once __DIR__ . '/csrf.php';
-
-// Generamos token CSRF específico para esta vista/acción.
-// Este scope ("confirmar_accion") se debe validar en sobrescribir.php y renombrar.php
-// con csrf_or_fail('confirmar_accion', true);
 $csrf_token = generateCsrfToken('confirmar_accion');
 
-// --- Proveedor de almacenamiento (por tenant o por sesión)
+// --- Proveedor de almacenamiento
 $provider = strtolower((string)($_SESSION['storage_provider'] ?? 'google'));
 $providerLabel = match ($provider) {
     'microsoft' => 'Microsoft OneDrive / SharePoint',
@@ -49,12 +57,6 @@ $folderId   = (string)$_GET['folder_id'];
 $fileId     = (string)$_GET['file_id'];
 $productoId = (int)$_GET['id'];
 
-/**
- * VALIDACIONES:
- * - Google IDs: alfanumérico con -, _
- * - OneDrive IDs: pueden incluir alfanumérico, -, _, ., ! (base64url-like)
- * Ampliamos el patrón para cubrir ambas plataformas de forma segura.
- */
 $validIdPattern = '/^[A-Za-z0-9_\-\.!]+$/';
 
 if (!preg_match($validIdPattern, $folderId)) {
@@ -99,11 +101,7 @@ if (!isset($_SESSION['archivo_actual'])) {
 // --- Validar archivo temporal actual
 $actual  = $_SESSION['archivo_actual'];
 $tmpPath = $actual['tmpPath'] ?? null;
-if (
-    !$tmpPath ||
-    !is_string($tmpPath) ||
-    !file_exists($tmpPath)
-) {
+if (!$tmpPath || !is_string($tmpPath) || !file_exists($tmpPath)) {
     $duplicados = $_SESSION['archivos_duplicados'] ?? [];
     if (empty($duplicados)) {
         unset($_SESSION['archivo_actual'], $_SESSION['archivos_duplicados']);
@@ -130,145 +128,123 @@ log_event(
     "transaccion"
 );
 
+// Tenant name
+$tenant_name = 'Mi empresa';
+try {
+    require_once __DIR__ . '/../core/db/master_connection.php';
+    $mdbC = new MasterDB();
+    $cidC = (int)($_SESSION['company_id'] ?? 0);
+    if ($cidC > 0) {
+        $csC = $mdbC->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidC]);
+        $crC = $csC->get_result()->fetch_assoc();
+        if ($crC) $tenant_name = $crC['nombre'];
+        $csC->close();
+    }
+} catch (Throwable) {}
+
+// ── Layout vars ─────────────────────────────────────────────────────────────
+$page_title      = 'Confirmar subida — Asset Vault';
+$page_section    = 'inventario';
+$topbar_title    = 'Archivo duplicado';
+$topbar_subtitle = htmlspecialchars($actual['file_name'], ENT_QUOTES, 'UTF-8');
+$topbar_user     = $_SESSION['user_name']    ?? ($_SESSION['user_email'] ?? '');
+$topbar_email    = $_SESSION['user_email']   ?? '';
+$topbar_pic      = $_SESSION['user_picture'] ?? '';
+$topbar_actions  =
+    '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Inventario</span></a>';
+
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmar Acción - Asset Vault</title>
+<div class="ih-app">
+<?php
+require __DIR__ . '/../includes/layout/sidebar_tenant.php';
+require __DIR__ . '/../includes/layout/topbar.php';
+?>
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
+<main class="ih-app__main" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+  <div class="ih-card" style="max-width:600px;width:100%;">
+    <div class="ih-card__body" style="padding:2rem;">
 
-  <style>
-    body {
-      font-family:'Saira',sans-serif;
-      background-color:#F5F5F5;
-      margin:0;padding:0;
-      display:flex;
-      flex-direction:column;
-      min-height:100vh
-    }
-    header {
-      background-color:#663399;
-      color:#fff;
-      padding:1rem;
-      display:flex;
-      justify-content:space-between;
-      align-items:center
-    }
-    header h1 {
-      font-size:1.5rem;
-      margin:0
-    }
-    .logout-btn {
-      background-color:#4E247A;
-      color:#fff;
-      border:none;
-      padding:0.5rem 1rem;
-      border-radius:5px;
-      text-decoration:none;
-      font-weight:500
-    }
-    .logout-btn:hover {
-      background-color:#86B329;
-      color:#fff
-    }
-    .container {
-      flex:1;
-      padding:2rem 1rem;
-      background-color:#fff;
-      box-shadow:0 0 10px rgba(0,0,0,0.05);
-      border-radius:0;
-      max-width:800px;
-      margin:2rem auto 4rem auto
-    }
-    .footer {
-      text-align:center;
-      padding:1rem;
-      background-color:#663399;
-      color:#fff;
-      width:100%;
-      position:fixed;
-      bottom:0;
-      left:0;
-      z-index:999
-    }
-    .form-label {
-      color:#4E247A;
-      font-weight:600
-    }
-    .btn-danger {
-      background-color:#D9534F;
-      border:none
-    }
-    .btn-danger:hover {
-      background-color:#C9302C
-    }
-    .btn-primary {
-      background-color:#86B329;
-      border:none
-    }
-    .btn-primary:hover {
-      background-color:#4E247A
-    }
-  </style>
-</head>
-<body>
-<header>
-  <h1><i class="bi bi-exclamation-triangle"></i> Confirmar Subida</h1>
-  <a href="../logout.php" class="logout-btn"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a>
-</header>
-
-<div class="container text-center">
-  <h3 class="mb-4 text-danger">
-    El archivo <strong><?= htmlspecialchars((string)$actual['file_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
-    ya existe en <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8'); ?>
-  </h3>
-
-  <p class="text-muted">Elegí una de las siguientes opciones:</p>
-
-  <div class="row g-4 justify-content-center">
-
-    <!-- Opción: Sobrescribir -->
-    <div class="col-md-6">
-      <form action="sobrescribir.php" method="POST">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
-        <input type="hidden" name="file_id" value="<?= htmlspecialchars($fileId, ENT_QUOTES, 'UTF-8'); ?>">
-
-        <button type="submit" class="btn btn-danger w-100">
-          <i class="bi bi-arrow-repeat"></i> Sobrescribir
-        </button>
-      </form>
-    </div>
-
-    <!-- Opción: Renombrar y Subir -->
-    <div class="col-md-6">
-      <form action="renombrar.php" method="POST">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
-        <input type="hidden" name="folder_id" value="<?= htmlspecialchars($actual['folder_id'], ENT_QUOTES, 'UTF-8'); ?>">
-        <input type="hidden" name="producto_id" value="<?= htmlspecialchars((string)$productoId, ENT_QUOTES, 'UTF-8'); ?>">
-
-        <div class="input-group">
-          <input
-            type="text"
-            class="form-control"
-            name="new_name"
-            placeholder="Nuevo nombre"
-            required
-          >
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-upload"></i> Renombrar y Subir
-          </button>
+      <!-- Encabezado -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
+          <i class="bi bi-exclamation-triangle"></i>
         </div>
-      </form>
+        <div>
+          <h2 style="margin:0;font-size:var(--ih-text-lg);font-weight:700;color:var(--ih-gray-800);">Archivo duplicado</h2>
+          <p style="margin:0;font-size:var(--ih-text-sm);color:var(--ih-gray-500);">
+            En <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8') ?>
+          </p>
+        </div>
+      </div>
+
+      <div class="ih-alert ih-alert--warning" style="margin-bottom:1.5rem;">
+        <i class="bi bi-files"></i>
+        <div>
+          El archivo <strong><?= htmlspecialchars((string)$actual['file_name'], ENT_QUOTES, 'UTF-8') ?></strong>
+          ya existe en <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8') ?>.
+          Elegí cómo continuar:
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+        <!-- Opción: Sobrescribir -->
+        <div class="ih-card" style="border:2px solid var(--ih-danger-light,#fecaca);">
+          <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-arrow-repeat" style="font-size:1.4rem;color:var(--ih-danger);"></i>
+              <strong style="font-size:var(--ih-text-sm);">Sobrescribir</strong>
+            </div>
+            <p style="margin:0;font-size:var(--ih-text-xs);color:var(--ih-gray-500);line-height:1.5;">
+              Reemplaza el archivo existente con la versión nueva.
+            </p>
+            <form action="sobrescribir.php" method="POST">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+              <input type="hidden" name="file_id" value="<?= htmlspecialchars($fileId, ENT_QUOTES, 'UTF-8') ?>">
+              <button type="submit" class="ih-btn ih-btn--danger ih-btn--block ih-btn--sm">
+                <i class="bi bi-arrow-repeat"></i> Sobrescribir
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Opción: Renombrar y Subir -->
+        <div class="ih-card" style="border:2px solid var(--ih-primary-light,#e5d9f7);">
+          <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-pencil-square" style="font-size:1.4rem;color:var(--ih-primary);"></i>
+              <strong style="font-size:var(--ih-text-sm);">Renombrar y subir</strong>
+            </div>
+            <p style="margin:0;font-size:var(--ih-text-xs);color:var(--ih-gray-500);line-height:1.5;">
+              Sube el archivo con un nuevo nombre, conservando el original.
+            </p>
+            <form action="renombrar.php" method="POST">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
+              <input type="hidden" name="folder_id" value="<?= htmlspecialchars($actual['folder_id'], ENT_QUOTES, 'UTF-8') ?>">
+              <input type="hidden" name="producto_id" value="<?= htmlspecialchars((string)$productoId, ENT_QUOTES, 'UTF-8') ?>">
+              <div style="display:flex;gap:6px;">
+                <input
+                  type="text"
+                  class="ih-input"
+                  name="new_name"
+                  placeholder="Nuevo nombre..."
+                  required
+                  style="flex:1;font-size:var(--ih-text-xs);"
+                >
+                <button type="submit" class="ih-btn ih-btn--primary ih-btn--sm">
+                  <i class="bi bi-upload"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div><!-- /grid -->
+
     </div>
-
   </div>
-</div>
+</main>
 
-<footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+</div><!-- /ih-app -->
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>

@@ -8,7 +8,7 @@ require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 
-$iconMap = require __DIR__ . '/../iconMap.php';
+$iconMap = require __DIR__ . '/../includes/iconMap.php';
 
 // ======================================================
 // DETECCIÓN DEL PROVEEDOR DE ALMACENAMIENTO
@@ -545,7 +545,6 @@ $subOpcionesSoftwareJson = json_encode($subOpcionesSoftware, JSON_UNESCAPED_UNIC
 // ======================================================
 $csrf_token_edit = generateCsrfToken('edit_producto');
 
-<?php
 // ── Layout vars ────────────────────────────────────────────────────────────
 require_once __DIR__ . '/../core/config/platform.php';
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG])) {
@@ -904,8 +903,6 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </div><!-- /card -->
 </main>
 </div><!-- /ih-app -->
-<?php require __DIR__ . '/../includes/layout/foot.php'; ?>
-
 <script>
 // ======================================================
 // JS DEL FORM (idéntico al tuyo, con mini retoques safe)
@@ -1165,5 +1162,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 200);
 });
 </script>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>
