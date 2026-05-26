@@ -54,27 +54,33 @@ defined('LOGO_SVG_FILE') || define('LOGO_SVG_FILE', __DIR__ . '/../../assets/img
 defined('LOGO_SVG_URL')  || define('LOGO_SVG_URL',  '/assets/img/logo.svg');
 
 /**
- * Devuelve el HTML del logo: SVG > PNG > fallback letra 'i'.
+ * Guards function_exists para evitar "Cannot redeclare" si realpath() resuelve
+ * el mismo archivo por dos paths distintos (ocurre en subdominios Hostinger).
  */
-function platform_logo_html(): string {
-    $style = 'width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit';
-    if (is_file(LOGO_SVG_FILE)) {
-        return '<img src="' . LOGO_SVG_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
+if (!function_exists('platform_logo_html')) {
+    function platform_logo_html(): string {
+        $style = 'width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit';
+        if (is_file(LOGO_SVG_FILE)) {
+            return '<img src="' . LOGO_SVG_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
+        }
+        if (is_file(LOGO_FILE)) {
+            return '<img src="' . LOGO_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
+        }
+        return 'i';
     }
-    if (is_file(LOGO_FILE)) {
-        return '<img src="' . LOGO_URL . '" alt="INTELLIHELP" style="' . $style . '" referrerpolicy="no-referrer">';
-    }
-    return 'i';
 }
 
-// === Utilidades ===
-function platform_log($msg){
-    $line = '['.date('Y-m-d H:i:s').'] '.$msg.PHP_EOL;
-    @file_put_contents(LOG_PATH, $line, FILE_APPEND);
+if (!function_exists('platform_log')) {
+    function platform_log($msg): void {
+        $line = '['.date('Y-m-d H:i:s').'] '.$msg.PHP_EOL;
+        @file_put_contents(LOG_PATH, $line, FILE_APPEND);
+    }
 }
 
-function ensure_dir($path){
-    if(!is_dir($path)){
-        mkdir($path, 0700, true);
+if (!function_exists('ensure_dir')) {
+    function ensure_dir($path): void {
+        if (!is_dir($path)) {
+            mkdir($path, 0700, true);
+        }
     }
 }

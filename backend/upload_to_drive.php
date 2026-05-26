@@ -194,29 +194,32 @@ try {
     $producto_id = $stmt->insert_id;
     $stmt->close();
 
-    // Crear carpeta raíz en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)
+    // Crear estructura de carpetas en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)
     if ($driveEnabled && $service && $parentFolderId) {
+        // Nivel 1: carpeta del modelo/marca dentro del root del tenant
         $folderName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^\w\s\-]/u', '', "$modelo - $marca")));
+        if ($folderName === '') $folderName = 'Activos';
         $existing = $service->files->listFiles([
             'q'      => "name = " . json_encode($folderName) . " and mimeType = 'application/vnd.google-apps.folder' and '{$parentFolderId}' in parents and trashed = false",
             'fields' => 'files(id)',
             'spaces' => 'drive',
         ]);
         if (count($existing->getFiles()) > 0) {
-            $carpeta_raiz_drive = $existing->getFiles()[0]->getId();
+            $modeloFolderId = $existing->getFiles()[0]->getId();
         } else {
             $meta = new Google\Service\Drive\DriveFile([
                 'name'     => $folderName,
                 'mimeType' => 'application/vnd.google-apps.folder',
                 'parents'  => [$parentFolderId],
             ]);
-            $carpeta_raiz_drive = $service->files->create($meta, ['fields' => 'id'])->id;
+            $modeloFolderId = $service->files->create($meta, ['fields' => 'id'])->id;
         }
 
-        // Crear subcarpeta por ServiceTag o ID
-        $subName = $servis_tag !== '' ? $servis_tag : 'producto_' . $producto_id;
+        // Nivel 2: subcarpeta por SerialTag o ID de producto
+        // Esta es la carpeta que se guarda en DB y a la que se vincula el activo
+        $subName = $servis_tag !== '' ? $servis_tag : 'activo_' . $producto_id;
         $subExisting = $service->files->listFiles([
-            'q'      => "name = " . json_encode($subName) . " and mimeType = 'application/vnd.google-apps.folder' and '{$carpeta_raiz_drive}' in parents and trashed = false",
+            'q'      => "name = " . json_encode($subName) . " and mimeType = 'application/vnd.google-apps.folder' and '{$modeloFolderId}' in parents and trashed = false",
             'fields' => 'files(id)',
             'spaces' => 'drive',
         ]);
@@ -226,10 +229,14 @@ try {
             $subMeta = new Google\Service\Drive\DriveFile([
                 'name'     => $subName,
                 'mimeType' => 'application/vnd.google-apps.folder',
-                'parents'  => [$carpeta_raiz_drive],
+                'parents'  => [$modeloFolderId],
             ]);
             $subcarpeta_drive_id = $service->files->create($subMeta, ['fields' => 'id'])->id;
         }
+
+        // Guardamos el ID de la SUBCARPETA específica del activo (no la del modelo)
+        // Así el link en "Ver activo" va directo a los archivos de ESE serial/activo
+        $carpeta_raiz_drive = $subcarpeta_drive_id;
 
         $stmt_upd = $conn->prepare("UPDATE `{$productosTable}` SET carpeta_raiz_drive = ? WHERE id = ?");
         $stmt_upd->bind_param('si', $carpeta_raiz_drive, $producto_id);

@@ -188,7 +188,7 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
       <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
          target="_blank" rel="noopener" class="vd-drive-btn">
-        <i class="bi bi-google-drive"></i> Ver Drive
+        <i class="bi bi-google-drive"></i> Ver archivos en Drive
       </a>
     <?php endif; ?>
   </div>
@@ -302,12 +302,15 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
           <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
              target="_blank" rel="noopener" class="vd-drive-btn" style="width:100%;justify-content:center;">
             <i class="bi bi-google-drive" style="color:#1FA463;font-size:1.2rem;"></i>
-            Ver carpeta en Google Drive
+            Ver archivos de este activo en Drive
           </a>
+          <div style="font-size:var(--ih-text-xs);color:var(--ih-gray-400);text-align:center;margin-top:6px;">
+            Abre la carpeta específica de este activo (<?= htmlspecialchars($producto['servis_tag'] ?: 'activo_'.$producto_id, ENT_QUOTES) ?>)
+          </div>
         <?php else: ?>
           <div style="color:var(--ih-gray-400);font-size:var(--ih-text-sm);text-align:center;padding:.5rem 0;">
             <i class="bi bi-cloud-slash" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
-            Sin carpeta asociada en Google Drive
+            Sin carpeta Drive asignada
           </div>
         <?php endif; ?>
       </div>

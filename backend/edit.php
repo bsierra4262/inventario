@@ -26,9 +26,11 @@ $tempDir        = __DIR__ . '/temp';
 if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
 
 if ($storageProvider === 'google') {
-    $googleClientId     = '';
-    $googleClientSecret = '';
-    $googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+    // Plataforma como primario, tenant override vía cloud_config
+    require_once __DIR__ . '/../core/config/platform.php';
+    $googleClientId     = GOOGLE_CLIENT_ID;
+    $googleClientSecret = GOOGLE_CLIENT_SECRET;
+    $googleRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/auth/superadmin_callback.php');
 
     try {
         $cfgTable = tn('cloud_config');
@@ -45,36 +47,41 @@ if ($storageProvider === 'google') {
             }
         }
     } catch (Throwable $e) {
-        log_event((string)($_SESSION['user_id'] ?? '?'), 'ERROR', 'No se pudo leer cloud_config: ' . $e->getMessage(), 'transaccion');
+        log_event((string)($_SESSION['user_id'] ?? '?'), 'WARN', 'cloud_config no disponible: ' . $e->getMessage(), 'transaccion');
     }
 
     if ($googleClientId && $googleClientSecret && isset($_SESSION['access_token'])) {
-        $client = new Google\Client();
-        $client->setClientId($googleClientId);
-        $client->setClientSecret($googleClientSecret);
-        $client->setRedirectUri($googleRedirectUri);
-        $client->addScope([
-            Google\Service\Drive::DRIVE,
-            Google\Service\Drive::DRIVE_FILE,
-            Google\Service\Drive::DRIVE_METADATA_READONLY,
-            Google\Service\Drive::DRIVE_APPDATA,
-        ]);
-        $client->setAccessType('offline');
-        $client->setAccessToken($_SESSION['access_token']);
+        try {
+            $client = new Google\Client();
+            $client->setClientId($googleClientId);
+            $client->setClientSecret($googleClientSecret);
+            $client->setRedirectUri($googleRedirectUri);
+            $client->addScope([
+                Google\Service\Drive::DRIVE,
+                Google\Service\Drive::DRIVE_FILE,
+                Google\Service\Drive::DRIVE_METADATA_READONLY,
+                Google\Service\Drive::DRIVE_APPDATA,
+            ]);
+            $client->setAccessType('offline');
+            $client->setAccessToken($_SESSION['access_token']);
 
-        if ($client->isAccessTokenExpired()) {
-            $refresh = $client->getRefreshToken();
-            if ($refresh) {
-                $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
-                $_SESSION['access_token'] = $newToken;
-            } else {
-                unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-                header('Location: ../login.php');
-                exit();
+            if ($client->isAccessTokenExpired()) {
+                $refresh = $client->getRefreshToken();
+                if ($refresh) {
+                    $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+                    $_SESSION['access_token'] = $newToken;
+                } else {
+                    unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
+                    // Token expirado sin refresh → continuar sin Drive
+                    $googleClientId = '';
+                }
             }
+            if ($googleClientId) {
+                $googleService = new Google\Service\Drive($client);
+            }
+        } catch (Throwable $e) {
+            log_event((string)($_SESSION['user_id'] ?? '?'), 'WARN', 'Error inicializando Drive en edit: ' . $e->getMessage(), 'transaccion');
         }
-
-        $googleService = new Google\Service\Drive($client);
     }
 }
 

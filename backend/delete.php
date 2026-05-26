@@ -129,8 +129,69 @@ if (
             'archivo'
         );
 
+        // ── Renombrar carpeta en Drive para marcarla como archivada ──────────
+        $driveMsg = '';
+        $carpetaId = $producto['carpeta_raiz_drive'] ?? '';
+        if ($carpetaId !== '' && isset($_SESSION['access_token'])) {
+            try {
+                require_once __DIR__ . '/../core/config/platform.php';
+                $driveClientId     = GOOGLE_CLIENT_ID;
+                $driveClientSecret = GOOGLE_CLIENT_SECRET;
+                $driveRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/auth/superadmin_callback.php');
+
+                // Override con config del tenant
+                $cfgT = tn('cloud_config');
+                $cfgR = $conn->query("SELECT config_key, config_value FROM `{$cfgT}` WHERE provider = 'google'");
+                if ($cfgR) {
+                    while ($cfgRow = $cfgR->fetch_assoc()) {
+                        match ($cfgRow['config_key']) {
+                            'client_id'     => $driveClientId     = $cfgRow['config_value'],
+                            'client_secret' => $driveClientSecret = $cfgRow['config_value'],
+                            'redirect_uri'  => $driveRedirectUri  = $cfgRow['config_value'],
+                            default         => null,
+                        };
+                    }
+                }
+
+                if ($driveClientId && $driveClientSecret) {
+                    $gClient = new Google\Client();
+                    $gClient->setClientId($driveClientId);
+                    $gClient->setClientSecret($driveClientSecret);
+                    $gClient->setRedirectUri($driveRedirectUri);
+                    $gClient->setAccessToken($_SESSION['access_token']);
+
+                    if ($gClient->isAccessTokenExpired()) {
+                        $rt = $gClient->getRefreshToken();
+                        if ($rt) {
+                            $_SESSION['access_token'] = $gClient->fetchAccessTokenWithRefreshToken($rt);
+                        } else {
+                            throw new Exception('Token Drive expirado al archivar.');
+                        }
+                    }
+
+                    $driveService = new Google\Service\Drive($gClient);
+
+                    // Obtener nombre actual de la carpeta
+                    $fileInfo  = $driveService->files->get($carpetaId, ['fields' => 'name']);
+                    $nombreOrig = $fileInfo->getName();
+
+                    // Renombrar solo si no tiene el prefijo ya
+                    if (!str_starts_with($nombreOrig, '[ARCHIVADO]')) {
+                        $nuevoNombre = '[ARCHIVADO ' . $fecha_baja . '] ' . $nombreOrig;
+                        $updatedFile = new Google\Service\Drive\DriveFile(['name' => $nuevoNombre]);
+                        $driveService->files->update($carpetaId, $updatedFile);
+                        $driveMsg = ' La carpeta en Drive fue renombrada como archivada.';
+                        log_event((string)$user_id, 'ARCHIVO_DRIVE', "Carpeta Drive $carpetaId renombrada a '$nuevoNombre'", 'archivo');
+                    }
+                }
+            } catch (Throwable $driveEx) {
+                // Drive error no bloquea el archivado — solo logueamos
+                log_event((string)$user_id, 'WARN', "No se pudo renombrar carpeta Drive al archivar: " . $driveEx->getMessage(), 'archivo');
+            }
+        }
+
         header('Location: /backend/resultado.php?status=success&origen=archivar&msg='
-            . urlencode('Activo archivado correctamente. Motivo: ' . $motivo));
+            . urlencode('Activo archivado correctamente. Motivo: ' . $motivo . $driveMsg));
         exit;
 
     } catch (Exception $ex) {
