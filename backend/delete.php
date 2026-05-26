@@ -94,7 +94,7 @@ if (
         ");
 
         $stmt_mov->bind_param(
-            'issssssdsssssssssssi',
+            'issssssdssssssssssssi',
             $producto['id'],
             $accion,
             $descripcion_mov,
