@@ -232,6 +232,7 @@ if ($isTenantFlow) {
             $ins->close();
         }
 
+        session_write_close();
         header('Location: /inventario/index.php');
         exit;
 

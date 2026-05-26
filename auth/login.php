@@ -296,10 +296,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 
             if ($mustChange) {
                 $_SESSION['force_password_change'] = true;
+                session_write_close();
                 header('Location: /auth/change_password.php');
                 exit();
             }
 
+            session_write_close();
             header('Location: /inventario/index.php');
             exit();
 
