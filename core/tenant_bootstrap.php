@@ -18,6 +18,7 @@ require_once __DIR__ . '/db/TenantDB.php';
 
 // Resolver empresa en sesión.
 // Si no hay, tomamos: (a) única empresa existente; (b) si hay varias -> pedimos selección.
+if (!function_exists('resolve_company_id')) {
 function resolve_company_id(): int {
     if (!empty($_SESSION['company_id'])) {
         return (int)$_SESSION['company_id'];
@@ -42,6 +43,7 @@ function resolve_company_id(): int {
     header('Location: /dashboard/select_empresa.php');
     exit;
 }
+}
 
 $companyId = resolve_company_id();
 $tenantDb  = new TenantDB($companyId);
@@ -50,7 +52,9 @@ $tenantDb  = new TenantDB($companyId);
 $conn = $tenantDb->conn;
 
 // También exponemos helper de tabla para modo 'prefix' (no necesario si usás 'external'):
+if (!function_exists('tn')) {
 function tn(string $name): string {
     global $tenantDb;
     return $tenantDb->t($name);
+}
 }

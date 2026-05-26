@@ -115,6 +115,7 @@ if (!$producto) {
 // ======================================================
 // HELPERS DRIVE (GOOGLE). Para MS vamos a dejar TODO en blanco seguro.
 // ======================================================
+if (!function_exists('drive_buscarOCrearCarpetaRaizProducto')) {
 function drive_buscarOCrearCarpetaRaizProducto(
     Google\Service\Drive $service,
     string $parentFolderId,
@@ -158,7 +159,9 @@ function drive_buscarOCrearCarpetaRaizProducto(
 
     return $carpeta_raiz_drive;
 }
+} // end function_exists drive_buscarOCrearCarpetaRaizProducto
 
+if (!function_exists('drive_buscarOCrearSubcarpetaProducto')) {
 function drive_buscarOCrearSubcarpetaProducto(
     Google\Service\Drive $service,
     string $carpeta_raiz_drive,
@@ -185,6 +188,7 @@ function drive_buscarOCrearSubcarpetaProducto(
         return $subFolder->id;
     }
 }
+} // end function_exists drive_buscarOCrearSubcarpetaProducto
 
 // ======================================================
 // PROCESAR SUBMIT (POST)

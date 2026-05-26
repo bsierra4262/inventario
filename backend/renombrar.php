@@ -23,11 +23,11 @@ csrf_or_fail('confirmar_accion', true); // true = un solo uso del token
 $user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
 
 // =========================
-// Autenticación Google Drive — credenciales desde DB
+// Autenticación Google Drive — plataforma primero, cloud_config como override
 // =========================
-$googleClientId     = '';
-$googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+$googleClientId     = GOOGLE_CLIENT_ID;
+$googleClientSecret = GOOGLE_CLIENT_SECRET;
+$googleRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/auth/superadmin_callback.php');
 
 try {
     $cfgTable = tn('cloud_config');
@@ -67,7 +67,8 @@ if ($client->isAccessTokenExpired()) {
         $_SESSION['access_token'] = $newToken;
     } else {
         unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        header('Location: ../login.php');
+        $cid_r = (int)($_SESSION['company_id'] ?? 0);
+        header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
         exit();
     }
 }
@@ -301,7 +302,7 @@ try {
     header('Location: resultado.php?status=success&msg=' . urlencode('Archivo renombrado y subido correctamente.'));
     exit();
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     log_event(
         $user_id,
         'ERROR',

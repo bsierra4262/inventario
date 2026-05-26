@@ -22,7 +22,7 @@ $s->execute();
 $me = $s->get_result()->fetch_assoc();
 $s->close();
 if (!$me || $me['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: /inventario/index.php');
     exit();
 }
 

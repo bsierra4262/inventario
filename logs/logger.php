@@ -26,6 +26,7 @@ if (!defined('LOG_PATH')) {
  * @param string $msg     Descripción detallada del evento
  * @param string $tag     Tag/módulo (auth, app, install, etc.)
  */
+if (!function_exists('log_event')) {
 function log_event(string $origin, string $type, string $msg, string $tag = 'app'): void
 {
     $logFile = LOG_PATH;
@@ -56,4 +57,5 @@ function log_event(string $origin, string $type, string $msg, string $tag = 'app
 
     // Append de la línea de log
     file_put_contents($logFile, $linea, FILE_APPEND | LOCK_EX);
+}
 }

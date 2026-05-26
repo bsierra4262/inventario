@@ -30,8 +30,10 @@ $_me  = $_st->get_result()->fetch_assoc();
 $_st->close();
 require_permission('asset.archive', $_me);
 
+if (!function_exists('esc_del')) {
 function esc_del(string $v): string {
     return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+}
 }
 
 // ======================================================
@@ -194,7 +196,7 @@ if (
             . urlencode('Activo archivado correctamente. Motivo: ' . $motivo . $driveMsg));
         exit;
 
-    } catch (Exception $ex) {
+    } catch (Throwable $ex) {
         $conn->rollback();
         log_event(
             (string)$user_id,

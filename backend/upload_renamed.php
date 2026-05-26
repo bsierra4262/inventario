@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    header('Location: ../login.php');
+    $cid_r = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
     exit();
 }
 
@@ -29,10 +30,10 @@ $newName  = htmlspecialchars((string)$_POST['new_name'], ENT_QUOTES, 'UTF-8');
 $tempPath = $_FILES['archivo']['tmp_name'];
 $folderId = htmlspecialchars((string)$_POST['folder_id'], ENT_QUOTES, 'UTF-8');
 
-// Credenciales Google desde DB
-$googleClientId     = '';
-$googleClientSecret = '';
-$googleRedirectUri  = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/login.php';
+// Credenciales Google — plataforma primero, cloud_config como override
+$googleClientId     = GOOGLE_CLIENT_ID;
+$googleClientSecret = GOOGLE_CLIENT_SECRET;
+$googleRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/auth/superadmin_callback.php');
 
 try {
     $cfgTable = tn('cloud_config');
@@ -53,7 +54,8 @@ try {
 
 if (!$googleClientId || !$googleClientSecret || !isset($_SESSION['access_token'])) {
     log_event((string)$user_id, 'ERROR', 'Sin credenciales Google o sin token de sesión en upload_renamed.php', 'transaccion');
-    header('Location: ../login.php');
+    $cid_r = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
     exit();
 }
 
@@ -72,7 +74,8 @@ if ($client->isAccessTokenExpired()) {
         $_SESSION['access_token'] = $newToken;
     } else {
         unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        header('Location: ../login.php');
+        $cid_r = (int)($_SESSION['company_id'] ?? 0);
+        header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
         exit();
     }
 }

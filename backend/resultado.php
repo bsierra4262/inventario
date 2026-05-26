@@ -58,7 +58,7 @@ if ($requiresDrive && !isset($_SESSION['access_token'])) {
 // En caso de error, algunas pantallas (ej. editar) necesitan saber el producto
 if ($status !== 'success' && !isset($_SESSION['form_data']['producto_id']) && $origen === 'editar') {
     log_event($user_id, 'ERROR', 'Acceso inválido a resultado.php: sin producto_id en contexto para reintentar edición.', 'transaccion');
-    header('Location: ../index.php');
+    header('Location: /inventario/index.php');
     exit();
 }
 
@@ -68,6 +68,7 @@ if ($status !== 'success' && !isset($_SESSION['form_data']['producto_id']) && $o
  *   queremos mostrar con bullets, pero sin permitir inyectar JS.
  * - Permitimos solo un subconjunto MUY chico de etiquetas (ul, li, strong, br).
  */
+if (!function_exists('formatMessageSafe')) {
 function formatMessageSafe(string $raw): string {
 
     // Normalizamos saltos de línea comunes
@@ -110,6 +111,7 @@ function formatMessageSafe(string $raw): string {
         htmlspecialchars($raw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
     );
 }
+} // end function_exists('formatMessageSafe')
 
 // Registramos en logs que el usuario llegó a esta vista
 log_event(

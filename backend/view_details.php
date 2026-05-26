@@ -10,7 +10,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 }
 
 require_once __DIR__ . '/db.php';
-if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
+// logger.php ya está incluido por db.php — stub de seguridad únicamente
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -41,10 +41,9 @@ if (!$producto) {
 
 log_event($user_id, 'CONSULTA', "Visualización de producto ID:{$producto_id}", 'consulta');
 
-// Nombre de empresa
+// Nombre de empresa (MasterDB ya disponible via db.php → tenant_bootstrap → master_connection)
 $tenant_name = 'Mi empresa';
 try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
     $masterDb   = new MasterDB();
     $cidTn      = (int)($_SESSION['company_id'] ?? 0);
     if ($cidTn > 0) {
@@ -82,16 +81,19 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <?php
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+if (!function_exists('vd_val')) {
 function vd_val(mixed $v): string {
     if ($v === null || $v === '' || $v === '0000-00-00') return '';
     return (string)$v;
 }
-
+}
+if (!function_exists('vd_row')) {
 function vd_row(string $label, mixed $valor, string $icon = ''): void {
     $v = vd_val($valor);
     if ($v === '') return;
     $ic = $icon ? "<i class=\"bi bi-{$icon} me-1\"></i>" : '';
     echo "<div class=\"vd-row\"><span class=\"vd-label\">{$ic}{$label}</span><span class=\"vd-value\">" . htmlspecialchars($v, ENT_QUOTES) . "</span></div>\n";
+}
 }
 
 $estado = vd_val($producto['estado'] ?? '');

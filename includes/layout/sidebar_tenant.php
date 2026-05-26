@@ -7,8 +7,10 @@
  */
 $page_section = $page_section ?? '';
 $tenant_name  = $tenant_name  ?? 'Mi empresa';
+if (!function_exists('ih_tn_active')) {
 function ih_tn_active(string $key, string $current): string {
     return $key === $current ? ' is-active' : '';
+}
 }
 ?>
 <aside class="ih-sidebar ih-app__sidebar">

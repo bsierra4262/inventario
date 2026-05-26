@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/platform.php';
 
+if (!class_exists('MasterDB')) {
 class MasterDB {
     public mysqli $conn;
 
@@ -24,4 +25,5 @@ class MasterDB {
         }
         return $stmt;
     }
+}
 }

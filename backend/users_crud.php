@@ -13,7 +13,8 @@ require_once __DIR__ . '/../logs/logger.php';
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
     http_response_code(403);
-    header('Location: ../login.php');
+    $cid_r = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
     exit();
 }
 
@@ -28,7 +29,7 @@ $stmt->close();
 if (!$current || $current['role'] !== 'admin') {
     log_event((string)$user_id, 'ACCESO_DENEGADO', 'Intento de acceso a users_crud sin rol admin', 'seguridad');
     http_response_code(403);
-    header('Location: ../index.php');
+    header('Location: /inventario/index.php');
     exit();
 }
 
