@@ -19,7 +19,11 @@ try {
     $conn->set_charset('utf8mb4');
 
     if (empty($_SESSION['user_id'])) {
-        header('Location: /auth/login.php');
+        $cid_empty = (int)($_SESSION['company_id'] ?? 0);
+        log_event('index.php', 'AUTH_FAIL', 'user_id vacío en sesión', 'auth');
+        $redir = '/auth/login.php';
+        if ($cid_empty > 0) $redir .= '?company=' . $cid_empty;
+        header('Location: ' . $redir);
         exit();
     }
 
@@ -33,8 +37,12 @@ try {
     $stmt->close();
 
     if (!$user) {
+        $cid_notfound = (int)($_SESSION['company_id'] ?? 0);
+        log_event('index.php', 'AUTH_FAIL', "user_id={$user_id} no encontrado en tabla={$usersTable}", 'auth');
         session_destroy();
-        header('Location: /auth/login.php');
+        $redir = '/auth/login.php?err=' . urlencode('Tu sesión expiró o tu usuario fue eliminado. Volvé a iniciar sesión.');
+        if ($cid_notfound > 0) $redir .= '&company=' . $cid_notfound;
+        header('Location: ' . $redir);
         exit();
     }
 

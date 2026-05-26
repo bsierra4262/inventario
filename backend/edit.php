@@ -545,352 +545,367 @@ $subOpcionesSoftwareJson = json_encode($subOpcionesSoftware, JSON_UNESCAPED_UNIC
 // ======================================================
 $csrf_token_edit = generateCsrfToken('edit_producto');
 
+<?php
+// ── Layout vars ────────────────────────────────────────────────────────────
+require_once __DIR__ . '/../core/config/platform.php';
+if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG])) {
+    header('Location: /dashboard/dashboard_superadmin.php'); exit;
+}
+
+$tenant_name = 'Mi empresa';
+try {
+    require_once __DIR__ . '/../core/db/master_connection.php';
+    $mdbE = new MasterDB();
+    $cidE = (int)($_SESSION['company_id'] ?? 0);
+    if ($cidE > 0) {
+        $csE = $mdbE->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidE]);
+        $crE = $csE->get_result()->fetch_assoc();
+        if ($crE) $tenant_name = $crE['nombre'];
+        $csE->close();
+    }
+} catch (Throwable) {}
+
+$nombreModelo    = $producto['modelo'] ?? 'Activo #' . $producto_id;
+$page_title      = 'Editar · ' . $nombreModelo;
+$page_section    = 'inventario';
+$topbar_title    = 'Editar activo';
+$topbar_subtitle = $nombreModelo;
+$topbar_user     = $_SESSION['user_name']    ?? ($_SESSION['user_email'] ?? '');
+$topbar_email    = $_SESSION['user_email']   ?? '';
+$topbar_pic      = $_SESSION['user_picture'] ?? '';
+$topbar_actions  =
+    '<a href="/backend/view_details.php?id=' . $producto_id . '" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-eye"></i> <span class="ih-hidden-mobile">Ver</span></a>'
+    . ' <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Editar Activo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        body { background: #f5f5f5; font-family: 'Saira', sans-serif; }
-        .main-container {
-            background: #fff;
-            border-radius: 14px;
-            max-width: 980px;
-            margin: 2rem auto;
-            padding: 2rem 2rem 1.5rem 2rem;
-            box-shadow: 0 6px 20px rgba(0,0,0,.1);
-        }
-        .btn-violeta {
-            background: #663399 !important;
-            border-color: #663399 !important;
-            color: #fff !important;
-        }
-        .btn-violeta:hover {
-            background: #4E247A !important;
-            border-color: #4E247A !important;
-        }
-        h2 { color: #4E247A; font-weight: bold; }
-        label { color: #663399; font-weight: 600; }
-        .form-control, .form-select { border-radius: 9px; }
-        .btn-primary {
-            background: #86B329;
-            border-color: #86B329;
-            font-weight: 600;
-        }
-        .btn-primary:hover {
-            background: #4E247A;
-            border-color: #4E247A;
-        }
-        .footer {
-            margin: 40px 0 0 0;
-            text-align: center;
-            color: #fff;
-            background: #663399;
-            border-radius: 0 0 14px 14px;
-            padding: 18px 0;
-        }
-    </style>
-</head>
-<body>
-<div class="main-container">
-    <a href="/index.php" class="btn btn-violeta mb-3" style="background:#663399;color:white;border-radius:25px;font-weight:600;">
-        <i class="bi bi-arrow-left"></i> Volver
-    </a>
+<style>
+.edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
+@media(max-width:640px){ .edit-grid { grid-template-columns:1fr; } }
+.edit-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 20px; }
+@media(max-width:640px){ .edit-grid-3 { grid-template-columns:1fr; } }
+.edit-full { grid-column: 1 / -1; }
+.edit-section-title {
+    font-size: var(--ih-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ih-gray-500);
+    margin: 1.25rem 0 .75rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--ih-gray-100);
+}
+.edit-section-title:first-child { margin-top: 0; }
+</style>
+<div class="ih-app">
+<?php
+require __DIR__ . '/../includes/layout/sidebar_tenant.php';
+require __DIR__ . '/../includes/layout/topbar.php';
+?>
+<main class="ih-app__main">
+  <div class="ih-card">
+    <div class="ih-card__body">
 
-    <h2><i class="bi bi-pencil-square"></i> Editar Activo: <?= htmlspecialchars($producto['modelo'] ?? '', ENT_QUOTES, 'UTF-8') ?></h2>
-
-    <form id="form-editar" action="" method="POST" enctype="multipart/form-data">
-        <!-- CSRF -->
+      <form id="form-editar" action="" method="POST" enctype="multipart/form-data" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token_edit, ENT_QUOTES, 'UTF-8') ?>">
 
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label for="asignado_a">Asignado a</label>
-                <input type="text" class="form-control" name="asignado_a" value="<?= htmlspecialchars($producto['asignado_a'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-            <div class="col-md-6">
-                <label for="modelo">Nombre/Modelo *</label>
-                <input type="text" class="form-control" name="modelo" value="<?= htmlspecialchars($producto['modelo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
-            </div>
-            <div class="col-md-6">
-                <label for="marca">Marca</label>
-                <input type="text" class="form-control" name="marca" value="<?= htmlspecialchars($producto['marca'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-            <div class="col-md-6">
-                <label for="servis_tag">S/N Service Tag</label>
-                <input type="text" class="form-control" name="servis_tag" id="servis_tag" value="<?= htmlspecialchars($producto['servis_tag'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-
-            <div class="col-md-6" id="cantidad-container">
-                <label for="cantidad">Cantidad *</label>
-                <input type="number" class="form-control" name="cantidad" id="cantidad" min="1"
-                       value="<?= htmlspecialchars($producto['cantidad'] ?? 1, ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-
-            <!-- CATEGORÍA Y SUBCATEGORÍA -->
-            <div class="col-md-6">
-                <label for="categoria-select">Categoría <i id="icon-categoria" class="bi bi-folder ms-2"></i></label>
-                <select class="form-select" name="categoria" id="categoria-select" required>
-                    <option value="">Seleccione...</option>
-                    <?php foreach($opcionesPorCategoria as $cat => $subs): ?>
-                        <option value="<?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>"
-                            <?= (($producto['categoria'] ?? '') == $cat) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-md-6" id="subcategoria-container" style="display:none;">
-                <label for="subcategoria-select">Subcategoría <i id="icon-subcategoria" class="bi bi-folder ms-2"></i></label>
-                <select id="subcategoria-select" name="subcategoria" class="form-select">
-                    <option value="">Seleccione...</option>
-                </select>
-            </div>
-
-            <!-- Sub-subcategoría Software -->
-            <div class="col-md-6" id="subsoftware-container" style="display:none;">
-                <label for="subsoftware-select">Detalle Licencia/Plataforma</label>
-                <select id="subsoftware-select" name="subsoftware" class="form-select">
-                    <option value="">Seleccione...</option>
-                </select>
-            </div>
-
-            <!-- CAMPO OTROS SUB-SUBCATEGORÍA -->
-            <div class="col-md-6" id="subsoftware-otros-container" style="display:none;">
-                <label for="subsoftware-otros-input">Detalle "Otros"</label>
-                <input type="text" name="subsoftware_otros" id="subsoftware-otros-input"
-                       class="form-control"
-                       value="<?= htmlspecialchars($producto['subsoftware_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                       placeholder="Escribí aquí el detalle...">
-            </div>
-
-            <!-- Patchcord -->
-            <div id="patchcord-extra" class="row g-3 mt-3" style="display:none;">
-                <div id="patchcord-categoria" class="col-md-4" style="display:none;">
-                    <label class="form-label">Tipo de patchcord</label>
-                    <select name="patchcord_tipo" id="patchcord-categoria-select" class="form-select">
-                        <option value="">— Seleccione tipo —</option>
-                        <option value="UTP" <?= (($producto['patchcord_tipo'] ?? '')==='UTP')?'selected':''; ?>>UTP</option>
-                        <option value="STP" <?= (($producto['patchcord_tipo'] ?? '')==='STP')?'selected':''; ?>>STP</option>
-                        <option value="FTP" <?= (($producto['patchcord_tipo'] ?? '')==='FTP')?'selected':''; ?>>FTP</option>
-                    </select>
-                </div>
-                <div id="patchcord-longitud" class="col-md-4" style="display:none;">
-                    <label class="form-label">Longitud</label>
-                    <select name="patchcord_longitud" id="patchcord-longitud-select" class="form-select">
-                        <option value="">— Seleccione longitud —</option>
-                        <option value="1"   <?= (($producto['patchcord_longitud'] ?? '')==='1')?'selected':''; ?>>1 m</option>
-                        <option value="3"   <?= (($producto['patchcord_longitud'] ?? '')==='3')?'selected':''; ?>>3 m</option>
-                        <option value="5"   <?= (($producto['patchcord_longitud'] ?? '')==='5')?'selected':''; ?>>5 m</option>
-                        <option value="10"  <?= (($producto['patchcord_longitud'] ?? '')==='10')?'selected':''; ?>>10 m</option>
-                        <option value=">10" <?= (($producto['patchcord_longitud'] ?? '')==='>10')?'selected':''; ?>>>10 m</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Switch -->
-            <div id="switch-extra" class="row g-3 mt-3" style="display:none;">
-                <div class="col-md-6">
-                    <label class="form-label">Gestión</label>
-                    <select name="switch_gestion" id="switch_gestion" class="form-select">
-                        <option value="">Seleccione...</option>
-                        <option value="No gestionado" <?= (($producto['switch_gestion'] ?? '')==='No gestionado')?'selected':''; ?>>No gestionado</option>
-                        <option value="Gestionado"     <?= (($producto['switch_gestion'] ?? '')==='Gestionado')?'selected':''; ?>>Gestionado</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Antenas -->
-            <div id="antenas-extra" class="row g-3 mt-3" style="display:none;">
-                <div class="col-md-6">
-                    <label class="form-label">Tipo de antena</label>
-                    <select name="antenas_tipo" id="antenas_tipo" class="form-select">
-                        <option value="">Seleccione...</option>
-                        <option value="Omnidireccional" <?= (($producto['antenas_tipo'] ?? '')==='Omnidireccional')?'selected':''; ?>>Omnidireccional</option>
-                        <option value="Direccional"     <?= (($producto['antenas_tipo'] ?? '')==='Direccional')?'selected':''; ?>>Direccional</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Bobina UTP -->
-            <div id="bobina-extra" class="row g-3 mt-3" style="display:none;">
-                <div id="bobina-categoria" class="col-md-4" style="display:none;">
-                    <label class="form-label">Categoría cable</label>
-                    <select name="bobina_categoria" id="bobina-categoria-select" class="form-select">
-                        <option value="">— Seleccione categoría —</option>
-                        <option value="CAT5e" <?= (($producto['bobina_categoria'] ?? '')==='CAT5e')?'selected':''; ?>>CAT5e</option>
-                        <option value="CAT6e" <?= (($producto['bobina_categoria'] ?? '')==='CAT6e')?'selected':''; ?>>CAT6e</option>
-                    </select>
-                </div>
-                <div id="bobina-ubicacion" class="col-md-4" style="display:none;">
-                    <label class="form-label">Tipo</label>
-                    <select name="bobina_ubicacion" id="bobina-ubicacion-select" class="form-select">
-                        <option value="">— Interior/Exterior —</option>
-                        <option value="Interior" <?= (($producto['bobina_ubicacion'] ?? '')==='Interior')?'selected':''; ?>>Interior</option>
-                        <option value="Exterior" <?= (($producto['bobina_ubicacion'] ?? '')==='Exterior')?'selected':''; ?>>Exterior</option>
-                    </select>
-                </div>
-                <div id="bobina-longitud" class="col-md-4" style="display:none;">
-                    <label class="form-label">Longitud</label>
-                    <select name="bobina_longitud" id="bobina-longitud-select" class="form-select">
-                        <option value="">— Seleccione longitud —</option>
-                        <option value="10"   <?= (($producto['bobina_longitud'] ?? '')==='10')?'selected':''; ?>>10 m</option>
-                        <option value="25"   <?= (($producto['bobina_longitud'] ?? '')==='25')?'selected':''; ?>>25 m</option>
-                        <option value="50"   <?= (($producto['bobina_longitud'] ?? '')==='50')?'selected':''; ?>>50 m</option>
-                        <option value="100"  <?= (($producto['bobina_longitud'] ?? '')==='100')?'selected':''; ?>>100 m</option>
-                        <option value=">100" <?= (($producto['bobina_longitud'] ?? '')==='>100')?'selected':''; ?>>>100 m</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Conectores -->
-            <div id="conectores-extra" class="row g-3 mt-3" style="display:none;">
-                <div class="col-md-6">
-                    <label class="form-label">Tipo de conector</label>
-                    <select id="conectores-tipo-select" name="conectores_tipo" class="form-select">
-                        <option value="">Seleccione...</option>
-                        <option value="RJ45" <?= (($producto['conectores_tipo'] ?? '')==='RJ45')?'selected':''; ?>>RJ45</option>
-                        <option value="SC"   <?= (($producto['conectores_tipo'] ?? '')==='SC')?'selected':''; ?>>SC</option>
-                        <option value="LC"   <?= (($producto['conectores_tipo'] ?? '')==='LC')?'selected':''; ?>>LC</option>
-                        <option value="Otros"<?= (($producto['conectores_tipo'] ?? '')==='Otros')?'selected':''; ?>>Otros</option>
-                    </select>
-                </div>
-                <div id="conectores-otros" class="col-12" style="display:none;">
-                    <label class="form-label">Especifique otro conector</label>
-                    <input type="text" name="detalle_conectores" class="form-control"
-                           value="<?= htmlspecialchars($producto['detalle_conectores'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                           placeholder="Describa aquí…">
-                </div>
-            </div>
-
-            <!-- Cintas de respaldo -->
-            <div id="cintas-extra" class="row g-3 mt-3" style="display:none;">
-                <div id="cintas-generacion" class="col-md-6" style="display:none;">
-                    <label class="form-label">Generación LTO</label>
-                    <select name="cintas_generacion" class="form-select">
-                        <option value="">Seleccione...</option>
-                        <option value="LTO-1" <?= (($producto['cintas_generacion'] ?? '')==='LTO-1')?'selected':''; ?>>LTO-1</option>
-                        <option value="LTO-2" <?= (($producto['cintas_generacion'] ?? '')==='LTO-2')?'selected':''; ?>>LTO-2</option>
-                        <option value="LTO-3" <?= (($producto['cintas_generacion'] ?? '')==='LTO-3')?'selected':''; ?>>LTO-3</option>
-                        <option value="LTO-4" <?= (($producto['cintas_generacion'] ?? '')==='LTO-4')?'selected':''; ?>>LTO-4</option>
-                        <option value="LTO-5" <?= (($producto['cintas_generacion'] ?? '')==='LTO-5')?'selected':''; ?>>LTO-5</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Repuestos -->
-            <div id="subcategoria-repuestos" class="row g-3 mt-3" style="display:none;">
-                <div class="col-12">
-                    <label class="form-label">Detalle Repuesto</label>
-                    <input type="text" name="detalle_repuesto" class="form-control"
-                           value="<?= htmlspecialchars($producto['detalle_repuesto'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-                </div>
-            </div>
-
-            <!-- Otros subcategoría -->
-            <div id="subcategoria-otros" class="row g-3 mt-3" style="display:none;">
-                <div class="col-12">
-                    <label class="form-label">Detalle "Otros" <span class="text-muted"></span></label>
-                    <input type="text" name="detalle_otros" class="form-control"
-                           value="<?= htmlspecialchars($producto['detalle_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                           placeholder="Escribí aquí el detalle...">
-                </div>
-            </div>
-
-            <!-- Otros por categoría/stock repuestos -->
-            <div id="detalle-otros-categoria" class="row g-3 mt-3" style="display:none;">
-                <div class="col-12">
-                    <label class="form-label">
-                        <?php
-                        if (($producto['categoria'] ?? '') === 'Otros') {
-                            echo 'Detalle del producto (Categoría "Otros")';
-                        } elseif (($producto['categoria'] ?? '') === 'Stock de Repuestos') {
-                            echo 'Detalle de repuesto (Stock de Repuestos)';
-                        } else {
-                            echo 'Detalle';
-                        }
-                        ?>
-                        <span class="text-muted"></span>
-                    </label>
-                    <input type="text" name="detalle_otros" class="form-control"
-                           value="<?= htmlspecialchars($producto['detalle_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                           placeholder="Escribí aquí el detalle...">
-                </div>
-            </div>
-
-            <!-- Descripción -->
-            <div class="col-12">
-                <label for="descripcion">Descripción</label>
-                <textarea class="form-control" name="descripcion" rows="3"><?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
-            </div>
-
-            <!-- Estado, valor, fechas -->
-            <div class="col-md-6">
-                <label for="estado">Estado</label>
-                <select class="form-select" name="estado">
-                    <option value="Nuevo" <?= (($producto['estado'] ?? '')==='Nuevo')?'selected':''; ?>>Nuevo</option>
-                    <option value="Usado" <?= (($producto['estado'] ?? '')==='Usado')?'selected':''; ?>>Usado</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label for="valor_usd">Valor en USD</label>
-                <input type="number" class="form-control" name="valor_usd" step="0.01" min="0"
-                       value="<?= htmlspecialchars($producto['valor_usd'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-
-            <div class="col-md-4">
-                <label for="periodo_garantia">Período de Garantía (meses)</label>
-                <input type="number" class="form-control" name="periodo_garantia"
-                       value="<?= htmlspecialchars($producto['periodo_garantia'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-            <div class="col-md-4">
-                <label for="fecha_garantia">Inicio Garantía</label>
-                <input type="date" class="form-control" name="fecha_garantia"
-                    value="<?= (!empty($producto['fecha_garantia']) && $producto['fecha_garantia'] != '0000-00-00')
-                                ? htmlspecialchars($producto['fecha_garantia'], ENT_QUOTES, 'UTF-8') : '' ?>">
-            </div>
-            <div class="col-md-4">
-                <label for="ubicacion">Ubicación</label>
-                <input type="text" class="form-control" name="ubicacion"
-                       value="<?= htmlspecialchars($producto['ubicacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-
-            <div class="col-md-6">
-                <label for="fecha_ingreso">Fecha de Ingreso</label>
-                <input type="date" class="form-control" name="fecha_ingreso"
-                       value="<?= (!empty($producto['fecha_ingreso']) && $producto['fecha_ingreso'] != '0000-00-00')
-                                ? htmlspecialchars($producto['fecha_ingreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
-            </div>
-            <div class="col-md-6">
-                <label for="fecha_egreso">Fecha de Egreso</label>
-                <input type="date" class="form-control" name="fecha_egreso"
-                       value="<?= (!empty($producto['fecha_egreso']) && $producto['fecha_egreso'] != '0000-00-00')
-                                ? htmlspecialchars($producto['fecha_egreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
-            </div>
-
-            <div class="col-12">
-                <label for="archivo">Subir Archivos</label>
-                <input type="file" class="form-control" name="archivo[]" multiple id="file-input">
-                <div class="form-text" style="color: #4E247A;">.jpg, .png, .pdf, .docx | máx 5MB</div>
-            </div>
-
-            <div class="col-12 d-flex justify-content-center mt-3">
-                <button type="submit" class="btn btn-primary" style="border-radius: 30px; padding: 0.6rem 2rem;">
-                    Actualizar Producto
-                </button>
-            </div>
+        <!-- ── Datos principales ─────────────────────────────────────── -->
+        <div class="edit-section-title"><i class="bi bi-person-badge"></i> Datos principales</div>
+        <div class="edit-grid">
+          <div class="ih-field">
+            <label class="ih-field__label">Asignado a</label>
+            <input type="text" class="ih-input" name="asignado_a"
+                   value="<?= htmlspecialchars($producto['asignado_a'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Nombre/Modelo <span class="req">*</span></label>
+            <input type="text" class="ih-input" name="modelo"
+                   value="<?= htmlspecialchars($producto['modelo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Marca</label>
+            <input type="text" class="ih-input" name="marca"
+                   value="<?= htmlspecialchars($producto['marca'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">S/N Service Tag</label>
+            <input type="text" class="ih-input" name="servis_tag" id="servis_tag"
+                   value="<?= htmlspecialchars($producto['servis_tag'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field edit-full">
+            <label class="ih-field__label">Descripción</label>
+            <textarea class="ih-input" name="descripcion" rows="3"><?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+          </div>
         </div>
-    </form>
-</div>
 
-<footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
+        <!-- ── Categorización ────────────────────────────────────────── -->
+        <div class="edit-section-title"><i class="bi bi-folder2-open"></i> Categorización</div>
+        <div class="edit-grid">
+          <div class="ih-field">
+            <label class="ih-field__label">Categoría <span class="req">*</span> <i id="icon-categoria" class="bi bi-folder ms-1"></i></label>
+            <select class="ih-select" name="categoria" id="categoria-select" required>
+              <option value="">Seleccione...</option>
+              <?php foreach($opcionesPorCategoria as $cat => $subs): ?>
+                <option value="<?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>"
+                    <?= (($producto['categoria'] ?? '') === $cat) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="ih-field" id="subcategoria-container" style="display:none;">
+            <label class="ih-field__label">Subcategoría <i id="icon-subcategoria" class="bi bi-folder ms-1"></i></label>
+            <select id="subcategoria-select" name="subcategoria" class="ih-select">
+              <option value="">Seleccione...</option>
+            </select>
+          </div>
+          <div class="ih-field" id="subsoftware-container" style="display:none;">
+            <label class="ih-field__label">Detalle Licencia/Plataforma</label>
+            <select id="subsoftware-select" name="subsoftware" class="ih-select">
+              <option value="">Seleccione...</option>
+            </select>
+          </div>
+          <div class="ih-field" id="subsoftware-otros-container" style="display:none;">
+            <label class="ih-field__label">Detalle "Otros"</label>
+            <input type="text" name="subsoftware_otros" id="subsoftware-otros-input" class="ih-input"
+                   value="<?= htmlspecialchars($producto['subsoftware_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                   placeholder="Escribí aquí el detalle...">
+          </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+          <!-- Cantidad (oculto si hay S/N) -->
+          <div class="ih-field" id="cantidad-container">
+            <label class="ih-field__label">Cantidad <span class="req">*</span></label>
+            <input type="number" class="ih-input" name="cantidad" id="cantidad" min="1"
+                   value="<?= htmlspecialchars((string)($producto['cantidad'] ?? 1), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+        </div>
+
+        <!-- ── Extras por subcategoría ─────────────────────────────── -->
+        <div id="patchcord-extra" style="display:none;">
+          <div class="edit-grid">
+            <div class="ih-field" id="patchcord-categoria">
+              <label class="ih-field__label">Tipo de Patchcord</label>
+              <select name="patchcord_tipo" id="patchcord-categoria-select" class="ih-select">
+                <option value="">— Tipo —</option>
+                <option value="UTP" <?= ($producto['patchcord_tipo']??'')==='UTP'?'selected':'';?>>UTP</option>
+                <option value="STP" <?= ($producto['patchcord_tipo']??'')==='STP'?'selected':'';?>>STP</option>
+                <option value="FTP" <?= ($producto['patchcord_tipo']??'')==='FTP'?'selected':'';?>>FTP</option>
+              </select>
+            </div>
+            <div class="ih-field" id="patchcord-longitud" style="display:none;">
+              <label class="ih-field__label">Longitud</label>
+              <select name="patchcord_longitud" id="patchcord-longitud-select" class="ih-select">
+                <option value="">— Longitud —</option>
+                <option value="1"   <?= ($producto['patchcord_longitud']??'')==='1'?'selected':'';?>>1 m</option>
+                <option value="3"   <?= ($producto['patchcord_longitud']??'')==='3'?'selected':'';?>>3 m</option>
+                <option value="5"   <?= ($producto['patchcord_longitud']??'')==='5'?'selected':'';?>>5 m</option>
+                <option value="10"  <?= ($producto['patchcord_longitud']??'')==='10'?'selected':'';?>>10 m</option>
+                <option value=">10" <?= ($producto['patchcord_longitud']??'')==='>10'?'selected':'';?>>>10 m</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="switch-extra" style="display:none;">
+          <div class="edit-grid">
+            <div class="ih-field">
+              <label class="ih-field__label">Gestión del Switch</label>
+              <select name="switch_gestion" id="switch_gestion" class="ih-select">
+                <option value="">Seleccione...</option>
+                <option value="No gestionado" <?= ($producto['switch_gestion']??'')==='No gestionado'?'selected':'';?>>No gestionado</option>
+                <option value="Gestionado"     <?= ($producto['switch_gestion']??'')==='Gestionado'?'selected':'';?>>Gestionado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="antenas-extra" style="display:none;">
+          <div class="edit-grid">
+            <div class="ih-field">
+              <label class="ih-field__label">Tipo de Antena</label>
+              <select name="antenas_tipo" id="antenas_tipo" class="ih-select">
+                <option value="">Seleccione...</option>
+                <option value="Omnidireccional" <?= ($producto['antenas_tipo']??'')==='Omnidireccional'?'selected':'';?>>Omnidireccional</option>
+                <option value="Direccional"     <?= ($producto['antenas_tipo']??'')==='Direccional'?'selected':'';?>>Direccional</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="bobina-extra" style="display:none;">
+          <div class="edit-grid-3">
+            <div class="ih-field" id="bobina-categoria">
+              <label class="ih-field__label">Categoría cable</label>
+              <select name="bobina_categoria" id="bobina-categoria-select" class="ih-select">
+                <option value="">— Categoría —</option>
+                <option value="CAT5e" <?= ($producto['bobina_categoria']??'')==='CAT5e'?'selected':'';?>>CAT5e</option>
+                <option value="CAT6e" <?= ($producto['bobina_categoria']??'')==='CAT6e'?'selected':'';?>>CAT6e</option>
+              </select>
+            </div>
+            <div class="ih-field" id="bobina-ubicacion" style="display:none;">
+              <label class="ih-field__label">Tipo (Interior/Exterior)</label>
+              <select name="bobina_ubicacion" id="bobina-ubicacion-select" class="ih-select">
+                <option value="">— Tipo —</option>
+                <option value="Interior" <?= ($producto['bobina_ubicacion']??'')==='Interior'?'selected':'';?>>Interior</option>
+                <option value="Exterior" <?= ($producto['bobina_ubicacion']??'')==='Exterior'?'selected':'';?>>Exterior</option>
+              </select>
+            </div>
+            <div class="ih-field" id="bobina-longitud" style="display:none;">
+              <label class="ih-field__label">Longitud</label>
+              <select name="bobina_longitud" id="bobina-longitud-select" class="ih-select">
+                <option value="">— Longitud —</option>
+                <option value="10"  <?= ($producto['bobina_longitud']??'')==='10'?'selected':'';?>>10 m</option>
+                <option value="25"  <?= ($producto['bobina_longitud']??'')==='25'?'selected':'';?>>25 m</option>
+                <option value="50"  <?= ($producto['bobina_longitud']??'')==='50'?'selected':'';?>>50 m</option>
+                <option value="100" <?= ($producto['bobina_longitud']??'')==='100'?'selected':'';?>>100 m</option>
+                <option value=">100"<?= ($producto['bobina_longitud']??'')==='>100'?'selected':'';?>>>100 m</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="conectores-extra" style="display:none;">
+          <div class="edit-grid">
+            <div class="ih-field">
+              <label class="ih-field__label">Tipo de Conector</label>
+              <select id="conectores-tipo-select" name="conectores_tipo" class="ih-select">
+                <option value="">Seleccione...</option>
+                <option value="RJ45" <?= ($producto['conectores_tipo']??'')==='RJ45'?'selected':'';?>>RJ45</option>
+                <option value="SC"   <?= ($producto['conectores_tipo']??'')==='SC'?'selected':'';?>>SC</option>
+                <option value="LC"   <?= ($producto['conectores_tipo']??'')==='LC'?'selected':'';?>>LC</option>
+                <option value="Otros"<?= ($producto['conectores_tipo']??'')==='Otros'?'selected':'';?>>Otros</option>
+              </select>
+            </div>
+            <div class="ih-field" id="conectores-otros" style="display:none;">
+              <label class="ih-field__label">Especifique conector</label>
+              <input type="text" name="detalle_conectores" class="ih-input"
+                     value="<?= htmlspecialchars($producto['detalle_conectores'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                     placeholder="Describa aquí…">
+            </div>
+          </div>
+        </div>
+
+        <div id="cintas-extra" style="display:none;">
+          <div class="edit-grid">
+            <div class="ih-field" id="cintas-generacion" style="display:none;">
+              <label class="ih-field__label">Generación LTO</label>
+              <select name="cintas_generacion" class="ih-select">
+                <option value="">Seleccione...</option>
+                <?php foreach(['LTO-1','LTO-2','LTO-3','LTO-4','LTO-5'] as $lto): ?>
+                  <option value="<?= $lto ?>" <?= ($producto['cintas_generacion']??'')===$lto?'selected':'';?>><?= $lto ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="subcategoria-repuestos" style="display:none;">
+          <div class="ih-field">
+            <label class="ih-field__label">Detalle Repuesto</label>
+            <input type="text" name="detalle_repuesto" class="ih-input"
+                   value="<?= htmlspecialchars($producto['detalle_repuesto'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+        </div>
+
+        <div id="subcategoria-otros" style="display:none;">
+          <div class="ih-field">
+            <label class="ih-field__label">Detalle "Otros"</label>
+            <input type="text" name="detalle_otros" class="ih-input"
+                   value="<?= htmlspecialchars($producto['detalle_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                   placeholder="Escribí aquí el detalle...">
+          </div>
+        </div>
+
+        <div id="detalle-otros-categoria" style="display:none;">
+          <div class="ih-field">
+            <label class="ih-field__label">
+              <?php
+              if (($producto['categoria'] ?? '') === 'Otros') echo 'Detalle (Categoría "Otros")';
+              elseif (($producto['categoria'] ?? '') === 'Stock de Repuestos') echo 'Detalle Repuesto';
+              else echo 'Detalle';
+              ?>
+            </label>
+            <input type="text" name="detalle_otros" class="ih-input"
+                   value="<?= htmlspecialchars($producto['detalle_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                   placeholder="Escribí aquí el detalle...">
+          </div>
+        </div>
+
+        <!-- ── Estado y valores ──────────────────────────────────────── -->
+        <div class="edit-section-title"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
+        <div class="edit-grid">
+          <div class="ih-field">
+            <label class="ih-field__label">Estado</label>
+            <select class="ih-select" name="estado">
+              <option value="Nuevo" <?= ($producto['estado']??'')==='Nuevo'?'selected':'';?>>Nuevo</option>
+              <option value="Usado" <?= ($producto['estado']??'')==='Usado'?'selected':'';?>>Usado</option>
+            </select>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Valor en USD</label>
+            <input type="number" class="ih-input" name="valor_usd" step="0.01" min="0"
+                   value="<?= htmlspecialchars((string)($producto['valor_usd'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Ubicación</label>
+            <input type="text" class="ih-input" name="ubicacion"
+                   value="<?= htmlspecialchars($producto['ubicacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+        </div>
+
+        <!-- ── Garantía y fechas ─────────────────────────────────────── -->
+        <div class="edit-section-title"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
+        <div class="edit-grid-3">
+          <div class="ih-field">
+            <label class="ih-field__label">Período garantía (meses)</label>
+            <input type="number" class="ih-input" name="periodo_garantia"
+                   value="<?= htmlspecialchars((string)($producto['periodo_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Inicio garantía</label>
+            <input type="date" class="ih-input" name="fecha_garantia"
+                   value="<?= (!empty($producto['fecha_garantia']) && $producto['fecha_garantia'] !== '0000-00-00')
+                               ? htmlspecialchars($producto['fecha_garantia'], ENT_QUOTES, 'UTF-8') : '' ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Fecha de Ingreso</label>
+            <input type="date" class="ih-input" name="fecha_ingreso"
+                   value="<?= (!empty($producto['fecha_ingreso']) && $producto['fecha_ingreso'] !== '0000-00-00')
+                               ? htmlspecialchars($producto['fecha_ingreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Fecha de Egreso</label>
+            <input type="date" class="ih-input" name="fecha_egreso"
+                   value="<?= (!empty($producto['fecha_egreso']) && $producto['fecha_egreso'] !== '0000-00-00')
+                               ? htmlspecialchars($producto['fecha_egreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
+          </div>
+        </div>
+
+        <!-- ── Archivos ──────────────────────────────────────────────── -->
+        <div class="edit-section-title"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
+        <div class="ih-field">
+          <label class="ih-field__label">Subir archivos</label>
+          <input type="file" class="ih-input" name="archivo[]" multiple id="file-input">
+          <span class="ih-field__hint">.jpg, .png, .pdf, .docx, .xlsx, .pptx · máx 5 MB por archivo</span>
+        </div>
+
+        <!-- ── Botón submit ──────────────────────────────────────────── -->
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:1.5rem;flex-wrap:wrap;">
+          <button type="submit" class="ih-btn ih-btn--primary ih-btn--lg">
+            <i class="bi bi-check-circle"></i> Guardar cambios
+          </button>
+          <a href="/backend/view_details.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--ghost ih-btn--lg">
+            Cancelar
+          </a>
+        </div>
+      </form>
+
+    </div><!-- /card__body -->
+  </div><!-- /card -->
+</main>
+</div><!-- /ih-app -->
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>
+
 <script>
 // ======================================================
 // JS DEL FORM (idéntico al tuyo, con mini retoques safe)

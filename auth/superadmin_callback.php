@@ -223,13 +223,20 @@ if ($isTenantFlow) {
         if ($found) {
             $_SESSION['user_id'] = (int)$uid;
         } else {
-            $username = explode('@', $email)[0];
-            $randPass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
-            $ins = $tconn->prepare("INSERT INTO `$usersTable` (username, password, email, role) VALUES (?, ?, ?, 'user')");
-            $ins->bind_param('sss', $username, $randPass, $email);
-            $ins->execute();
-            $_SESSION['user_id'] = (int)$ins->insert_id;
-            $ins->close();
+            // Sin acceso: el usuario debe estar pre-registrado por el admin del tenant
+            $tenantCbError(
+                'Tu cuenta (' . htmlspecialchars($email, ENT_QUOTES) . ') no tiene permiso para acceder a esta empresa. '
+                . 'Pedile al administrador que te agregue como usuario en el panel de gestión.'
+            );
+        }
+
+        // Log de diagnóstico: confirma qué user_id y tabla se usaron
+        if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
+        if (function_exists('log_event')) {
+            log_event($email, 'TENANT_LOGIN',
+                "uid={$_SESSION['user_id']} cid={$_SESSION['company_id']} provider={$tenantProvider} tabla={$usersTable}",
+                'auth'
+            );
         }
 
         session_write_close();

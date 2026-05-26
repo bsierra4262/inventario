@@ -42,14 +42,16 @@ $requiresDrive = in_array($origen, $origenesQueRequierenDrive, true);
 // Autorización mínima: debe haber sesión activa
 if (empty($_SESSION['user_id'])) {
     log_event($user_id, 'ERROR', 'Acceso denegado a resultado.php: sin sesión de usuario.', 'transaccion');
-    header('Location: ../login.php');
+    $cid_r = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
     exit();
 }
 
 // Si el flujo requiere Drive, validamos token de Drive
 if ($requiresDrive && !isset($_SESSION['access_token'])) {
     log_event($user_id, 'ERROR', 'Acceso denegado a resultado.php: sin token de acceso Drive.', 'transaccion');
-    header('Location: ../login.php');
+    $cid_r2 = (int)($_SESSION['company_id'] ?? 0);
+    header('Location: /auth/login.php' . ($cid_r2 ? '?company=' . $cid_r2 : ''));
     exit();
 }
 
@@ -122,121 +124,93 @@ $productoIdSafe = 0;
 if (isset($_SESSION['form_data']['producto_id'])) {
     $productoIdSafe = (int)($_SESSION['form_data']['producto_id']);
 }
+
+// ── Layout ───────────────────────────────────────────────────────────────────
+require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../core/db/master_connection.php';
+
+$tenant_name = 'Mi empresa';
+try {
+    $mdbR = new MasterDB();
+    $cidR = (int)($_SESSION['company_id'] ?? 0);
+    if ($cidR > 0) {
+        $csR = $mdbR->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidR]);
+        $crR = $csR->get_result()->fetch_assoc();
+        if ($crR) $tenant_name = $crR['nombre'];
+        $csR->close();
+    }
+} catch (Throwable) {}
+
+$isSuccess = ($status === 'success');
+
+$page_title   = $isSuccess ? 'Operación exitosa' : 'Error en operación';
+$page_section = 'inventario';
+
+$topbar_title    = $isSuccess ? 'Operación exitosa' : 'Ocurrió un error';
+$topbar_subtitle = '';
+$topbar_user     = $_SESSION['user_name']    ?? ($_SESSION['user_email'] ?? '');
+$topbar_email    = $_SESSION['user_email']   ?? '';
+$topbar_pic      = $_SESSION['user_picture'] ?? '';
+$topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Inventario</span></a>';
+
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resultado</title>
+<div class="ih-app">
+<?php
+require __DIR__ . '/../includes/layout/sidebar_tenant.php';
+require __DIR__ . '/../includes/layout/topbar.php';
+?>
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
+<main class="ih-app__main" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+  <div class="ih-card" style="max-width:560px;width:100%;text-align:center;">
+    <div class="ih-card__body" style="padding:2.5rem 2rem;">
 
-  <style>
-    body {
-      font-family: 'Saira', sans-serif;
-      background-color: #F5F5F5;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding-bottom: 60px; /* para no tapar con el footer fijo */
-    }
-    .container-box {
-      background-color: #fff;
-      padding: 3rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 600px;
-      width: 90%;
-    }
-    .icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-    }
-    .success-icon { color: #86B329; }
-    .error-icon   { color: #D9534F; }
-    .footer {
-      text-align: center;
-      padding: 1rem;
-      background-color: #663399;
-      color: #fff;
-      width: 100%;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      font-size: .9rem;
-    }
-    .btn-custom {
-      border-radius: 30px;
-      padding: 0.5rem 1.5rem;
-      font-weight: 600;
-    }
-    ul {
-      text-align: left;
-      margin-top: 1rem;
-      padding-left: 1.5rem;
-    }
-    li {
-      margin-bottom: 0.5rem;
-    }
-  </style>
-</head>
-<body>
+      <!-- Ícono -->
+      <div style="font-size:4rem;margin-bottom:1.25rem;line-height:1;">
+        <?php if ($isSuccess): ?>
+          <i class="bi bi-check-circle-fill" style="color:var(--ih-success);"></i>
+        <?php else: ?>
+          <i class="bi bi-exclamation-octagon-fill" style="color:var(--ih-danger);"></i>
+        <?php endif; ?>
+      </div>
 
-  <div class="container-box">
-    <div class="icon <?php echo ($status === 'success' ? 'success-icon' : 'error-icon'); ?>">
-      <i class="bi <?php echo ($status === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-octagon-fill'); ?>"></i>
-    </div>
+      <!-- Título -->
+      <h2 style="font-size:var(--ih-text-xl);font-weight:700;color:var(--ih-gray-800);margin-bottom:.75rem;">
+        <?= $isSuccess ? 'Operación exitosa' : 'Ocurrió un error' ?>
+      </h2>
 
-    <h2 class="fw-bold text-uppercase" style="color: #4E247A;">
-      <?php echo ($status === 'success' ? 'Operación exitosa' : 'Ocurrió un error'); ?>
-    </h2>
+      <!-- Mensaje -->
+      <div style="color:var(--ih-gray-600);font-size:var(--ih-text-sm);margin-bottom:2rem;text-align:left;background:var(--ih-gray-50);border-radius:var(--ih-radius-md);padding:1rem;">
+        <?= formatMessageSafe($msg) ?>
+      </div>
 
-    <div class="lead text-muted mt-3">
-      <?php echo formatMessageSafe($msg); ?>
-    </div>
-
-    <div class="mt-4 d-flex justify-content-center flex-wrap gap-3">
-      <?php if ($status === 'success'): ?>
-
-        <a href="../index.php"
-           class="btn btn-custom"
-           style="background-color: #86B329; color: white;">
-            <i class="bi bi-house-door"></i> Volver al inicio
-        </a>
-
-      <?php else: ?>
-
-        <?php if ($origen === 'editar' && $productoIdSafe > 0): ?>
-          <a href="edit.php?id=<?php echo urlencode((string)$productoIdSafe); ?>"
-             class="btn btn-custom"
-             style="background-color: #D9534F; color: white;">
-            <i class="bi bi-arrow-repeat"></i> Reintentar
+      <!-- Botones -->
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <?php if ($isSuccess): ?>
+          <a href="/inventario/index.php" class="ih-btn ih-btn--primary">
+            <i class="bi bi-house-door"></i> Volver al inventario
           </a>
-
-          <a href="edit.php?id=<?php echo urlencode((string)$productoIdSafe); ?>"
-             class="btn btn-custom"
-             style="background-color: #6c757d; color: white;">
-            <i class="bi bi-pencil-square"></i> Editar de nuevo
-          </a>
+          <?php if ($origen === 'editar' && $productoIdSafe > 0): ?>
+            <a href="/backend/view_details.php?id=<?= $productoIdSafe ?>" class="ih-btn ih-btn--ghost">
+              <i class="bi bi-eye"></i> Ver activo
+            </a>
+          <?php endif; ?>
 
         <?php else: ?>
-          <a href="../index.php"
-             class="btn btn-custom"
-             style="background-color: #D9534F; color: white;">
-            <i class="bi bi-arrow-repeat"></i> Volver
+          <?php if ($origen === 'editar' && $productoIdSafe > 0): ?>
+            <a href="/backend/edit.php?id=<?= $productoIdSafe ?>" class="ih-btn ih-btn--danger">
+              <i class="bi bi-arrow-repeat"></i> Reintentar
+            </a>
+          <?php endif; ?>
+          <a href="/inventario/index.php" class="ih-btn ih-btn--ghost">
+            <i class="bi bi-arrow-left"></i> Volver
           </a>
         <?php endif; ?>
+      </div>
 
-      <?php endif; ?>
     </div>
   </div>
+</main>
 
-  <footer class="footer">© 2025 ITH - Todos los derechos reservados</footer>
-</body>
-</html>
+</div><!-- /ih-app -->
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>
