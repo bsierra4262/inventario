@@ -174,7 +174,7 @@ try {
     );
 
     $stmt->bind_param(
-        'sssssssissssssidsssssssssssssss',
+        'sssssssissssssidssssssssssssss',
         $modelo, $marca, $descripcion, $servis_tag, $estado, $categoria, $subcategoria,
         $periodo_garantia, $fecha_garantia, $ubicacion, $carpeta_raiz_drive,
         $fi, $fc, $asignado_a, $cantidad, $valor_usd,
@@ -256,7 +256,7 @@ try {
         )"
     );
     $stmt_mov->bind_param(
-        'isisssssssidsssssssssssssssssssss',
+        'isisssssssidsssssissssssssssssss',
         $producto_id, $descripcion, $user_id,
         $modelo, $marca, $detalle_tecnico, $asignado_a, $categoria, $subcategoria,
         $servis_tag, $cantidad, $valor_usd, $estado, $carpeta_raiz_drive,
