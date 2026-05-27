@@ -44,8 +44,8 @@ if (!$tenant_id) {
 // podés generar el token antes en la vista y meterlo en la URL como ?csrf_token=...
 // Igual, mantenemos la verificación.
 $csrf_token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
-if (!checkCsrfToken('export_inventario', $csrf_token)) {
-    log_event($user_id, "CSRF_BLOCK", "Intento de exportación CSV con token inválido", "seguridad");
+if (!verifyCsrfToken($csrf_token, 'export_inventario')) {
+    log_event((string)$user_id, "CSRF_BLOCK", "Intento de exportación CSV con token inválido", "seguridad");
     http_response_code(403);
     echo "CSRF inválido o ausente.";
     exit();

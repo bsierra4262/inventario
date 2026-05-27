@@ -49,8 +49,8 @@ $user_name = (string)($me['username'] ?? $user_id);
 
 // --- CSRF ---
 $csrf_token = $_POST['csrf_token'] ?? '';
-if (!checkCsrfToken('full_backup', $csrf_token)) {
-    log_event($user_id, 'CSRF_BLOCK', 'Intento import_full_backup con token inválido', 'seguridad');
+if (!verifyCsrfToken($csrf_token, 'full_backup')) {
+    log_event((string)$user_id, 'CSRF_BLOCK', 'Intento import_full_backup con token inválido', 'seguridad');
     back_with_msg('CSRF inválido.', 'error');
 }
 

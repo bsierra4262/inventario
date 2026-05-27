@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST'
 
 // CSRF
 $csrf = $_POST['csrf_token'] ?? '';
-if (!checkCsrfToken('import_csv', $csrf)) {
+if (!verifyCsrfToken($csrf, 'import_csv')) {
     log_event((string)$user_id, 'CSRF_BLOCK', 'Intento de importación CSV con CSRF inválido', 'seguridad');
     $_SESSION['mensaje'] =
         '<strong><i class="bi bi-x-circle-fill"></i> Error:</strong> Seguridad CSRF inválida.';

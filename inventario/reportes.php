@@ -188,15 +188,30 @@ require __DIR__ . '/../includes/layout/head.php';
 
 /* ─── Tablas ─────────────────────────────────────────────────────── */
 .rp-table-wrap { overflow-x: auto; border-radius: var(--ih-radius-md); border: 1px solid var(--ih-gray-200); margin-bottom: 16px; }
-.rp-table { width: 100%; border-collapse: collapse; font-size: var(--ih-text-sm); }
+.rp-table { width: 100%; border-collapse: collapse; font-size: var(--ih-text-sm); background: #fff; }
 .rp-table thead th {
-  background: var(--ih-primary); color: #fff; padding: 9px 12px;
+  background: var(--ih-primary, #663399) !important;
+  color: #ffffff !important;
+  padding: 10px 12px;
   text-align: left; font-weight: 700; white-space: nowrap; font-size: 12px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
 }
-.rp-table tbody tr:nth-child(even) { background: var(--ih-gray-50); }
+.rp-table tbody tr:nth-child(even) { background: var(--ih-gray-50, #f7f7fa); }
 .rp-table tbody tr:hover { background: #ede6fa; transition: background .12s; }
-.rp-table td { padding: 7px 12px; border-bottom: 1px solid var(--ih-gray-100); vertical-align: middle; }
-.rp-table tfoot th { background: var(--ih-gray-100); color: var(--ih-gray-700); padding: 9px 12px; font-weight: 700; text-align: right; }
+.rp-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ih-gray-100, #ececf0);
+  vertical-align: middle;
+  color: var(--ih-gray-800, #232337);
+}
+.rp-table tfoot th {
+  background: var(--ih-gray-100, #ececf0) !important;
+  color: var(--ih-gray-800, #232337) !important;
+  padding: 10px 12px;
+  font-weight: 700;
+  text-align: right;
+}
 .rp-table tfoot th:last-child { text-align: left; }
 
 /* ─── Paginador ──────────────────────────────────────────────────── */

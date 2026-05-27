@@ -117,7 +117,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <!-- ══════════════════ GOOGLE ══════════════════ -->
   <div id="panel-google">
 
-    <!-- Estado credenciales de plataforma -->
+    <!-- Estado credenciales: plataforma o tenant -->
+    <?php
+    $tenantGoogleOk = !empty($googleCfg['client_id']) && !empty($googleCfg['client_secret']);
+    ?>
     <?php if ($platformGoogleOk): ?>
       <div class="ih-alert ih-alert--success" style="margin-bottom:20px;">
         <i class="bi bi-shield-check-fill"></i>
@@ -127,12 +130,20 @@ require __DIR__ . '/../includes/layout/topbar.php';
           Solo configurá el <strong>ID de carpeta raíz</strong> de Drive para esta empresa.
         </div>
       </div>
+    <?php elseif ($tenantGoogleOk): ?>
+      <div class="ih-alert ih-alert--success" style="margin-bottom:20px;">
+        <i class="bi bi-check-circle-fill"></i>
+        <div>
+          <strong>Credenciales OAuth propias activas.</strong>
+          Esta empresa tiene sus credenciales de Google Cloud configuradas. Podés actualizarlas si querés cambiar de proyecto.
+        </div>
+      </div>
     <?php else: ?>
       <div class="ih-alert ih-alert--warning" style="margin-bottom:20px;">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <div>
-          Las credenciales OAuth de plataforma no están configuradas.
-          Podés ingresar las credenciales de tu propia app de Google Cloud, o contactar al administrador del sistema.
+          Las credenciales OAuth no están configuradas.
+          Podés ingresar las credenciales de tu propia app de Google Cloud, o contactar al administrador del sistema para que las configure a nivel plataforma.
         </div>
       </div>
     <?php endif; ?>
