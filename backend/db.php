@@ -80,10 +80,18 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
         log_event("db.php", "APP", "Charset utf8mb4 aplicado (tenant)", "bootstrap");
 
         // Migraciones silenciosas idempotentes
+        // IMPORTANTE: role debe ser VARCHAR(40) para soportar roles personalizados
+        // (no ENUM, que solo permite los 4 builtin y descarta los customs como '').
         try {
-            @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` ENUM('admin','manager','user','viewer') NOT NULL DEFAULT 'user'");
             @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1");
             @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `must_change_password` TINYINT(1) NOT NULL DEFAULT 0");
+            // Solo migrar role si sigue siendo ENUM (no pisar VARCHAR existente)
+            $rc = @$conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
+            if ($rc && $rr = $rc->fetch_assoc()) {
+                if (str_starts_with(strtolower((string)$rr['Type']), 'enum')) {
+                    @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'");
+                }
+            }
         } catch (Throwable $eAlter) {
             // Silencioso
         }
