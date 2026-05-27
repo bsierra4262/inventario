@@ -8,8 +8,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
-// --- Solo admins ---
+// --- Solo quien tenga integration.edit (admin por default, o roles custom) ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
     header('Location: /auth/login.php');
@@ -21,9 +22,34 @@ $s->bind_param('i', $user_id);
 $s->execute();
 $me = $s->get_result()->fetch_assoc();
 $s->close();
-if (!$me || $me['role'] !== 'admin') {
+if (!$me || !user_can('integration.edit', $me)) {
     header('Location: /inventario/index.php');
     exit();
+}
+
+/**
+ * Sincroniza companies.provider en la DB master con el provider del tenant.
+ * Necesario para que el listado de empresas en el superadmin muestre el
+ * proveedor correcto cuando el cliente cambia de Google a Microsoft o viceversa.
+ */
+function sync_master_provider(string $provider): void {
+    $cid = (int)($_SESSION['company_id'] ?? 0);
+    if ($cid <= 0 || !in_array($provider, ['google','microsoft'], true)) return;
+    try {
+        require_once __DIR__ . '/../core/db/master_connection.php';
+        $mdb = new MasterDB();
+        $stmt = $mdb->conn->prepare('UPDATE companies SET provider = ? WHERE id = ?');
+        $stmt->bind_param('si', $provider, $cid);
+        $stmt->execute();
+        $stmt->close();
+        // Tambien marca el provider activo en cloud_config (para cloud_provider_actual())
+        $cfgT = tn('cloud_config');
+        $upS = $GLOBALS['conn']->prepare("INSERT INTO `{$cfgT}` (provider, config_key, config_value) VALUES (?, 'storage_provider', ?)
+                                          ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)");
+        $upS->bind_param('ss', $provider, $provider);
+        $upS->execute();
+        $upS->close();
+    } catch (Throwable) {}
 }
 
 // --- Solo POST ---
@@ -127,6 +153,7 @@ switch ($action) {
             }
         }
 
+        sync_master_provider('google');
         log_event((string)$user_id, 'CLOUD_CONFIG', 'Credenciales Google guardadas', 'integracion');
         redirect_cfg('Credenciales de Google Drive guardadas correctamente.');
 
@@ -151,6 +178,7 @@ switch ($action) {
             save_config($conn, $configTable, 'microsoft', 'drive_id', $driveId);
         }
 
+        sync_master_provider('microsoft');
         log_event((string)$user_id, 'CLOUD_CONFIG', 'Credenciales Microsoft guardadas', 'integracion');
         redirect_cfg('Credenciales de Microsoft OneDrive guardadas correctamente.');
 

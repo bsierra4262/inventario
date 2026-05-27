@@ -136,6 +136,44 @@ try {
                         $adminFeedback = "Estado del usuario ID {$uid} cambiado.";
                     }
                     break;
+
+                case 'sync_provider_from_cloud':
+                    // Sincroniza companies.provider desde lo que tenga el tenant en cloud_config.storage_provider
+                    $ccT = $pf . 'cloud_config';
+                    $rs = $tconn->query("SELECT config_value FROM `{$ccT}` WHERE config_key = 'storage_provider' AND config_value != '' LIMIT 1");
+                    $detected = '';
+                    if ($rs && $row = $rs->fetch_assoc()) {
+                        $detected = strtolower((string)$row['config_value']);
+                    }
+                    if ($detected === '') {
+                        // Fallback: si hay creds google → google; si hay ms → microsoft
+                        $rs2 = $tconn->query("SELECT DISTINCT provider FROM `{$ccT}` WHERE config_key IN ('client_id','client_secret','root_folder_id')");
+                        $provs = [];
+                        if ($rs2) { while ($r2 = $rs2->fetch_assoc()) $provs[] = (string)$r2['provider']; }
+                        if (in_array('google', $provs, true))    $detected = 'google';
+                        elseif (in_array('microsoft', $provs, true)) $detected = 'microsoft';
+                    }
+                    if (in_array($detected, ['google','microsoft'], true)) {
+                        $db->pquery('UPDATE companies SET provider = ? WHERE id = ?', 'si', [$detected, $id]);
+                        $company['provider'] = $detected;
+                        $adminFeedback = "Provider sincronizado: companies.provider = {$detected}";
+                    } else {
+                        $adminFeedback = 'No se pudo detectar el provider del tenant (cloud_config vacío).';
+                        $adminFeedbackOk = false;
+                    }
+                    break;
+
+                case 'reset_user_must_change':
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid > 0) {
+                        $usrT = $pf . 'users';
+                        $stmtMC = $tconn->prepare("UPDATE `{$usrT}` SET must_change_password = 1 WHERE id = ?");
+                        $stmtMC->bind_param('i', $uid);
+                        $stmtMC->execute();
+                        $stmtMC->close();
+                        $adminFeedback = "Usuario ID {$uid} marcado para cambiar contraseña al próximo login.";
+                    }
+                    break;
             }
         }
     }
@@ -178,6 +216,22 @@ try {
             $tenantSettings[$tsRow['setting_key']] = $tsRow['setting_value'];
         }
     }
+
+    // Custom roles del tenant
+    $tenantCustomRoles = [];
+    $crTable = $pf . 'custom_roles';
+    $crRes = @$tconn->query("SELECT role_key, label FROM `$crTable` ORDER BY label ASC");
+    if ($crRes) {
+        while ($crRow = $crRes->fetch_assoc()) {
+            $tenantCustomRoles[(string)$crRow['role_key']] = (string)$crRow['label'];
+        }
+    }
+
+    // Conteo de overrides de permisos
+    $tenantPermOverrides = 0;
+    $rpTable = $pf . 'role_permissions';
+    $rpRes = @$tconn->query("SELECT COUNT(*) c FROM `$rpTable`");
+    if ($rpRes) $tenantPermOverrides = (int)($rpRes->fetch_assoc()['c'] ?? 0);
 } catch (Throwable $te) {
     $tenantError = $te->getMessage();
 }
@@ -421,6 +475,62 @@ require __DIR__ . '/../includes/layout/head.php';
             </td>
           </tr>
           <?php endif; ?>
+
+          <!-- Sincronizar provider -->
+          <tr style="border-bottom:1px solid var(--ih-gray-100);">
+            <td style="padding:12px 0;">
+              <strong>Provider configurado en master</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                <code style="background:var(--ih-gray-100);padding:2px 6px;border-radius:4px;font-size:11px;"><?= htmlspecialchars($company['provider'] ?? '') ?></code>
+                — si el cliente cambió el provider y la lista lo muestra desactualizado, sincronizalo desde el cloud_config del tenant.
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;">
+              <form method="POST" style="display:inline-block;">
+                <?php csrf_input(); ?>
+                <input type="hidden" name="admin_action" value="sync_provider_from_cloud">
+                <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm">
+                  <i class="bi bi-arrow-repeat"></i> Sincronizar provider
+                </button>
+              </form>
+            </td>
+          </tr>
+
+          <!-- Custom roles del tenant -->
+          <?php if (!empty($tenantCustomRoles)): ?>
+          <tr style="border-bottom:1px solid var(--ih-gray-100);">
+            <td style="padding:12px 0;">
+              <strong>Roles personalizados del cliente</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                <?php foreach ($tenantCustomRoles as $rk => $rlbl): ?>
+                  <span class="ih-badge ih-badge--purple" style="margin-right:4px;font-size:11px;">
+                    <i class="bi bi-stars"></i> <?= htmlspecialchars($rlbl) ?>
+                    <code style="opacity:.7;margin-left:4px;"><?= htmlspecialchars($rk) ?></code>
+                  </span>
+                <?php endforeach; ?>
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;color:var(--ih-gray-500);font-size:12px;">
+              <?= $tenantPermOverrides ?> override(s) de permisos
+            </td>
+          </tr>
+          <?php endif; ?>
+
+          <!-- Backup completo -->
+          <tr>
+            <td style="padding:12px 0;">
+              <strong>Respaldo completo del tenant</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                Descarga un JSON con TODOS los datos: productos, movimientos, usuarios (hashes), cloud_config,
+                tenant_settings, roles personalizados y overrides de permisos. Sin archivos binarios (los archivos viven en Drive/OneDrive).
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;">
+              <a href="/dashboard/empresa_backup.php?id=<?= (int)$id ?>" class="ih-btn ih-btn--primary ih-btn--sm">
+                <i class="bi bi-download"></i> Descargar respaldo
+              </a>
+            </td>
+          </tr>
         </table>
       </div>
     </div>
