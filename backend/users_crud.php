@@ -36,7 +36,23 @@ if (!$current || !user_can('user.edit', $current)) {
 }
 
 // Migracion lazy: asegurar VARCHAR(40) en columna role (empresas viejas tienen ENUM)
-try { @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'"); } catch (Throwable) {}
+// Robusto: chequear schema actual y solo hacer ALTER si es ENUM
+try {
+    $colInfo = $conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
+    if ($colInfo && $row = $colInfo->fetch_assoc()) {
+        $colType = strtolower((string)$row['Type']);
+        if (str_starts_with($colType, 'enum')) {
+            $alterOk = $conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'");
+            if ($alterOk) {
+                log_event((string)$user_id, 'MIGRATION', "Columna role migrada de ENUM a VARCHAR(40) en {$usersTable}", 'usuarios');
+            } else {
+                log_event((string)$user_id, 'MIGRATION_ERROR', "Fallo ALTER role VARCHAR: " . $conn->error, 'usuarios');
+            }
+        }
+    }
+} catch (Throwable $e) {
+    log_event((string)$user_id, 'MIGRATION_ERROR', "Exception en migracion role: " . $e->getMessage(), 'usuarios');
+}
 
 // --- Solo POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -166,10 +182,24 @@ switch ($action) {
         }
 
         if ($upd->execute()) {
-            log_event((string)$user_id, 'EDITAR_USUARIO', "Usuario ID {$target_id} ('{$target['username']}') actualizado", 'usuarios');
+            // Read-back para detectar el caso "ENUM strict rechazo el valor y guardo ''"
+            $check = $conn->prepare("SELECT role FROM `{$usersTable}` WHERE id = ?");
+            $check->bind_param('i', $target_id);
+            $check->execute();
+            $rowChk = $check->get_result()->fetch_assoc();
+            $check->close();
+            $savedRole = (string)($rowChk['role'] ?? '');
+            if ($savedRole !== $role) {
+                log_event((string)$user_id, 'EDITAR_USUARIO_WARN',
+                    "Role intentado='{$role}' pero quedo='{$savedRole}' en usuario {$target['username']}",
+                    'usuarios');
+                redirect_users("El rol no se pudo guardar correctamente. Verificá que la columna acepte VARCHAR (la migración pudo fallar).", 'error');
+            }
+            log_event((string)$user_id, 'EDITAR_USUARIO', "Usuario ID {$target_id} ('{$target['username']}') actualizado a rol '{$role}'", 'usuarios');
             redirect_users("Usuario '{$target['username']}' actualizado correctamente.");
         } else {
-            redirect_users('Error al actualizar el usuario.', 'error');
+            log_event((string)$user_id, 'EDITAR_USUARIO_ERROR', "Fallo UPDATE usuario {$target_id}: " . $upd->error, 'usuarios');
+            redirect_users('Error al actualizar el usuario: ' . $upd->error, 'error');
         }
 
     // =========================================================

@@ -33,9 +33,21 @@ if (!$currentUser) {
 // Solo admin del tenant puede gestionar usuarios
 require_permission('user.view', $currentUser);
 
-// Migracion lazy: asegurar que la columna role sea VARCHAR para soportar custom roles
-// (las empresas viejas tienen ENUM('admin','manager','user','viewer') que los rechaza)
-try { @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'"); } catch (Throwable) {}
+// Migracion lazy robusta: chequea si role es ENUM y solo migra en ese caso
+try {
+    $colInfo = $conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
+    if ($colInfo && $row = $colInfo->fetch_assoc()) {
+        if (str_starts_with(strtolower((string)$row['Type']), 'enum')) {
+            if ($conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'")) {
+                log_event((string)$user_id, 'MIGRATION', "role ENUM→VARCHAR aplicado en {$usersTable}", 'usuarios');
+            } else {
+                log_event((string)$user_id, 'MIGRATION_ERROR', "ALTER role fallo: " . $conn->error, 'usuarios');
+            }
+        }
+    }
+} catch (Throwable $e) {
+    log_event((string)$user_id, 'MIGRATION_ERROR', "Exception migracion role: " . $e->getMessage(), 'usuarios');
+}
 
 $allUsers = [];
 $res = $conn->query("SELECT id, username, email, role, created_at FROM `{$usersTable}` ORDER BY id ASC");

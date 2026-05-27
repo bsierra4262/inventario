@@ -49,7 +49,7 @@ if ($masterDbError !== '') {
 }
 
 if (empty($companies)) {
-    $page_title = 'Acceso restringido';
+    $page_title = 'Servicio no disponible';
     require __DIR__ . '/../includes/layout/head.php';
     ?>
     <div class="ih-auth">
@@ -59,17 +59,14 @@ if (empty($companies)) {
             <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
             <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
           </div>
-          <h2 class="ih-auth__title">Sin empresas activas</h2>
-          <p class="ih-auth__subtitle">El SuperAdmin debe crear al menos una empresa cliente</p>
+          <h2 class="ih-auth__title">Servicio no disponible</h2>
+          <p class="ih-auth__subtitle">No hay empresas activas para iniciar sesión</p>
         </div>
         <div class="ih-auth__body">
           <div class="ih-alert ih-alert--info">
             <i class="bi bi-info-circle-fill"></i>
-            <div>El SuperAdmin debe habilitar una empresa desde <strong>Panel SuperAdmin → Nueva empresa</strong>.</div>
+            <div>El servicio se encuentra temporalmente no disponible. Por favor contactá al administrador del sistema.</div>
           </div>
-          <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary ih-btn--block">
-            <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
-          </a>
         </div>
         <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
       </div>
@@ -129,23 +126,16 @@ if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
             <div class="ih-auth__logo"><?= function_exists('platform_logo_html') ? platform_logo_html() : 'i' ?></div>
             <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
           </div>
-          <h2 class="ih-auth__title">Empresa sin configurar</h2>
-          <p class="ih-auth__subtitle">La base de datos del tenant no está disponible</p>
+          <h2 class="ih-auth__title">Servicio no disponible</h2>
+          <p class="ih-auth__subtitle">No se puede acceder al inventario en este momento</p>
         </div>
         <div class="ih-auth__body">
           <div class="ih-alert ih-alert--warning">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <div>
-              Esta empresa fue creada pero su base de datos no está accesible.
-              Pedile al SuperAdmin que complete los datos de conexión.
-              <?php if ($tenantDbError): ?>
-                <div class="ih-text-xs ih-text-muted" style="margin-top:8px">Detalle: <?= htmlspecialchars($tenantDbError) ?></div>
-              <?php endif; ?>
+              El servicio se encuentra temporalmente no disponible. Por favor contactá al administrador del sistema.
             </div>
           </div>
-          <a href="/auth/superadmin_login.php" class="ih-btn ih-btn--primary ih-btn--block">
-            <i class="bi bi-shield-lock"></i> Ir al Panel SuperAdmin
-          </a>
         </div>
         <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
       </div>
