@@ -300,8 +300,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="rp-label">Hasta Fecha de Carga</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
+    <div style="display:flex;align-items:end;gap:8px;">
+      <label class="rp-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
+        Incluir archivados
+      </label>
+    </div>
     <div>
       <button class="ih-btn ih-btn--accent" type="submit">Filtrar</button>
+      <a href="?tab=inventario" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
@@ -340,12 +347,21 @@ require __DIR__ . '/../includes/layout/topbar.php';
           $fh = $conn->real_escape_string($_GET['fecha_hasta']);
           $f[] = "($col_carga) <= '$fh'";
       }
-      $f[] = "archivado = 0";
-      $hay_filtros = count($f) > 0;
-      $sql = "SELECT * FROM `{$prodTable}`"
-           . ($hay_filtros ? " WHERE ".implode(" AND ", $f) : "")
-           . " ORDER BY id DESC "
-           . (empty($_GET) ? "LIMIT 100" : "");
+      // Permitir incluir archivados opcionalmente
+      if (empty($_GET['incluir_archivados'])) { $f[] = "archivado = 0"; }
+      $whereClause = count($f) > 0 ? " WHERE ".implode(" AND ", $f) : "";
+
+      // Paginacion REAL con COUNT + OFFSET/LIMIT
+      $per_page_opts = [20, 50, 100, 200];
+      $per_page = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts, true) ? (int)$_GET['per_page'] : 20;
+      $page = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+      $countSql = "SELECT COUNT(*) AS total FROM `{$prodTable}`{$whereClause}";
+      $countRes = $conn->query($countSql);
+      $totalRows = $countRes ? (int)($countRes->fetch_assoc()['total'] ?? 0) : 0;
+      $totalPages = max(1, (int)ceil($totalRows / $per_page));
+      if ($page > $totalPages) $page = $totalPages;
+      $offset = ($page - 1) * $per_page;
+      $sql = "SELECT * FROM `{$prodTable}`{$whereClause} ORDER BY id DESC LIMIT $per_page OFFSET $offset";
       $res = $conn->query($sql);
       while ($row = $res->fetch_assoc()):
 ?>
@@ -369,19 +385,18 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   <div class="paginador-container">
     <form method="get" id="form-per-page-inventario" class="select-perpage-label">
-      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($value).'">'; }
-        $perPageOptions = [20, 50, 100];
-        $per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), $perPageOptions) ? intval($_GET['per_page']) : 20;
-        $page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-      ?>
+      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
+      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+        <?= number_format($totalRows) ?> registro<?= $totalRows === 1 ? '' : 's' ?>
+      </span>
       Mostrar:
       <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-inventario').submit()">
-        <?php foreach($perPageOptions as $opt): ?><option value="<?= $opt ?>" <?= $per_page == $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?>
+        <?php foreach($per_page_opts as $opt): ?><option value="<?= $opt ?>" <?= $per_page == $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?>
       </select>
       por página
     </form>
     <nav><ul class="pagination-cool">
-      <?php $totalRows = $res->num_rows ?? 0; $totalPages = max(1, ceil($totalRows / $per_page)); $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
+      <?php $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
       <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
       <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
       <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?= $i ?></a></li><?php endfor; ?>
@@ -450,6 +465,26 @@ require __DIR__ . '/../includes/layout/topbar.php';
       }
       $f[] = "archivado = 0";
       $where = count($f) ? "WHERE ".implode(" AND ", $f) : "";
+
+      // Paginacion REAL
+      $per_page_opts_v = [20, 50, 100, 200];
+      $per_page_v = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_v, true) ? (int)$_GET['per_page'] : 20;
+      $page_v = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+      $countSqlV = "
+        SELECT COUNT(*) AS total FROM (
+          SELECT 1
+          FROM `{$prodTable}` $where
+          GROUP BY UPPER(REPLACE(TRIM(REPLACE(modelo,CHAR(160),' ')),' ','')),
+                   UPPER(REPLACE(TRIM(REPLACE(marca,CHAR(160),' ')),' ','')),
+                   UPPER(REPLACE(TRIM(REPLACE(categoria,CHAR(160),' ')),' ','')),
+                   UPPER(REPLACE(TRIM(REPLACE(subcategoria,CHAR(160),' ')),' ',''))
+        ) c";
+      $countResV = $conn->query($countSqlV);
+      $totalRowsV = $countResV ? (int)($countResV->fetch_assoc()['total'] ?? 0) : 0;
+      $totalPagesV = max(1, (int)ceil($totalRowsV / $per_page_v));
+      if ($page_v > $totalPagesV) $page_v = $totalPagesV;
+      $offsetV = ($page_v - 1) * $per_page_v;
+
       $sql = "
         SELECT MAX(modelo_mostrar) AS modelo, MAX(marca_mostrar) AS marca,
                MAX(categoria_mostrar) AS categoria, MAX(subcategoria_mostrar) AS subcategoria,
@@ -469,7 +504,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         ) t
         GROUP BY modelo_key, marca_key, categoria_key, subcategoria_key
         ORDER BY SUM(cantidad) DESC, marca ASC, modelo ASC
-        ".(empty($_GET) ? "LIMIT 100" : "")."
+        LIMIT $per_page_v OFFSET $offsetV
       ";
       $res = $conn->query($sql);
       $granTotal = 0;
@@ -491,21 +526,21 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   <div class="paginador-container">
     <form method="get" id="form-per-page-valor" class="select-perpage-label">
-      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($value).'">'; }
-        $per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), [20,50,100]) ? intval($_GET['per_page']) : 20;
-        $page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-      ?>
+      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
+      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+        <?= number_format($totalRowsV) ?> registro<?= $totalRowsV === 1 ? '' : 's' ?>
+      </span>
       Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-valor').submit()">
-        <?php foreach([20,50,100] as $opt): ?><option value="<?=$opt?>" <?=$per_page==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
+        <?php foreach($per_page_opts_v as $opt): ?><option value="<?=$opt?>" <?=$per_page_v==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
     <nav><ul class="pagination-cool">
-      <?php $totalRows = $res->num_rows ?? 0; $totalPages = max(1, ceil($totalRows / $per_page)); $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
+      <?php $start = max(1, $page_v-2); $end = min($totalPagesV, $page_v+2); ?>
+      <li class="page-item <?= $page_v<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="page-item <?= $page_v<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_v-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_v?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="page-item <?= $page_v>=$totalPagesV?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesV,$page_v+1)])) ?>">&rsaquo;</a></li>
+      <li class="page-item <?= $page_v>=$totalPagesV?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesV])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
@@ -518,12 +553,55 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="rp-label">Años Amortización</label>
       <select name="anios" class="ih-select">
         <?php for($i=1;$i<=10;$i++): ?>
-          <option value="<?=$i?>" <?=((isset($_GET['anios'])?$_GET['anios']:4)==$i)?'selected':''?>><?=$i?> año<?=$i>1?'s':''?></option>
+          <option value="<?=$i?>" <?=((isset($_GET['anios'])?(int)$_GET['anios']:4)===$i)?'selected':''?>><?=$i?> año<?=$i>1?'s':''?></option>
         <?php endfor; ?>
       </select>
     </div>
     <div>
+      <label class="rp-label">Categoría</label>
+      <select name="categoria" id="categoria-reporte3" class="ih-select" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        <?php foreach($categorias as $cat): ?>
+          <option value="<?=htmlspecialchars($cat)?>" <?=($_GET['categoria']??'')===$cat?'selected':''?>><?=htmlspecialchars($cat)?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div>
+      <label class="rp-label">Subcategoría</label>
+      <select name="subcategoria" id="subcategoria-reporte3" class="ih-select">
+        <option value="">Todas</option>
+        <?php if (!empty($_GET['categoria']) && isset($categorias_full[$_GET['categoria']])): ?>
+          <?php foreach($categorias_full[$_GET['categoria']] as $sub): ?>
+            <option value="<?=htmlspecialchars($sub)?>" <?=($_GET['subcategoria']??'')===$sub?'selected':''?>><?=htmlspecialchars($sub)?></option>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </select>
+    </div>
+    <div>
+      <label class="rp-label">Marca</label>
+      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
+    </div>
+    <div>
+      <label class="rp-label">Modelo</label>
+      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
+    </div>
+    <div>
+      <label class="rp-label">Desde Fecha Compra/Ingreso</label>
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+    </div>
+    <div>
+      <label class="rp-label">Hasta Fecha Compra/Ingreso</label>
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+    </div>
+    <div style="display:flex;align-items:end;gap:8px;">
+      <label class="rp-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
+        Incluir archivados
+      </label>
+    </div>
+    <div>
       <button class="ih-btn ih-btn--accent" type="submit" name="filtro_amorti">Ver</button>
+      <a href="?tab=amortizacion" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
@@ -542,13 +620,58 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
     <?php
-      $anios = isset($_GET['anios']) ? intval($_GET['anios']) : 4;
-      $filtros = ["archivado = 0","(fecha_egreso IS NULL OR fecha_egreso = '0000-00-00')"];
-      $where = "WHERE ".implode(" AND ", $filtros);
-      $limit = empty($_GET) ? "LIMIT 100" : "";
-      $sql = "SELECT * FROM `{$prodTable}` $where ORDER BY id DESC $limit";
+      $anios = isset($_GET['anios']) ? max(1, (int)$_GET['anios']) : 4;
+      $filtrosA = ["(fecha_egreso IS NULL OR fecha_egreso = '0000-00-00')"];
+      if (empty($_GET['incluir_archivados'])) { $filtrosA[] = "archivado = 0"; }
+      if (!empty($_GET['categoria']))    $filtrosA[] = "categoria = '".$conn->real_escape_string($_GET['categoria'])."'";
+      if (!empty($_GET['subcategoria'])) $filtrosA[] = "subcategoria = '".$conn->real_escape_string($_GET['subcategoria'])."'";
+      if (!empty($_GET['marca']))        $filtrosA[] = "LOWER(marca) LIKE LOWER('%".$conn->real_escape_string($_GET['marca'])."%')";
+      if (!empty($_GET['modelo']))       $filtrosA[] = "LOWER(modelo) LIKE LOWER('%".$conn->real_escape_string($_GET['modelo'])."%')";
+      // Filtro por fecha de compra (o ingreso como fallback)
+      $col_amort_date = "COALESCE(NULLIF(fecha_compra,'0000-00-00'), NULLIF(fecha_ingreso,'0000-00-00'))";
+      if (!empty($_GET['fecha_desde'])) {
+        $filtrosA[] = "$col_amort_date >= '".$conn->real_escape_string($_GET['fecha_desde'])."'";
+      }
+      if (!empty($_GET['fecha_hasta'])) {
+        $filtrosA[] = "$col_amort_date <= '".$conn->real_escape_string($_GET['fecha_hasta'])."'";
+      }
+      $whereA = "WHERE ".implode(" AND ", $filtrosA);
+
+      // Paginacion REAL
+      $per_page_opts_a = [20, 50, 100, 200];
+      $per_page_a = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_a, true) ? (int)$_GET['per_page'] : 20;
+      $page_a = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+      $countResA = $conn->query("SELECT COUNT(*) AS total FROM `{$prodTable}` $whereA");
+      $totalRowsA = $countResA ? (int)($countResA->fetch_assoc()['total'] ?? 0) : 0;
+      $totalPagesA = max(1, (int)ceil($totalRowsA / $per_page_a));
+      if ($page_a > $totalPagesA) $page_a = $totalPagesA;
+      $offsetA = ($page_a - 1) * $per_page_a;
+
+      // Para los totales generales (de TODOS los registros filtrados, no solo la pagina)
+      $totalCompra = 0; $totalActual = 0;
+      $resTotales = $conn->query("SELECT valor_usd, cantidad, fecha_compra, fecha_ingreso FROM `{$prodTable}` $whereA");
+      if ($resTotales) {
+        $hoyTot = new DateTime();
+        while ($rt = $resTotales->fetch_assoc()) {
+          $vc = (float)$rt['valor_usd'] * (int)$rt['cantidad'];
+          $totalCompra += $vc;
+          $fbT = null;
+          if (!empty($rt['fecha_compra']) && $rt['fecha_compra'] !== '0000-00-00')    $fbT = new DateTime($rt['fecha_compra']);
+          elseif (!empty($rt['fecha_ingreso']) && $rt['fecha_ingreso'] !== '0000-00-00') $fbT = new DateTime($rt['fecha_ingreso']);
+          if ($fbT) {
+            $diasTrans = (int)$hoyTot->diff($fbT)->days;
+            $aniosTrans = $diasTrans / 365.25;
+            $depr = min(1, $aniosTrans / $anios);
+            $va = round($vc * (1 - $depr), 2);
+            if ($va < 0) $va = 0;
+          } else { $va = $vc; }
+          $totalActual += $va;
+        }
+        $resTotales->close();
+      }
+
+      $sql = "SELECT * FROM `{$prodTable}` $whereA ORDER BY id DESC LIMIT $per_page_a OFFSET $offsetA";
       $res = $conn->query($sql);
-      $totalActual = 0; $totalCompra = 0;
       while($row = $res->fetch_assoc()):
         $fecha_base = null;
         if (!empty($row['fecha_compra']) && $row['fecha_compra'] !== '0000-00-00') {
@@ -557,18 +680,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
             $fecha_base = new DateTime($row['fecha_ingreso']);
         }
         $hoy = new DateTime();
-        $valor_compra = floatval($row['valor_usd']) * intval($row['cantidad']);
-        $totalCompra += $valor_compra;
+        $valor_compra = (float)$row['valor_usd'] * (int)$row['cantidad'];
         if ($fecha_base && $anios > 0) {
-          $interval = $fecha_base->diff($hoy);
-          $aniosTrans = ($interval->y) + ($interval->m/12);
-          $depreciacion = min(1, $aniosTrans/$anios);
+          // Calculo basado en dias para mas precision
+          $diasTrans = (int)$hoy->diff($fecha_base)->days;
+          $aniosTrans = $diasTrans / 365.25;
+          $depreciacion = min(1, $aniosTrans / $anios);
           $valor_actual = round($valor_compra * (1 - $depreciacion), 2);
           if ($valor_actual < 0) $valor_actual = 0;
         } else {
           $valor_actual = $valor_compra;
         }
-        $totalActual += $valor_actual;
         $fecha_base_str = $fecha_base ? $fecha_base->format('Y-m-d') : '—';
     ?>
       <tr>
@@ -603,29 +725,60 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   <div class="paginador-container">
     <form method="get" id="form-per-page-amortizacion" class="select-perpage-label">
-      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($value).'">'; }
-        $per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), [20,50,100]) ? intval($_GET['per_page']) : 20;
-        $page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-      ?>
+      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
+      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+        <?= number_format($totalRowsA) ?> registro<?= $totalRowsA === 1 ? '' : 's' ?>
+      </span>
       Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-amortizacion').submit()">
-        <?php foreach([20,50,100] as $opt): ?><option value="<?=$opt?>" <?=$per_page==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
+        <?php foreach($per_page_opts_a as $opt): ?><option value="<?=$opt?>" <?=$per_page_a==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
     <nav><ul class="pagination-cool">
-      <?php $totalRows = $res->num_rows ?? 0; $totalPages = max(1, ceil($totalRows / $per_page)); $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
+      <?php $start = max(1, $page_a-2); $end = min($totalPagesA, $page_a+2); ?>
+      <li class="page-item <?= $page_a<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="page-item <?= $page_a<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_a-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_a?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="page-item <?= $page_a>=$totalPagesA?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesA,$page_a+1)])) ?>">&rsaquo;</a></li>
+      <li class="page-item <?= $page_a>=$totalPagesA?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesA])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
 
 <!-- ════════ TRAZABILIDAD ════════ -->
 <div style="display:<?= $tab === 'trazabilidad' ? 'block' : 'none' ?>">
+  <?php
+  // Lista dinamica de acciones existentes en producto_movimientos
+  $accionesT = [];
+  $acRes = $conn->query("SELECT DISTINCT accion FROM `{$movTable}` WHERE accion IS NOT NULL AND accion != '' ORDER BY accion ASC");
+  if ($acRes) { while ($ar = $acRes->fetch_assoc()) $accionesT[] = $ar['accion']; }
+  ?>
   <form method="GET" class="rp-filter" id="form-trazabilidad">
     <input type="hidden" name="tab" value="trazabilidad">
+    <div>
+      <label class="rp-label">Acción</label>
+      <select name="accion" class="ih-select">
+        <option value="">Todas</option>
+        <?php foreach($accionesT as $ac): ?>
+          <option value="<?=htmlspecialchars($ac)?>" <?=($_GET['accion']??'')===$ac?'selected':''?>><?=htmlspecialchars($ac)?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div>
+      <label class="rp-label">Usuario</label>
+      <input type="text" name="usuario" class="ih-input" value="<?=htmlspecialchars($_GET['usuario']??'')?>" placeholder="Nombre o Email">
+    </div>
+    <div>
+      <label class="rp-label">Modelo</label>
+      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
+    </div>
+    <div>
+      <label class="rp-label">Marca</label>
+      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
+    </div>
+    <div>
+      <label class="rp-label">S/N Tag</label>
+      <input type="text" name="servis_tag" class="ih-input" value="<?=htmlspecialchars($_GET['servis_tag']??'')?>">
+    </div>
     <div>
       <label class="rp-label">Desde Fecha</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
@@ -636,6 +789,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <button class="ih-btn ih-btn--accent" type="submit" name="trazabilidad">Buscar</button>
+      <a href="?tab=trazabilidad" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
@@ -657,17 +811,37 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
     <?php
-      $where = "pm.accion IN ('modificado','Archivado','Alta','Agregado','Importado') AND pm.realizado_por != 0";
-      $params = []; $types = "";
+      $whereT = ["pm.realizado_por != 0"];
+      $paramsT = []; $typesT = "";
+      if (!empty($_GET['accion']))     { $whereT[] = "pm.accion = ?";          $paramsT[] = $_GET['accion'];                $typesT .= "s"; }
+      if (!empty($_GET['usuario']))    { $whereT[] = "(u.username LIKE ? OR u.email LIKE ?)"; $paramsT[] = "%".$_GET['usuario']."%"; $paramsT[] = "%".$_GET['usuario']."%"; $typesT .= "ss"; }
+      if (!empty($_GET['modelo']))     { $whereT[] = "LOWER(pm.modelo) LIKE LOWER(?)";   $paramsT[] = "%".$_GET['modelo']."%";    $typesT .= "s"; }
+      if (!empty($_GET['marca']))      { $whereT[] = "LOWER(pm.marca) LIKE LOWER(?)";    $paramsT[] = "%".$_GET['marca']."%";     $typesT .= "s"; }
+      if (!empty($_GET['servis_tag'])) { $whereT[] = "LOWER(pm.servis_tag) LIKE LOWER(?)"; $paramsT[] = "%".$_GET['servis_tag']."%"; $typesT .= "s"; }
       if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-        $where .= " AND pm.fecha BETWEEN ? AND ?";
-        $params[] = $_GET['fecha_desde']; $params[] = $_GET['fecha_hasta']; $types .= "ss";
+        $whereT[] = "DATE(pm.fecha) BETWEEN ? AND ?";
+        $paramsT[] = $_GET['fecha_desde']; $paramsT[] = $_GET['fecha_hasta']; $typesT .= "ss";
       } elseif (!empty($_GET['fecha_desde'])) {
-        $where .= " AND pm.fecha >= ?"; $params[] = $_GET['fecha_desde']; $types .= "s";
+        $whereT[] = "DATE(pm.fecha) >= ?"; $paramsT[] = $_GET['fecha_desde']; $typesT .= "s";
       } elseif (!empty($_GET['fecha_hasta'])) {
-        $where .= " AND pm.fecha <= ?"; $params[] = $_GET['fecha_hasta']; $types .= "s";
+        $whereT[] = "DATE(pm.fecha) <= ?"; $paramsT[] = $_GET['fecha_hasta']; $typesT .= "s";
       }
-      $limit = (empty($_GET['fecha_desde']) && empty($_GET['fecha_hasta'])) ? "LIMIT 100" : "";
+      $whereSqlT = "WHERE " . implode(" AND ", $whereT);
+
+      // Paginacion REAL
+      $per_page_opts_t = [20, 50, 100, 200];
+      $per_page_t = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_t, true) ? (int)$_GET['per_page'] : 50;
+      $page_t = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+      $countSqlT = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id $whereSqlT";
+      $stmtCT = $conn->prepare($countSqlT);
+      if (!empty($paramsT)) $stmtCT->bind_param($typesT, ...$paramsT);
+      $stmtCT->execute();
+      $totalRowsT = (int)($stmtCT->get_result()->fetch_assoc()['total'] ?? 0);
+      $stmtCT->close();
+      $totalPagesT = max(1, (int)ceil($totalRowsT / $per_page_t));
+      if ($page_t > $totalPagesT) $page_t = $totalPagesT;
+      $offsetT = ($page_t - 1) * $per_page_t;
+
       $sql = "SELECT pm.fecha,pm.accion,u.username,u.email,
               pm.modelo AS modelo_mod, pm.marca AS marca_mod, pm.servis_tag AS tag_mod, pm.cantidad AS cant_mod,
               pm.valor_usd AS valor_mod, pm.estado AS estado_mod, pm.fecha_garantia AS garant_mod,
@@ -676,9 +850,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
               pm.categoria AS cat_mod, pm.subcategoria AS sub_mod
               FROM `{$movTable}` pm
               LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
-              WHERE $where ORDER BY pm.fecha DESC $limit";
+              $whereSqlT ORDER BY pm.fecha DESC LIMIT $per_page_t OFFSET $offsetT";
       $stmt = $conn->prepare($sql);
-      if (!empty($params)) $stmt->bind_param($types, ...$params);
+      if (!empty($paramsT)) $stmt->bind_param($typesT, ...$paramsT);
       $stmt->execute();
       $res = $stmt->get_result();
       $hay_datos = false;
@@ -717,35 +891,51 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   <div class="paginador-container">
     <form method="get" id="form-per-page-trazabilidad" class="select-perpage-label">
-      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($value).'">'; }
-        $per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), [20,50,100]) ? intval($_GET['per_page']) : 20;
-        $page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-      ?>
+      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
+      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+        <?= number_format($totalRowsT) ?> registro<?= $totalRowsT === 1 ? '' : 's' ?>
+      </span>
       Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-trazabilidad').submit()">
-        <?php foreach([20,50,100] as $opt): ?><option value="<?=$opt?>" <?=$per_page==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
+        <?php foreach($per_page_opts_t as $opt): ?><option value="<?=$opt?>" <?=$per_page_t==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
     <nav><ul class="pagination-cool">
-      <?php $totalRows = $res->num_rows ?? 0; $totalPages = max(1, ceil($totalRows / $per_page)); $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
+      <?php $start = max(1, $page_t-2); $end = min($totalPagesT, $page_t+2); ?>
+      <li class="page-item <?= $page_t<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="page-item <?= $page_t<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_t-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_t?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="page-item <?= $page_t>=$totalPagesT?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesT,$page_t+1)])) ?>">&rsaquo;</a></li>
+      <li class="page-item <?= $page_t>=$totalPagesT?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesT])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
 
 <!-- ════════ ARCHIVADOS ════════ -->
 <div style="display:<?= $tab === 'archivados' ? 'block' : 'none' ?>">
+  <?php
+  // Motivos: union de fijos + los detectados en DB historica
+  $motivosDef = ['Venta','Donación','Scrapping','Desguace','Perdida','Robo'];
+  $motivosDB = [];
+  $mvRes = $conn->query("SELECT DISTINCT descripcion FROM `{$movTable}` WHERE accion = 'Archivado' AND descripcion LIKE 'Motivo:%'");
+  if ($mvRes) {
+    while ($mr = $mvRes->fetch_assoc()) {
+      if (preg_match('/Motivo:\s*([^|]+)/', (string)$mr['descripcion'], $mm)) {
+        $m = trim($mm[1]);
+        if ($m !== '' && !in_array($m, $motivosDB, true)) $motivosDB[] = $m;
+      }
+    }
+  }
+  $motivosTodos = array_unique(array_merge($motivosDef, $motivosDB));
+  sort($motivosTodos);
+  ?>
   <form method="GET" class="rp-filter" id="form-archivados">
     <input type="hidden" name="tab" value="archivados">
     <div>
       <label class="rp-label">Motivo</label>
       <select name="motivo" class="ih-select">
         <option value="">Todos</option>
-        <?php foreach(['Venta','Donación','Scrapping','Desguace','Perdida','Robo'] as $motivo): ?>
-          <option value="<?=$motivo?>" <?=($_GET['motivo']??'')===$motivo?'selected':''?>><?=$motivo?></option>
+        <?php foreach($motivosTodos as $motivo): ?>
+          <option value="<?=htmlspecialchars($motivo)?>" <?=($_GET['motivo']??'')===$motivo?'selected':''?>><?=htmlspecialchars($motivo)?></option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -785,26 +975,40 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
     <?php
-      $f = ["pm.accion = 'Archivado'"];
-      $params = []; $types = "";
-      if (!empty($_GET['motivo'])) { $f[] = "pm.descripcion LIKE ?"; $params[] = "%Motivo: ".$_GET['motivo']."%"; $types .= "s"; }
-      if (!empty($_GET['usuario'])) { $f[] = "(u.username LIKE ? OR u.email LIKE ?)"; $params[] = "%".$_GET['usuario']."%"; $params[] = "%".$_GET['usuario']."%"; $types .= "ss"; }
+      $whereAR = ["pm.accion = 'Archivado'"];
+      $paramsAR = []; $typesAR = "";
+      if (!empty($_GET['motivo']))   { $whereAR[] = "pm.descripcion LIKE ?"; $paramsAR[] = "%Motivo: ".$_GET['motivo']."%"; $typesAR .= "s"; }
+      if (!empty($_GET['usuario']))  { $whereAR[] = "(u.username LIKE ? OR u.email LIKE ?)"; $paramsAR[] = "%".$_GET['usuario']."%"; $paramsAR[] = "%".$_GET['usuario']."%"; $typesAR .= "ss"; }
       if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-        $f[] = "pm.fecha BETWEEN ? AND ?"; $params[] = $_GET['fecha_desde']; $params[] = $_GET['fecha_hasta']; $types .= "ss";
+        $whereAR[] = "DATE(pm.fecha) BETWEEN ? AND ?"; $paramsAR[] = $_GET['fecha_desde']; $paramsAR[] = $_GET['fecha_hasta']; $typesAR .= "ss";
       } elseif (!empty($_GET['fecha_desde'])) {
-        $f[] = "pm.fecha >= ?"; $params[] = $_GET['fecha_desde']; $types .= "s";
+        $whereAR[] = "DATE(pm.fecha) >= ?"; $paramsAR[] = $_GET['fecha_desde']; $typesAR .= "s";
       } elseif (!empty($_GET['fecha_hasta'])) {
-        $f[] = "pm.fecha <= ?"; $params[] = $_GET['fecha_hasta']; $types .= "s";
+        $whereAR[] = "DATE(pm.fecha) <= ?"; $paramsAR[] = $_GET['fecha_hasta']; $typesAR .= "s";
       }
-      $hay_filtros = count($f) > 1;
-      $limit = !$hay_filtros ? "LIMIT 100" : "";
+      $whereSqlAR = "WHERE " . implode(" AND ", $whereAR);
+
+      // Paginacion REAL
+      $per_page_opts_ar = [20, 50, 100, 200];
+      $per_page_ar = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_ar, true) ? (int)$_GET['per_page'] : 20;
+      $page_ar = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
+      $countSqlAR = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id $whereSqlAR";
+      $stmtCAR = $conn->prepare($countSqlAR);
+      if (!empty($paramsAR)) $stmtCAR->bind_param($typesAR, ...$paramsAR);
+      $stmtCAR->execute();
+      $totalRowsAR = (int)($stmtCAR->get_result()->fetch_assoc()['total'] ?? 0);
+      $stmtCAR->close();
+      $totalPagesAR = max(1, (int)ceil($totalRowsAR / $per_page_ar));
+      if ($page_ar > $totalPagesAR) $page_ar = $totalPagesAR;
+      $offsetAR = ($page_ar - 1) * $per_page_ar;
+
       $sql = "SELECT pm.*, u.username, u.email
               FROM `{$movTable}` pm
               LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
-              ".(count($f) ? "WHERE ".implode(" AND ",$f) : "")."
-              ORDER BY pm.fecha DESC $limit";
+              $whereSqlAR
+              ORDER BY pm.fecha DESC LIMIT $per_page_ar OFFSET $offsetAR";
       $stmt = $conn->prepare($sql);
-      if (!empty($params)) $stmt->bind_param($types, ...$params);
+      if (!empty($paramsAR)) $stmt->bind_param($typesAR, ...$paramsAR);
       $stmt->execute();
       $res = $stmt->get_result();
       $hay_datos = false;
@@ -851,21 +1055,21 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   <div class="paginador-container">
     <form method="get" id="form-per-page-archivados" class="select-perpage-label">
-      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($value).'">'; }
-        $per_page = isset($_GET['per_page']) && in_array(intval($_GET['per_page']), [20,50,100]) ? intval($_GET['per_page']) : 20;
-        $page = isset($_GET['page']) && intval($_GET['page']) > 0 ? intval($_GET['page']) : 1;
-      ?>
+      <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
+      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+        <?= number_format($totalRowsAR) ?> registro<?= $totalRowsAR === 1 ? '' : 's' ?>
+      </span>
       Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-archivados').submit()">
-        <?php foreach([20,50,100] as $opt): ?><option value="<?=$opt?>" <?=$per_page==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
+        <?php foreach($per_page_opts_ar as $opt): ?><option value="<?=$opt?>" <?=$per_page_ar==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
     <nav><ul class="pagination-cool">
-      <?php $totalRows = $res->num_rows ?? 0; $totalPages = max(1, ceil($totalRows / $per_page)); $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
+      <?php $start = max(1, $page_ar-2); $end = min($totalPagesAR, $page_ar+2); ?>
+      <li class="page-item <?= $page_ar<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="page-item <?= $page_ar<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_ar-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_ar?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="page-item <?= $page_ar>=$totalPagesAR?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesAR,$page_ar+1)])) ?>">&rsaquo;</a></li>
+      <li class="page-item <?= $page_ar>=$totalPagesAR?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesAR])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
@@ -883,6 +1087,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
   const selectPairs = [
     {cat:'#categoria-reporte',  sub:'#subcategoria-reporte'},
+    {cat:'#categoria-reporte3', sub:'#subcategoria-reporte3'},
     {cat:'#categoria-reporte4', sub:'#subcategoria-reporte4'}
   ];
 
