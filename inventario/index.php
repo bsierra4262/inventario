@@ -15,6 +15,7 @@ require_once __DIR__ . '/../backend/csrf.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 require_once __DIR__ . '/../includes/cloud_icons.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
 
 try {
@@ -227,10 +228,18 @@ $topbar_subtitle = number_format($kpi_total) . ' en inventario';
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '
-  <a href="/inventario/agregar.php"  class="ih-btn ih-btn--accent ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nuevo activo</span></a>
-  <a href="/inventario/exportar.php" class="ih-btn ih-btn--outline ih-btn--sm"><i class="bi bi-download"></i> <span class="ih-hidden-mobile">Exportar</span></a>
-';
+$_canCreate  = user_can('asset.create', $user);
+$_canExport  = user_can('asset.export', $user);
+$_canEdit    = user_can('asset.edit', $user);
+$_canArchive = user_can('asset.archive', $user);
+
+$topbar_actions = '';
+if ($_canCreate) {
+    $topbar_actions .= '<a href="/inventario/agregar.php"  class="ih-btn ih-btn--accent ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nuevo activo</span></a> ';
+}
+if ($_canExport) {
+    $topbar_actions .= '<a href="/inventario/exportar.php" class="ih-btn ih-btn--outline ih-btn--sm"><i class="bi bi-download"></i> <span class="ih-hidden-mobile">Exportar</span></a>';
+}
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
@@ -496,10 +505,13 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td>
                   <div class="ih-flex ih-gap-1" style="justify-content:center;">
                     <a href="/backend/view_details.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver detalle"><i class="bi bi-eye"></i></a>
-                    <a href="/backend/edit.php?id=<?= $row['id'] ?>"         class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
-                    <a href="/backend/delete.php?id=<?= $row['id'] ?>"       class="ih-btn ih-btn--ghost ih-btn--sm" title="Eliminar"
-                       onclick="return confirm('¿Eliminar el activo #<?= $row['id'] ?>?')"
-                       style="color:var(--ih-danger);"><i class="bi bi-trash"></i></a>
+                    <?php if ($_canEdit): ?>
+                      <a href="/backend/edit.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
+                    <?php endif; ?>
+                    <?php if ($_canArchive): ?>
+                      <a href="/backend/delete.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Archivar"
+                         style="color:var(--ih-danger);"><i class="bi bi-trash"></i></a>
+                    <?php endif; ?>
                   </div>
                 </td>
               </tr>

@@ -13,6 +13,7 @@ require_once __DIR__ . '/db.php';
 // logger.php ya está incluido por db.php — stub de seguridad únicamente
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 require_once __DIR__ . '/../includes/cloud_icons.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -66,9 +67,20 @@ $topbar_subtitle = $nombreModelo;
 $topbar_user     = $_SESSION['user_name']    ?? ($_SESSION['user_email'] ?? '');
 $topbar_email    = $_SESSION['user_email']   ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  =
-    '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>'
-    . ' <a href="/backend/edit.php?id=' . $producto_id . '" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-pencil"></i> <span class="ih-hidden-mobile">Editar</span></a>';
+// Permisos del usuario actual
+$_vd_us = tn('users');
+$_vd_stmt = $conn->prepare("SELECT role FROM `{$_vd_us}` WHERE id = ? LIMIT 1");
+$_vd_stmt->bind_param('i', $user_id);
+$_vd_stmt->execute();
+$_vd_user = $_vd_stmt->get_result()->fetch_assoc();
+$_vd_stmt->close();
+$_canEdit    = user_can('asset.edit', $_vd_user);
+$_canArchive = user_can('asset.archive', $_vd_user);
+
+$topbar_actions = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+if ($_canEdit) {
+    $topbar_actions .= ' <a href="/backend/edit.php?id=' . $producto_id . '" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-pencil"></i> <span class="ih-hidden-mobile">Editar</span></a>';
+}
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
@@ -330,9 +342,16 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     <div class="ih-card vd-section">
       <div class="ih-card__body" style="padding:1rem;display:flex;flex-direction:column;gap:10px;">
         <div class="vd-section-title"><i class="bi bi-lightning"></i> Acciones</div>
+        <?php if ($_canEdit): ?>
         <a href="/backend/edit.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--primary ih-btn--block">
           <i class="bi bi-pencil-square"></i> Editar activo
         </a>
+        <?php endif; ?>
+        <?php if ($_canArchive && empty($producto['archivado'])): ?>
+        <a href="/backend/delete.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--danger ih-btn--block">
+          <i class="bi bi-archive"></i> Archivar activo
+        </a>
+        <?php endif; ?>
         <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--block">
           <i class="bi bi-arrow-left"></i> Volver al inventario
         </a>

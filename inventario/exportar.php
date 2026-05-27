@@ -11,6 +11,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
@@ -34,6 +35,9 @@ try {
         header('Location: /auth/login.php');
         exit();
     }
+
+    // Permiso minimo para ver la pantalla de export
+    require_permission('asset.export', $user);
 
     $tenant_name = 'Mi empresa';
     try {
@@ -186,7 +190,8 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
     </div>
 
-    <!-- ── Importar CSV ───────────────────────────────────────── -->
+    <?php if (user_can('asset.import_csv', $user)): ?>
+    <!-- ── Importar CSV (solo si tiene permiso) ───────────────── -->
     <div class="ih-card" style="margin-top:20px;margin-bottom:40px;">
       <div class="ih-card__body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <i class="bi bi-upload" style="font-size:28px;color:var(--ih-gray-400);flex-shrink:0;"></i>
@@ -201,6 +206,7 @@ require __DIR__ . '/../includes/layout/head.php';
         </a>
       </div>
     </div>
+    <?php endif; ?>
 
   </main>
 </div>
