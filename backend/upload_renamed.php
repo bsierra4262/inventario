@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    $cid_r = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+    require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }
 
@@ -54,8 +54,8 @@ try {
 
 if (!$googleClientId || !$googleClientSecret || !isset($_SESSION['access_token'])) {
     log_event((string)$user_id, 'ERROR', 'Sin credenciales Google o sin token de sesión en upload_renamed.php', 'transaccion');
-    $cid_r = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+    require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }
 
@@ -74,8 +74,8 @@ if ($client->isAccessTokenExpired()) {
         $_SESSION['access_token'] = $newToken;
     } else {
         unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        $cid_r = (int)($_SESSION['company_id'] ?? 0);
-        header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+        require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+        header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
         exit();
     }
 }

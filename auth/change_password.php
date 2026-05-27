@@ -130,11 +130,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($accessToken) {
                     @file_get_contents('https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken));
                 }
+                // Calcular URL antes de destruir sesion (con subdomain preferido)
+                require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+                $loginUrl = tenant_login_url($cid_keep);
+
                 $_SESSION = [];
                 if ($cid_keep > 0) $_SESSION['company_id'] = $cid_keep;
-
-                // Redirigir al login con el company_id para preservar el tenant
-                $loginUrl = '/auth/login.php' . ($cid_keep > 0 ? '?company=' . $cid_keep : '');
                 echo '<script>
                     alert("Contraseña cambiada exitosamente. Por favor, iniciá sesión nuevamente.");
                     window.location.href = ' . json_encode($loginUrl) . ';

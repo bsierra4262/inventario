@@ -68,8 +68,8 @@ if ($client->isAccessTokenExpired()) {
         $_SESSION['access_token'] = $newToken;
     } else {
         unset($_SESSION['access_token'], $_SESSION['google_authenticated']);
-        $cid_r = (int)($_SESSION['company_id'] ?? 0);
-        header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+        require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+        header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
         exit();
     }
 }

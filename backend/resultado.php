@@ -40,18 +40,17 @@ $origenesQueRequierenDrive = [
 $requiresDrive = in_array($origen, $origenesQueRequierenDrive, true);
 
 // Autorización mínima: debe haber sesión activa
+require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
 if (empty($_SESSION['user_id'])) {
     log_event($user_id, 'ERROR', 'Acceso denegado a resultado.php: sin sesión de usuario.', 'transaccion');
-    $cid_r = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }
 
 // Si el flujo requiere Drive, validamos token de Drive
 if ($requiresDrive && !isset($_SESSION['access_token'])) {
     log_event($user_id, 'ERROR', 'Acceso denegado a resultado.php: sin token de acceso Drive.', 'transaccion');
-    $cid_r2 = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid_r2 ? '?company=' . $cid_r2 : ''));
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }
 

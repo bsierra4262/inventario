@@ -15,8 +15,8 @@ require_once __DIR__ . '/../core/security/permissions_db.php';
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
     http_response_code(403);
-    $cid_r = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid_r ? '?company=' . $cid_r : ''));
+    require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }
 

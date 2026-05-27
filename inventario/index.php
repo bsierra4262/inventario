@@ -22,11 +22,9 @@ try {
     $conn->set_charset('utf8mb4');
 
     if (empty($_SESSION['user_id'])) {
-        $cid_empty = (int)($_SESSION['company_id'] ?? 0);
+        require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
         log_event('index.php', 'AUTH_FAIL', 'user_id vacío en sesión', 'auth');
-        $redir = '/auth/login.php';
-        if ($cid_empty > 0) $redir .= '?company=' . $cid_empty;
-        header('Location: ' . $redir);
+        header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
         exit();
     }
 
@@ -40,12 +38,11 @@ try {
     $stmt->close();
 
     if (!$user) {
+        require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
         $cid_notfound = (int)($_SESSION['company_id'] ?? 0);
         log_event('index.php', 'AUTH_FAIL', "user_id={$user_id} no encontrado en tabla={$usersTable}", 'auth');
         session_destroy();
-        $redir = '/auth/login.php?err=' . urlencode('Tu sesión expiró o tu usuario fue eliminado. Volvé a iniciar sesión.');
-        if ($cid_notfound > 0) $redir .= '&company=' . $cid_notfound;
-        header('Location: ' . $redir);
+        header('Location: ' . tenant_login_url($cid_notfound, ['err' => 'Tu sesión expiró o tu usuario fue eliminado. Volvé a iniciar sesión.']));
         exit();
     }
 

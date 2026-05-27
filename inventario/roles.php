@@ -19,8 +19,8 @@ if (!function_exists('log_event')) { function log_event(...$a) {} }
 // Solo admins
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
-    $cid = (int)($_SESSION['company_id'] ?? 0);
-    header('Location: /auth/login.php' . ($cid ? '?company=' . $cid : ''));
+    require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit;
 }
 $usersTable = tn('users');
