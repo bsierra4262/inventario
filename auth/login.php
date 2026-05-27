@@ -249,13 +249,21 @@ if ($msConfigured && !$must_choose_company) {
 $ssoConfigured = ($googleAuthUrl !== null) || ($msAuthUrl !== null);
 
 // ── 5) LOGIN LOCAL (solo si SSO no está configurado o ?local=1) ───────────────
+// El admin del cliente puede DESHABILITAR el login local en configurar_integracion.php
+// (solo aplica si tiene SSO configurado — sin SSO permitimos siempre el local para no
+// dejarlos sin acceso).
+require_once __DIR__ . '/../core/tenants/tenant_settings.php';
+$localDisabled = ($conn instanceof mysqli) && $ssoConfigured && tenant_local_login_disabled($conn);
+
 $error_msg  = '';
-$show_local = !$ssoConfigured || !empty($_GET['local']); // ?local=1 → fallback para admin
+$show_local = !$ssoConfigured || (!empty($_GET['local']) && !$localDisabled);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['username'], $_POST['password'])
 ) {
-    if ($must_choose_company && empty($_POST['company_id'])) {
+    if ($localDisabled) {
+        $error_msg = 'El acceso con usuario y contraseña está deshabilitado para esta empresa. Ingresá con Google o Microsoft.';
+    } elseif ($must_choose_company && empty($_POST['company_id'])) {
         $error_msg = 'Seleccioná una empresa para continuar.';
     } elseif (!($conn instanceof mysqli)) {
         $error_msg = 'La empresa no está disponible en este momento.';
@@ -401,12 +409,14 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
 
         <!-- Opción fallback local (oculta, para emergencias de admin) -->
-        <p class="ih-text-xs ih-text-muted" style="text-align:center;margin-top:20px;">
-          <a href="?<?= $companyId ? 'company='.$companyId.'&' : '' ?>local=1"
-             style="color:var(--ih-gray-400);text-decoration:none;">
-            ··· acceso alternativo
-          </a>
-        </p>
+        <?php if (!$localDisabled): ?>
+          <p class="ih-text-xs ih-text-muted" style="text-align:center;margin-top:20px;">
+            <a href="?<?= $companyId ? 'company='.$companyId.'&' : '' ?>local=1"
+               style="color:var(--ih-gray-400);text-decoration:none;">
+              ··· acceso alternativo
+            </a>
+          </p>
+        <?php endif; ?>
 
       <?php else: ?>
         <!-- ── Sin SSO o ?local=1: formulario usuario/contraseña ── -->

@@ -6,8 +6,10 @@ require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
+require_once __DIR__ . '/../core/security/csrf.php';
 
 superadmin_require_login();
+csrf_start();
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
@@ -37,12 +39,106 @@ $stats = [
     'products_arch'   => '—',
     'movements'       => '—',
 ];
-$tenantUsers    = [];
-$cloudConfig    = [];
-$tenantError    = '';
+$tenantUsers     = [];
+$cloudConfig     = [];
+$tenantSettings  = [];
+$tenantError     = '';
+$adminFeedback   = '';
+$adminFeedbackOk = true;
 
 try {
     ['conn' => $tconn, 'prefix' => $pf] = tenant_conn_by_company($id);
+
+    // ── Procesar acciones admin del superadmin ──────────────────────────────
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action'])) {
+        // Chequeo CSRF manual (no usamos csrf_validate porque hace die() en vez de retornar)
+        $csrfOk = isset($_POST[CSRF_TOKEN_NAME])
+                  && hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', (string)$_POST[CSRF_TOKEN_NAME]);
+
+        if (!$csrfOk) {
+            $adminFeedback = 'CSRF invalido. Recargá la página.';
+            $adminFeedbackOk = false;
+        } else {
+            $action = (string)$_POST['admin_action'];
+            switch ($action) {
+                case 'tenant_setting':
+                    $tsKey = (string)($_POST['setting_key'] ?? '');
+                    $tsVal = (string)($_POST['setting_value'] ?? '0');
+                    $allowed = ['disable_local_login'];
+                    if (in_array($tsKey, $allowed, true)) {
+                        // crear tabla on-demand (mismo schema que tenant_settings.php)
+                        $stTable = $pf . 'tenant_settings';
+                        $tconn->query("CREATE TABLE IF NOT EXISTS `{$stTable}` (
+                            setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+                            setting_value TEXT NULL,
+                            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                        $stmtSt = $tconn->prepare("INSERT INTO `{$stTable}` (setting_key, setting_value) VALUES (?, ?)
+                                                   ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+                        $valNorm = $tsVal === '1' ? '1' : '0';
+                        $stmtSt->bind_param('ss', $tsKey, $valNorm);
+                        $stmtSt->execute();
+                        $stmtSt->close();
+                        $adminFeedback = "Setting actualizado: {$tsKey} = {$valNorm}";
+                    } else {
+                        $adminFeedback = 'Setting no permitido.';
+                        $adminFeedbackOk = false;
+                    }
+                    break;
+
+                case 'clear_cloud_config':
+                    $provider = (string)($_POST['provider'] ?? '');
+                    if (in_array($provider, ['google', 'microsoft'], true)) {
+                        $ccT = $pf . 'cloud_config';
+                        $stmtClr = $tconn->prepare("DELETE FROM `{$ccT}` WHERE provider = ?");
+                        $stmtClr->bind_param('s', $provider);
+                        $stmtClr->execute();
+                        $aff = $stmtClr->affected_rows;
+                        $stmtClr->close();
+                        $adminFeedback = "Config {$provider} eliminada ({$aff} entradas).";
+                    } else {
+                        $adminFeedback = 'Provider invalido.';
+                        $adminFeedbackOk = false;
+                    }
+                    break;
+
+                case 'reset_user_password':
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    $newPass = (string)($_POST['new_password'] ?? '');
+                    if ($uid > 0 && strlen($newPass) >= 8) {
+                        $hashed = password_hash($newPass, PASSWORD_DEFAULT);
+                        $usrT = $pf . 'users';
+                        $stmtRp = $tconn->prepare("UPDATE `{$usrT}` SET password = ?, must_change_password = 1 WHERE id = ?");
+                        $stmtRp->bind_param('si', $hashed, $uid);
+                        $stmtRp->execute();
+                        $aff = $stmtRp->affected_rows;
+                        $stmtRp->close();
+                        if ($aff > 0) {
+                            $adminFeedback = "Contraseña reseteada para usuario ID {$uid}. Se forzará cambio al próximo login.";
+                        } else {
+                            $adminFeedback = 'No se encontró el usuario.';
+                            $adminFeedbackOk = false;
+                        }
+                    } else {
+                        $adminFeedback = 'Contraseña debe tener al menos 8 caracteres.';
+                        $adminFeedbackOk = false;
+                    }
+                    break;
+
+                case 'toggle_user_active':
+                    $uid = (int)($_POST['user_id'] ?? 0);
+                    if ($uid > 0) {
+                        $usrT = $pf . 'users';
+                        $stmtTU = $tconn->prepare("UPDATE `{$usrT}` SET active = IF(active = 1, 0, 1) WHERE id = ?");
+                        $stmtTU->bind_param('i', $uid);
+                        $stmtTU->execute();
+                        $stmtTU->close();
+                        $adminFeedback = "Estado del usuario ID {$uid} cambiado.";
+                    }
+                    break;
+            }
+        }
+    }
 
     // Usuarios
     $usrTable = $pf . 'users';
@@ -71,6 +167,15 @@ try {
     if ($ccRes) {
         while ($ccRow = $ccRes->fetch_assoc()) {
             $cloudConfig[$ccRow['provider']][] = $ccRow['config_key'];
+        }
+    }
+
+    // Tenant settings
+    $tsTable = $pf . 'tenant_settings';
+    $tsRes = @$tconn->query("SELECT setting_key, setting_value FROM `$tsTable`");
+    if ($tsRes) {
+        while ($tsRow = $tsRes->fetch_assoc()) {
+            $tenantSettings[$tsRow['setting_key']] = $tsRow['setting_value'];
         }
     }
 } catch (Throwable $te) {
@@ -235,6 +340,92 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
     </div>
 
+    <?php if ($adminFeedback !== ''): ?>
+    <div class="ih-alert <?= $adminFeedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?> ih-mt-6">
+      <i class="bi bi-<?= $adminFeedbackOk ? 'check-circle-fill' : 'exclamation-triangle-fill' ?>"></i>
+      <div><?= htmlspecialchars($adminFeedback) ?></div>
+    </div>
+    <?php endif; ?>
+
+    <!-- ── Acciones del superadmin sobre el tenant ──────────────────── -->
+    <?php if (!$tenantError): ?>
+    <div class="ih-card ih-mt-6" style="border-left:4px solid #ef4444;">
+      <div class="ih-card__header">
+        <div>
+          <h2 class="ih-card__title"><i class="bi bi-shield-fill-exclamation"></i> Control superadmin</h2>
+          <div class="ih-card__subtitle">Acciones de recuperación / gestión sobre la configuración del tenant</div>
+        </div>
+      </div>
+      <div class="ih-card__body">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;line-height:1.6;">
+          <tr style="border-bottom:1px solid var(--ih-gray-100);">
+            <td style="padding:12px 0;">
+              <strong>Acceso alternativo (usuario+contraseña)</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                <?= ($tenantSettings['disable_local_login'] ?? '0') === '1'
+                    ? 'Actualmente <strong style="color:#ef4444;">DESHABILITADO</strong> — solo SSO.'
+                    : 'Actualmente <strong style="color:#10b981;">habilitado</strong> — fallback con usuario+pass.' ?>
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;">
+              <form method="POST" style="display:inline-block;">
+                <?php csrf_input(); ?>
+                <input type="hidden" name="admin_action" value="tenant_setting">
+                <input type="hidden" name="setting_key" value="disable_local_login">
+                <input type="hidden" name="setting_value" value="<?= ($tenantSettings['disable_local_login'] ?? '0') === '1' ? '0' : '1' ?>">
+                <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm">
+                  <?= ($tenantSettings['disable_local_login'] ?? '0') === '1' ? 'Habilitar' : 'Deshabilitar' ?>
+                </button>
+              </form>
+            </td>
+          </tr>
+
+          <?php if (!empty($cloudConfig['google'])): ?>
+          <tr style="border-bottom:1px solid var(--ih-gray-100);">
+            <td style="padding:12px 0;">
+              <strong>Cloud config Google</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                Keys: <?= htmlspecialchars(implode(', ', $cloudConfig['google'])) ?>
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;">
+              <form method="POST" style="display:inline-block;" onsubmit="return confirm('Borrar TODAS las credenciales Google de este tenant?');">
+                <?php csrf_input(); ?>
+                <input type="hidden" name="admin_action" value="clear_cloud_config">
+                <input type="hidden" name="provider" value="google">
+                <button type="submit" class="ih-btn ih-btn--danger ih-btn--sm">
+                  <i class="bi bi-trash"></i> Limpiar config Google
+                </button>
+              </form>
+            </td>
+          </tr>
+          <?php endif; ?>
+
+          <?php if (!empty($cloudConfig['microsoft'])): ?>
+          <tr style="border-bottom:1px solid var(--ih-gray-100);">
+            <td style="padding:12px 0;">
+              <strong>Cloud config Microsoft</strong><br>
+              <span class="ih-text-muted ih-text-sm">
+                Keys: <?= htmlspecialchars(implode(', ', $cloudConfig['microsoft'])) ?>
+              </span>
+            </td>
+            <td style="text-align:right;padding:12px 0;">
+              <form method="POST" style="display:inline-block;" onsubmit="return confirm('Borrar TODAS las credenciales Microsoft de este tenant?');">
+                <?php csrf_input(); ?>
+                <input type="hidden" name="admin_action" value="clear_cloud_config">
+                <input type="hidden" name="provider" value="microsoft">
+                <button type="submit" class="ih-btn ih-btn--danger ih-btn--sm">
+                  <i class="bi bi-trash"></i> Limpiar config Microsoft
+                </button>
+              </form>
+            </td>
+          </tr>
+          <?php endif; ?>
+        </table>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Usuarios del tenant -->
     <?php if (!$tenantError): ?>
     <div class="ih-card ih-mt-6">
@@ -260,6 +451,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <th>Rol</th>
                 <th>Estado</th>
                 <th>Contraseña</th>
+                <th style="text-align:right;">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -282,6 +474,27 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?php else: ?>
                       <span class="ih-badge ih-badge--success"><i class="bi bi-check2"></i> Configurada</span>
                     <?php endif; ?>
+                  </td>
+                  <td style="text-align:right;white-space:nowrap;">
+                    <!-- Reset password -->
+                    <form method="POST" style="display:inline-block;" onsubmit="var p=prompt('Nueva contraseña para <?= htmlspecialchars($u['username']) ?> (min 8 caracteres):'); if(!p||p.length<8){alert('Cancelado o muy corta');return false;} this.new_password.value=p; return confirm('¿Resetear contraseña de '+<?= json_encode($u['username']) ?>+'? Se forzará cambio al próximo login.');">
+                      <?php csrf_input(); ?>
+                      <input type="hidden" name="admin_action" value="reset_user_password">
+                      <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                      <input type="hidden" name="new_password" value="">
+                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Resetear contraseña">
+                        <i class="bi bi-key"></i>
+                      </button>
+                    </form>
+                    <!-- Toggle activo -->
+                    <form method="POST" style="display:inline-block;" onsubmit="return confirm(<?= json_encode(($isActive ? 'Desactivar' : 'Activar') . ' al usuario ' . $u['username'] . '?') ?>);">
+                      <?php csrf_input(); ?>
+                      <input type="hidden" name="admin_action" value="toggle_user_active">
+                      <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                      <button type="submit" class="ih-btn <?= $isActive ? 'ih-btn--ghost' : 'ih-btn--success' ?> ih-btn--sm" title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
+                        <i class="bi <?= $isActive ? 'bi-person-slash' : 'bi-person-check' ?>"></i>
+                      </button>
+                    </form>
                   </td>
                 </tr>
               <?php endforeach; ?>

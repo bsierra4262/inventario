@@ -49,6 +49,25 @@ $platformGoogleOk = GOOGLE_CLIENT_ID !== '' && GOOGLE_CLIENT_SECRET !== '';
 $platformMsOk     = MS_CLIENT_ID !== '' && MS_CLIENT_SECRET !== '';
 
 $csrf = generateCsrfToken('cloud_config');
+
+// --- Settings del tenant (toggle acceso alternativo, etc) ---
+require_once __DIR__ . '/../core/tenants/tenant_settings.php';
+
+// Procesar POST de settings (toggle local login)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tenant_setting'])) {
+    $tsName  = (string)$_POST['tenant_setting'];
+    $tsValue = isset($_POST['tenant_setting_value']) ? (string)$_POST['tenant_setting_value'] : '0';
+    if (verifyCsrfToken($_POST['csrf_token'] ?? '', 'cloud_config')) {
+        $allowed = ['disable_local_login'];
+        if (in_array($tsName, $allowed, true)) {
+            tenant_setting_set($conn, $tsName, $tsValue === '1' ? '1' : '0');
+            header('Location: /inventario/configurar_integracion.php?msg=' . urlencode('Configuración actualizada.') . '&type=success');
+            exit;
+        }
+    }
+}
+
+$localLoginDisabled = tenant_local_login_disabled($conn);
 $feedbackMsg  = htmlspecialchars($_GET['msg']  ?? '');
 $feedbackType = match ($_GET['type'] ?? '') {
     'error'   => 'danger',
@@ -102,6 +121,47 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <div><?= $feedbackMsg ?></div>
       <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
     </div>
+  <?php endif; ?>
+
+  <!-- ══════════════════ SEGURIDAD: Toggle acceso alternativo ══════════════════ -->
+  <?php
+  $tenantGoogleHas = !empty($googleCfg['client_id']) && !empty($googleCfg['client_secret']);
+  $tenantMsHas     = !empty($msCfg['client_id']) && !empty($msCfg['client_secret']);
+  $tenantHasSSO    = $platformGoogleOk || $platformMsOk || $tenantGoogleHas || $tenantMsHas;
+  ?>
+  <?php if ($tenantHasSSO): ?>
+  <div class="ih-card" style="margin-bottom:20px;border-left:4px solid var(--ih-primary);">
+    <div class="ih-card__body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:280px;">
+        <h3 style="margin:0 0 4px;font-size:var(--ih-text-md);color:var(--ih-gray-800);font-weight:700;">
+          <i class="bi bi-shield-lock-fill" style="color:var(--ih-primary);"></i>
+          Acceso alternativo (usuario + contraseña)
+        </h3>
+        <p style="margin:0;font-size:var(--ih-text-sm);color:var(--ih-gray-600);">
+          <?php if ($localLoginDisabled): ?>
+            <strong style="color:var(--ih-danger);">Deshabilitado.</strong>
+            Todos los usuarios deben ingresar con Google o Microsoft. El link "acceso alternativo" está oculto en la pantalla de login.
+          <?php else: ?>
+            <strong style="color:var(--ih-success);">Habilitado.</strong>
+            Los usuarios pueden ingresar con usuario y contraseña como fallback de emergencia
+            (link <em>··· acceso alternativo</em> visible en la pantalla de login).
+          <?php endif; ?>
+        </p>
+      </div>
+      <form method="POST" action="/inventario/configurar_integracion.php" style="display:flex;align-items:center;gap:8px;">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+        <input type="hidden" name="tenant_setting" value="disable_local_login">
+        <input type="hidden" name="tenant_setting_value" value="<?= $localLoginDisabled ? '0' : '1' ?>">
+        <button type="submit" class="ih-btn <?= $localLoginDisabled ? 'ih-btn--success' : 'ih-btn--danger' ?> ih-btn--sm">
+          <?php if ($localLoginDisabled): ?>
+            <i class="bi bi-unlock-fill"></i> Habilitar acceso alternativo
+          <?php else: ?>
+            <i class="bi bi-lock-fill"></i> Deshabilitar acceso alternativo
+          <?php endif; ?>
+        </button>
+      </form>
+    </div>
+  </div>
   <?php endif; ?>
 
   <!-- Tabs de proveedor -->
