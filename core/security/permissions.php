@@ -172,9 +172,12 @@ if (!function_exists('require_permission')) {
 
 /**
  * Devuelve la etiqueta legible del rol. Soporta builtin + custom (DB).
+ * NUNCA retorna string vacio — si el role esta vacio o no se encuentra,
+ * devuelve algo legible para evitar badges en blanco.
  */
 if (!function_exists('role_label')) {
     function role_label(string $role): string {
+        if ($role === '' || $role === null) return 'Sin rol';
         if (isset(TENANT_ROLE_LABELS[$role])) return TENANT_ROLE_LABELS[$role];
         // Custom roles: leer de DB si hay $conn global
         global $conn;
@@ -192,6 +195,8 @@ if (!function_exists('role_label')) {
             }
             if (isset($cache[$role])) return $cache[$role];
         }
-        return ucfirst(str_replace('_', ' ', $role));
+        // Fallback: capitalizar el role_key para que al menos se vea algo
+        $pretty = ucwords(str_replace(['_', '-'], ' ', $role));
+        return $pretty !== '' ? $pretty : 'Sin rol';
     }
 }

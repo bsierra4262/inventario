@@ -7,6 +7,8 @@ require_once __DIR__ . '/../core/db/master_connection.php';
 
 superadmin_require_login();
 
+require_once __DIR__ . '/../core/tenants/install_tenant.php';
+
 $db = new MasterDB();
 
 $companies = [];
@@ -21,6 +23,38 @@ try {
 } catch (Throwable $e) {
     $loadError = $e->getMessage();
 }
+
+// Auto-sincronizar companies.provider con el provider REAL del tenant (cloud_config).
+// Necesario porque el cliente puede haber configurado un provider distinto al que
+// quedo guardado en master. Hacemos best-effort: si el tenant esta caido, ignoramos.
+foreach ($companies as &$_co) {
+    try {
+        ['conn' => $_tc, 'prefix' => $_tp] = tenant_conn_by_company((int)$_co['id']);
+        $_ccT = $_tp . 'cloud_config';
+        $detected = '';
+        $rsP = @$_tc->query("SELECT config_value FROM `{$_ccT}` WHERE config_key = 'storage_provider' AND config_value != '' LIMIT 1");
+        if ($rsP && $rowP = $rsP->fetch_assoc()) {
+            $detected = strtolower((string)$rowP['config_value']);
+        }
+        if ($detected === '') {
+            // Fallback: si solo hay creds google → google; solo ms → microsoft
+            $rsP2 = @$_tc->query("SELECT DISTINCT provider FROM `{$_ccT}` WHERE config_key IN ('client_id','client_secret','root_folder_id')");
+            $provs = [];
+            if ($rsP2) { while ($r2 = $rsP2->fetch_assoc()) $provs[] = (string)$r2['provider']; }
+            if (count($provs) === 1) $detected = $provs[0];
+        }
+        if (in_array($detected, ['google','microsoft'], true) && $detected !== ($_co['provider'] ?? '')) {
+            // Sincronizar master
+            $upS = $db->conn->prepare('UPDATE companies SET provider = ? WHERE id = ?');
+            $iid = (int)$_co['id'];
+            $upS->bind_param('si', $detected, $iid);
+            $upS->execute();
+            $upS->close();
+            $_co['provider'] = $detected; // reflejar en la pagina actual
+        }
+    } catch (Throwable) { /* tenant inaccesible, ignorar */ }
+}
+unset($_co);
 
 $flash = '';
 if (!empty($_GET['ok'])) {
