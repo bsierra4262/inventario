@@ -85,18 +85,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'create_custom') {
             $newLabel = trim((string)($_POST['new_role_label'] ?? ''));
-            $newKey   = strtolower(preg_replace('/[^a-z0-9_]+/', '_', trim((string)($_POST['new_role_key'] ?? $newLabel))));
-            $newKey   = trim($newKey, '_');
-            if ($newLabel === '' || $newKey === '') {
-                $feedback = 'Nombre del rol vacio.'; $feedbackOk = false;
+            // BUG fix: '?? $newLabel' no aplicaba cuando new_role_key venia como
+            // string vacia ('' no es null). Resultado: clave quedaba vacia y
+            // la creacion fallaba con 'Nombre del rol vacio.' aunque el usuario
+            // si habia escrito el nombre visible.
+            $rawKey = trim((string)($_POST['new_role_key'] ?? ''));
+            if ($rawKey === '') $rawKey = $newLabel; // fallback al nombre visible
+            $newKey = strtolower(preg_replace('/[^a-z0-9_]+/', '_', $rawKey));
+            $newKey = trim($newKey, '_');
+            if ($newLabel === '') {
+                $feedback = 'El nombre visible es obligatorio.'; $feedbackOk = false;
+            } elseif ($newKey === '') {
+                $feedback = 'No se pudo generar una clave tecnica valida desde el nombre. Probá agregando letras o numeros.'; $feedbackOk = false;
+            } elseif (strlen($newKey) > 40) {
+                $feedback = 'La clave tecnica es muy larga (max 40 caracteres). Acortala manualmente.'; $feedbackOk = false;
             } elseif (in_array($newKey, TENANT_ROLES, true)) {
-                $feedback = 'Esa clave coincide con un rol del sistema.'; $feedbackOk = false;
+                $feedback = 'Esa clave coincide con un rol del sistema. Cambia el nombre o ingresá una clave tecnica diferente.'; $feedbackOk = false;
             } else {
                 if (custom_role_create($conn, $newKey, $newLabel)) {
                     log_event((string)$user_id, 'ROLE_CREATE', "Rol custom creado: {$newKey} ({$newLabel})", 'auth');
-                    $feedback = 'Rol "' . htmlspecialchars($newLabel) . '" creado. Ya podés asignar permisos.';
+                    $feedback = 'Rol "' . $newLabel . '" creado. Ya podés asignar permisos.';
                 } else {
-                    $feedback = 'No se pudo crear el rol (verificá que la clave sea valida).'; $feedbackOk = false;
+                    $feedback = 'No se pudo crear el rol en la base de datos. Revisá los logs.'; $feedbackOk = false;
                 }
             }
         } elseif ($action === 'delete_custom') {
