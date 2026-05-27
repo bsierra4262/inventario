@@ -14,8 +14,18 @@ if (empty($_SESSION['user_id'])) {
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/db.php'; // conexión del tenant actual
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $user_id   = $_SESSION['user_id'];
+
+// Verificar permiso de importar CSV
+$_imp_us = tn('users');
+$_imp_stmt = $conn->prepare("SELECT role FROM `{$_imp_us}` WHERE id = ? LIMIT 1");
+$_imp_stmt->bind_param('i', $user_id);
+$_imp_stmt->execute();
+$_imp_user = $_imp_stmt->get_result()->fetch_assoc();
+$_imp_stmt->close();
+require_permission('asset.import_csv', $_imp_user);
 $tenant_id = $_SESSION['tenant_id'] ?? null; // multiempresa futuro
 
 // Permitimos SOLO POST con archivo

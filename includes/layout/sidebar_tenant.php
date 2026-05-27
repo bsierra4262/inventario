@@ -46,6 +46,9 @@ $sidebar_cloud_label    = strtolower($sidebar_cloud_provider) === 'microsoft' ? 
         <?= cloud_icon_svg($sidebar_cloud_provider, 18) ?>
         <span><?= htmlspecialchars($sidebar_cloud_label) ?></span>
       </a>
+      <a href="/inventario/roles.php" class="ih-sidebar__link<?= ih_tn_active('roles',$page_section) ?>">
+        <i class="bi bi-shield-lock"></i> Roles y permisos
+      </a>
     </div>
     <?php endif; ?>
 

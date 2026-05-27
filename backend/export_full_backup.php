@@ -22,6 +22,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 // --- Auth: solo admin ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -37,11 +38,7 @@ $s->bind_param('i', $user_id);
 $s->execute();
 $me = $s->get_result()->fetch_assoc();
 $s->close();
-if (!$me || $me['role'] !== 'admin') {
-    http_response_code(403);
-    echo 'Solo administradores pueden exportar el backup completo.';
-    exit;
-}
+require_permission('asset.backup_full', $me);
 
 // --- CSRF ---
 $csrf_token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';

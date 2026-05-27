@@ -35,14 +35,16 @@ if (!$user_id) {
     exit;
 }
 
+require_once __DIR__ . '/../core/security/permissions.php';
+
 $usersTable = tn('users');
 $s = $conn->prepare("SELECT username, role FROM `{$usersTable}` WHERE id = ?");
 $s->bind_param('i', $user_id);
 $s->execute();
 $me = $s->get_result()->fetch_assoc();
 $s->close();
-if (!$me || $me['role'] !== 'admin') {
-    back_with_msg('Solo administradores pueden importar el backup.', 'error');
+if (!user_can('asset.backup_full', $me)) {
+    back_with_msg('No tenés permiso para importar el backup completo.', 'error');
 }
 
 $user_name = (string)($me['username'] ?? $user_id);

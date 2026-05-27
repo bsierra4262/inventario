@@ -7,10 +7,23 @@ require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
 $cloudUploadOk = cloud_upload_disponible($conn);
+
+// Verificar permiso de editar activos
+$_edit_uid  = (int)($_SESSION['user_id'] ?? 0);
+if ($_edit_uid > 0) {
+    $_edit_us   = tn('users');
+    $_edit_stmt = $conn->prepare("SELECT role FROM `{$_edit_us}` WHERE id = ? LIMIT 1");
+    $_edit_stmt->bind_param('i', $_edit_uid);
+    $_edit_stmt->execute();
+    $_edit_user = $_edit_stmt->get_result()->fetch_assoc();
+    $_edit_stmt->close();
+    require_permission('asset.edit', $_edit_user);
+}
 
 // ======================================================
 // DETECCIÓN DEL PROVEEDOR DE ALMACENAMIENTO

@@ -66,9 +66,41 @@ if (!function_exists('tenant_permissions_matrix')) {
 
 /**
  * Devuelve true si el rol indicado puede realizar la acción.
+ *
+ * Si hay overrides en DB (tabla tn('role_permissions')) los respeta.
+ * Sino usa la matriz default hardcoded.
+ *
+ * El check de DB requiere $conn (variable global del tenant activo). Si no
+ * existe (ej: scripts CLI sin tenant), usa solo la matriz default.
  */
 if (!function_exists('role_can')) {
     function role_can(string $action, string $role): bool {
+        global $conn;
+
+        // Si hay conexion tenant, chequear overrides en DB
+        if (isset($conn) && $conn instanceof mysqli) {
+            static $cache = [];
+            $key = $role;
+            if (!isset($cache[$key])) {
+                if (function_exists('role_perms_effective')) {
+                    $cache[$key] = role_perms_effective($conn, $role);
+                } else {
+                    // permissions_db.php no cargado aun — load lazy
+                    $pdbPath = __DIR__ . '/permissions_db.php';
+                    if (is_file($pdbPath)) {
+                        require_once $pdbPath;
+                        $cache[$key] = role_perms_effective($conn, $role);
+                    } else {
+                        $cache[$key] = null;
+                    }
+                }
+            }
+            if (is_array($cache[$key])) {
+                return in_array($action, $cache[$key], true);
+            }
+        }
+
+        // Fallback: matriz default
         $matrix = tenant_permissions_matrix();
         if (!isset($matrix[$action])) return false;
         return in_array($role, $matrix[$action], true);

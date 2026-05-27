@@ -8,6 +8,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
 
 // -----------------------------------------------------
 // 1. AUTENTICACIÓN BÁSICA
@@ -50,6 +51,15 @@ if (!verifyCsrfToken($csrf_token, 'export_inventario')) {
     echo "CSRF inválido o ausente.";
     exit();
 }
+
+// Verificar permiso de exportar
+$_exp_us = tn('users');
+$_exp_stmt = $conn->prepare("SELECT role FROM `{$_exp_us}` WHERE id = ? LIMIT 1");
+$_exp_stmt->bind_param('i', $user_id);
+$_exp_stmt->execute();
+$_exp_user = $_exp_stmt->get_result()->fetch_assoc();
+$_exp_stmt->close();
+require_permission('asset.export', $_exp_user);
 // No rotamos el token acá porque es una acción 'descargable' que quizá abrís en pestaña nueva;
 // si querés forzar rotación única, usando csrf_or_fail('export_inventario', true) en vez de checkCsrfToken()
 // vas a invalidar reusos. Te dejo la versión no destructiva por comodidad.

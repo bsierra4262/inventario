@@ -21,6 +21,8 @@ $iconMap = require __DIR__ . '/../includes/iconMap.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
 $cloudUploadOk = cloud_upload_disponible($conn);
 
+require_once __DIR__ . '/../core/security/permissions.php';
+
 try {
     if (empty($_SESSION['user_id'])) {
         header('Location: /auth/login.php');
@@ -41,6 +43,9 @@ try {
         header('Location: /auth/login.php');
         exit();
     }
+
+    // Verificar permiso de crear activos
+    require_permission('asset.create', $user);
 
     $tenant_name = 'Mi empresa';
     try {
