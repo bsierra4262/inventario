@@ -41,6 +41,9 @@ function ih_sa_active(string $key, string $current): string {
       <?php if (platform_can('logs.view')): ?>
       <a href="/dashboard/superadmin_logs.php"          class="ih-sidebar__link<?= ih_sa_active('logs',        $page_section) ?>"><i class="bi bi-list-ul"></i>     Auditoría</a>
       <?php endif; ?>
+      <?php if (($_SESSION['superadmin_role'] ?? '') === 'superadmin'): ?>
+      <a href="/dashboard/superadmin_roles.php"         class="ih-sidebar__link<?= ih_sa_active('roles',       $page_section) ?>"><i class="bi bi-shield-lock"></i> Roles y permisos</a>
+      <?php endif; ?>
     </div>
 
     <div class="ih-sidebar__group">

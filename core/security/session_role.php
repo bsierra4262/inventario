@@ -26,6 +26,29 @@ function platform_permissions_matrix(): array {
 
 function platform_can(string $action): bool {
     $role = $_SESSION['superadmin_role'] ?? 'viewer';
+
+    // superadmin siempre tiene TODO (proteccion anti-lockout)
+    if ($role === 'superadmin') return true;
+
+    // Chequear overrides en DB master con cache por request
+    static $cache = [];
+    if (!isset($cache[$role])) {
+        $cache[$role] = null;
+        try {
+            $pdbPath = __DIR__ . '/platform_permissions_db.php';
+            if (is_file($pdbPath)) {
+                require_once $pdbPath;
+                require_once __DIR__ . '/../db/master_connection.php';
+                $mdb = new MasterDB();
+                $cache[$role] = platform_perms_effective($mdb->conn, $role);
+            }
+        } catch (Throwable) { $cache[$role] = null; }
+    }
+    if (is_array($cache[$role])) {
+        return in_array($action, $cache[$role], true);
+    }
+
+    // Fallback: matriz default
     $matrix = platform_permissions_matrix();
     if (!isset($matrix[$action])) return false;
     return in_array($role, $matrix[$action], true);
