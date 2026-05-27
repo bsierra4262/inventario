@@ -138,6 +138,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $csrf_token = generateCsrfToken('roles_edit');
 
+// Procesar boton de reparar tipos de columna (admin trigger manual)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fix_role_column') {
+    if (verifyCsrfToken($_POST['csrf_token'] ?? '', 'roles_edit')) {
+        $alterRes = $conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'");
+        if ($alterRes) {
+            $feedback = 'Columna role migrada a VARCHAR(40) correctamente. Ya podes asignar roles personalizados.';
+            $feedbackOk = true;
+        } else {
+            $feedback = 'No se pudo migrar la columna: ' . $conn->error;
+            $feedbackOk = false;
+        }
+    }
+}
+
+// Diagnostico actual de la columna role
+$colRoleType = '';
+try {
+    $cinfo = $conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
+    if ($cinfo && $cr = $cinfo->fetch_assoc()) { $colRoleType = (string)$cr['Type']; }
+} catch (Throwable) {}
+$colIsEnum = str_starts_with(strtolower($colRoleType), 'enum');
+
 // Cargar custom roles del tenant
 $customRoles = custom_roles_all($conn);
 
@@ -206,6 +228,29 @@ require __DIR__ . '/../includes/layout/topbar.php';
     siempre mantiene Ver/Editar usuarios e integraciones (para evitar lockouts).
   </div>
 </div>
+
+<!-- Diagnostico: si la columna role sigue siendo ENUM, ofrecer reparacion -->
+<?php if ($colIsEnum): ?>
+<div class="ih-alert ih-alert--warning" style="margin-bottom:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div style="flex:1;min-width:280px;">
+    <strong>Roles personalizados deshabilitados</strong><br>
+    <span class="ih-text-sm">
+      La columna <code>role</code> de tu base de datos es de tipo <code><?= htmlspecialchars($colRoleType) ?></code>,
+      que solo acepta los 4 roles del sistema (admin, manager, user, viewer).
+      Si asignás un rol personalizado a un usuario, MySQL lo rechaza y guarda vacío
+      (por eso aparece "Sin rol"). Click acá para reparar:
+    </span>
+  </div>
+  <form method="POST" action="/inventario/roles.php" style="margin:0;">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+    <input type="hidden" name="action" value="fix_role_column">
+    <button type="submit" class="ih-btn ih-btn--primary ih-btn--sm">
+      <i class="bi bi-tools"></i> Reparar columna role
+    </button>
+  </form>
+</div>
+<?php endif; ?>
 
 <style>
 .role-tab {

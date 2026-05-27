@@ -182,21 +182,27 @@ switch ($action) {
         }
 
         if ($upd->execute()) {
-            // Read-back para detectar el caso "ENUM strict rechazo el valor y guardo ''"
+            $affected = $upd->affected_rows;
+            // Read-back: comparar lo intentado vs lo realmente guardado
             $check = $conn->prepare("SELECT role FROM `{$usersTable}` WHERE id = ?");
             $check->bind_param('i', $target_id);
             $check->execute();
             $rowChk = $check->get_result()->fetch_assoc();
             $check->close();
             $savedRole = (string)($rowChk['role'] ?? '');
+
+            // Detectar tipo de columna para diagnostico
+            $colType = 'desconocido';
+            $colInfo = $conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
+            if ($colInfo && $cr = $colInfo->fetch_assoc()) { $colType = (string)$cr['Type']; }
+
             if ($savedRole !== $role) {
-                log_event((string)$user_id, 'EDITAR_USUARIO_WARN',
-                    "Role intentado='{$role}' pero quedo='{$savedRole}' en usuario {$target['username']}",
-                    'usuarios');
-                redirect_users("El rol no se pudo guardar correctamente. Verificá que la columna acepte VARCHAR (la migración pudo fallar).", 'error');
+                $detail = "Rol intentado: '{$role}' | Rol guardado: '{$savedRole}' | Tipo de columna: {$colType} | Filas afectadas: {$affected}";
+                log_event((string)$user_id, 'EDITAR_USUARIO_WARN', "Discrepancia rol usuario {$target['username']}: {$detail}", 'usuarios');
+                redirect_users("El rol no se guardo bien. {$detail}", 'error');
             }
-            log_event((string)$user_id, 'EDITAR_USUARIO', "Usuario ID {$target_id} ('{$target['username']}') actualizado a rol '{$role}'", 'usuarios');
-            redirect_users("Usuario '{$target['username']}' actualizado correctamente.");
+            log_event((string)$user_id, 'EDITAR_USUARIO', "Usuario ID {$target_id} ('{$target['username']}') actualizado a rol '{$role}' (tipo col: {$colType})", 'usuarios');
+            redirect_users("Usuario '{$target['username']}' actualizado correctamente. Rol asignado: {$savedRole}.");
         } else {
             log_event((string)$user_id, 'EDITAR_USUARIO_ERROR', "Fallo UPDATE usuario {$target_id}: " . $upd->error, 'usuarios');
             redirect_users('Error al actualizar el usuario: ' . $upd->error, 'error');
