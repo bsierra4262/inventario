@@ -14,6 +14,9 @@ require_once __DIR__ . '/../backend/csrf.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
+// Icon map para iconos dinamicos al lado de categoria/subcategoria
+$iconMap = require __DIR__ . '/../includes/iconMap.php';
+
 try {
     if (empty($_SESSION['user_id'])) {
         header('Location: /auth/login.php');
@@ -260,7 +263,9 @@ require __DIR__ . '/../includes/layout/head.php';
           <div class="ih-form-grid">
 
             <div class="ih-field ih-field--required">
-              <label class="ih-label" for="f-categoria">Categoría</label>
+              <label class="ih-label" for="f-categoria">
+                Categoría <i id="iconCat" class="bi bi-folder" style="margin-left:6px;color:var(--ih-primary);"></i>
+              </label>
               <select id="f-categoria" name="categoria" class="ih-select" required>
                 <option value="">Seleccioná…</option>
                 <?php foreach (array_keys($opcionesPorCategoria) as $cat): ?>
@@ -272,7 +277,9 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
 
             <div class="ih-field" id="campo-subcategoria" style="display:none;">
-              <label class="ih-label" for="f-subcategoria">Subcategoría</label>
+              <label class="ih-label" for="f-subcategoria">
+                Subcategoría <i id="iconSub" class="bi bi-folder" style="margin-left:6px;color:var(--ih-primary);"></i>
+              </label>
               <select id="f-subcategoria" name="subcategoria" class="ih-select">
                 <option value="">Seleccioná…</option>
               </select>
@@ -525,6 +532,7 @@ require __DIR__ . '/../includes/layout/head.php';
 <script>
 const opcionesPorCategoria = <?= json_encode($opcionesPorCategoria, JSON_UNESCAPED_UNICODE) ?>;
 const subOpcionesSoftware  = <?= json_encode($subOpcionesSoftware,  JSON_UNESCAPED_UNICODE) ?>;
+const iconMapJS            = <?= json_encode($iconMap, JSON_UNESCAPED_UNICODE) ?>;
 
 // Valores pre-cargados (desde sesión en caso de error)
 const fdCategoria    = <?= json_encode((string)$fv('categoria')) ?>;
@@ -539,6 +547,15 @@ const subSwSel  = document.getElementById('f-subsoftware');
 const subSwOtros = document.getElementById('campo-subsoftware-otros');
 const servisTag  = document.getElementById('f-servis-tag');
 const cantCont   = document.getElementById('campo-cantidad');
+const iconCat    = document.getElementById('iconCat');
+const iconSub    = document.getElementById('iconSub');
+
+// Helper: setear icono manteniendo el estilo de color
+function setIcon(el, claseBi) {
+  if (!el) return;
+  const fallback = 'bi bi-folder';
+  el.className = claseBi || fallback;
+}
 
 // ── Cantidad oculta si hay S/N ────────────────────────────
 function toggleCantidad() {
@@ -613,10 +630,13 @@ function actualizarSubcategorias(catValue, subcatValue, preserveSubcat) {
 }
 
 catSel.addEventListener('change', () => {
+  setIcon(iconCat, iconMapJS[catSel.value] || 'bi bi-folder');
+  setIcon(iconSub, 'bi bi-folder');
   actualizarSubcategorias(catSel.value, '', false);
 });
 
 subSel.addEventListener('change', () => {
+  setIcon(iconSub, iconMapJS[subSel.value] || 'bi bi-folder');
   mostrarExtras(subSel.value);
   mostrarSubSoftware(subSel.value, '');
 });
@@ -647,6 +667,8 @@ document.getElementById('f-conectores-tipo')?.addEventListener('change', functio
 // ── Pre-cargar valores tras error de formulario ───────────
 document.addEventListener('DOMContentLoaded', () => {
   if (fdCategoria) {
+    setIcon(iconCat, iconMapJS[fdCategoria] || 'bi bi-folder');
+    if (fdSubcategoria) setIcon(iconSub, iconMapJS[fdSubcategoria] || 'bi bi-folder');
     actualizarSubcategorias(fdCategoria, fdSubcategoria, true);
     // Esperar a que el DOM esté listo para activar cascadas
     setTimeout(() => {

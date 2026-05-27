@@ -12,6 +12,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 require_once __DIR__ . '/db.php';
 // logger.php ya está incluido por db.php — stub de seguridad únicamente
 if (!function_exists('log_event')) { function log_event(...$a) {} }
+require_once __DIR__ . '/../includes/cloud_icons.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -188,9 +189,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     </div>
 
     <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
+      <?php $cloudProv = cloud_provider_actual($conn); ?>
       <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
          target="_blank" rel="noopener" class="vd-drive-btn">
-        <i class="bi bi-google-drive"></i> Ver archivos en Drive
+        <?= cloud_icon_svg($cloudProv, 18) ?> Ver archivos en Drive
       </a>
     <?php endif; ?>
   </div>
@@ -303,7 +305,7 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
         <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
           <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
              target="_blank" rel="noopener" class="vd-drive-btn" style="width:100%;justify-content:center;">
-            <i class="bi bi-google-drive" style="color:#1FA463;font-size:1.2rem;"></i>
+            <?= cloud_icon_svg($cloudProv ?? cloud_provider_actual($conn), 22) ?>
             Ver archivos de este activo en Drive
           </a>
           <div style="font-size:var(--ih-text-xs);color:var(--ih-gray-400);text-align:center;margin-top:6px;">

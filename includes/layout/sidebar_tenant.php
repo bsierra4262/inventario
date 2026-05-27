@@ -12,6 +12,9 @@ function ih_tn_active(string $key, string $current): string {
     return $key === $current ? ' is-active' : '';
 }
 }
+require_once __DIR__ . '/../cloud_icons.php';
+$sidebar_cloud_provider = isset($conn) && $conn instanceof mysqli ? cloud_provider_actual($conn) : 'google';
+$sidebar_cloud_label    = strtolower($sidebar_cloud_provider) === 'microsoft' ? 'OneDrive / Cloud' : 'Google Drive / Cloud';
 ?>
 <aside class="ih-sidebar ih-app__sidebar">
   <a href="/inventario/index.php" class="ih-sidebar__brand">
@@ -39,8 +42,9 @@ function ih_tn_active(string $key, string $current): string {
     ?>
     <div class="ih-sidebar__group">
       <div class="ih-sidebar__group-title">Configuración</div>
-      <a href="/inventario/configurar_integracion.php" class="ih-sidebar__link<?= ih_tn_active('integracion',$page_section) ?>">
-        <i class="bi bi-cloud-arrow-up"></i> Drive / Cloud
+      <a href="/inventario/configurar_integracion.php" class="ih-sidebar__link<?= ih_tn_active('integracion',$page_section) ?>" style="display:flex;align-items:center;gap:8px;">
+        <?= cloud_icon_svg($sidebar_cloud_provider, 18) ?>
+        <span><?= htmlspecialchars($sidebar_cloud_label) ?></span>
       </a>
     </div>
     <?php endif; ?>
