@@ -82,17 +82,18 @@ if (!function_exists('role_can')) {
             static $cache = [];
             $key = $role;
             if (!isset($cache[$key])) {
-                if (function_exists('role_perms_effective')) {
+                // Load lazy del modulo DB si no esta cargado
+                if (!function_exists('role_perms_effective_v2')) {
+                    $pdbPath = __DIR__ . '/permissions_db.php';
+                    if (is_file($pdbPath)) require_once $pdbPath;
+                }
+                if (function_exists('role_perms_effective_v2')) {
+                    // v2 maneja builtin (DB con fallback default) y custom (solo DB, sin fallback)
+                    $cache[$key] = role_perms_effective_v2($conn, $role);
+                } elseif (function_exists('role_perms_effective')) {
                     $cache[$key] = role_perms_effective($conn, $role);
                 } else {
-                    // permissions_db.php no cargado aun — load lazy
-                    $pdbPath = __DIR__ . '/permissions_db.php';
-                    if (is_file($pdbPath)) {
-                        require_once $pdbPath;
-                        $cache[$key] = role_perms_effective($conn, $role);
-                    } else {
-                        $cache[$key] = null;
-                    }
+                    $cache[$key] = null;
                 }
             }
             if (is_array($cache[$key])) {
@@ -100,7 +101,7 @@ if (!function_exists('role_can')) {
             }
         }
 
-        // Fallback: matriz default
+        // Fallback: matriz default (solo aplica a builtin roles)
         $matrix = tenant_permissions_matrix();
         if (!isset($matrix[$action])) return false;
         return in_array($role, $matrix[$action], true);
@@ -170,10 +171,27 @@ if (!function_exists('require_permission')) {
 }
 
 /**
- * Devuelve la etiqueta legible del rol.
+ * Devuelve la etiqueta legible del rol. Soporta builtin + custom (DB).
  */
 if (!function_exists('role_label')) {
     function role_label(string $role): string {
-        return TENANT_ROLE_LABELS[$role] ?? ucfirst($role);
+        if (isset(TENANT_ROLE_LABELS[$role])) return TENANT_ROLE_LABELS[$role];
+        // Custom roles: leer de DB si hay $conn global
+        global $conn;
+        if (isset($conn) && $conn instanceof mysqli) {
+            static $cache = null;
+            if ($cache === null) {
+                $cache = [];
+                if (!function_exists('custom_roles_all')) {
+                    $pdbPath = __DIR__ . '/permissions_db.php';
+                    if (is_file($pdbPath)) require_once $pdbPath;
+                }
+                if (function_exists('custom_roles_all')) {
+                    $cache = custom_roles_all($conn);
+                }
+            }
+            if (isset($cache[$role])) return $cache[$role];
+        }
+        return ucfirst(str_replace('_', ' ', $role));
     }
 }

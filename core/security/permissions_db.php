@@ -139,6 +139,124 @@ function role_perms_has_overrides(mysqli $conn, string $role): bool {
 }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLES PERSONALIZADOS (custom roles)
+// El admin puede crear roles propios (ej: 'auditor', 'tecnico_externo') con sus
+// propios permisos. Se almacenan en tn('custom_roles') y conviven con los
+// builtin (admin/manager/user/viewer) sin reemplazarlos.
+// ─────────────────────────────────────────────────────────────────────────────
+
+if (!function_exists('custom_roles_ensure_table')) {
+function custom_roles_ensure_table(mysqli $conn): void {
+    static $checked = [];
+    $key = spl_object_id($conn);
+    if (isset($checked[$key])) return;
+    try {
+        $table = tn('custom_roles');
+        $conn->query("CREATE TABLE IF NOT EXISTS `{$table}` (
+            role_key VARCHAR(40) NOT NULL PRIMARY KEY,
+            label    VARCHAR(120) NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $checked[$key] = true;
+    } catch (Throwable) {}
+}
+}
+
+/**
+ * Lista todos los custom roles del tenant: [role_key => label].
+ */
+if (!function_exists('custom_roles_all')) {
+function custom_roles_all(mysqli $conn): array {
+    custom_roles_ensure_table($conn);
+    $out = [];
+    try {
+        $table = tn('custom_roles');
+        $res = $conn->query("SELECT role_key, label FROM `{$table}` ORDER BY label ASC");
+        if ($res) { while ($r = $res->fetch_assoc()) $out[(string)$r['role_key']] = (string)$r['label']; }
+    } catch (Throwable) {}
+    return $out;
+}
+}
+
+if (!function_exists('custom_role_create')) {
+function custom_role_create(mysqli $conn, string $key, string $label): bool {
+    custom_roles_ensure_table($conn);
+    // Sanitizar key: minusculas, sin espacios, solo letras y guiones bajos
+    $key = strtolower(preg_replace('/[^a-z0-9_]/', '_', $key));
+    if ($key === '' || in_array($key, TENANT_ROLES, true)) return false;
+    if (strlen($key) > 40 || $label === '') return false;
+    try {
+        $table = tn('custom_roles');
+        $stmt = $conn->prepare("INSERT INTO `{$table}` (role_key, label) VALUES (?, ?)
+                                ON DUPLICATE KEY UPDATE label = VALUES(label)");
+        $stmt->bind_param('ss', $key, $label);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
+    } catch (Throwable) { return false; }
+}
+}
+
+if (!function_exists('custom_role_delete')) {
+function custom_role_delete(mysqli $conn, string $key): bool {
+    custom_roles_ensure_table($conn);
+    if (in_array($key, TENANT_ROLES, true)) return false; // no se borran los builtin
+    try {
+        $tableR = tn('custom_roles');
+        $tableP = tn('role_permissions');
+        $conn->begin_transaction();
+        $s1 = $conn->prepare("DELETE FROM `{$tableR}` WHERE role_key = ?");
+        $s1->bind_param('s', $key); $s1->execute(); $s1->close();
+        $s2 = $conn->prepare("DELETE FROM `{$tableP}` WHERE role = ?");
+        $s2->bind_param('s', $key); $s2->execute(); $s2->close();
+        $conn->commit();
+        return true;
+    } catch (Throwable) {
+        try { $conn->rollback(); } catch (Throwable) {}
+        return false;
+    }
+}
+}
+
+/**
+ * Devuelve TODOS los roles disponibles para asignar a usuarios:
+ * builtin + custom. Formato [role_key => label_legible].
+ */
+if (!function_exists('all_assignable_roles')) {
+function all_assignable_roles(mysqli $conn): array {
+    $out = [];
+    foreach (TENANT_ROLES as $r) { $out[$r] = role_label($r); }
+    foreach (custom_roles_all($conn) as $k => $lbl) { $out[$k] = $lbl; }
+    return $out;
+}
+}
+
+// Cuando llamamos role_perms_effective con un custom role que no tiene rows,
+// retorna []. Hay que ajustar el flujo. Reescribimos para que custom roles sin
+// rows tengan permisos vacios (no se aplica matriz default).
+if (!function_exists('role_perms_effective_v2')) {
+function role_perms_effective_v2(mysqli $conn, string $role): array {
+    // Si es builtin, comportamiento original (DB con fallback a default)
+    if (in_array($role, TENANT_ROLES, true)) {
+        return role_perms_effective($conn, $role);
+    }
+    // Custom role: solo lo que esta en DB (sin fallback)
+    role_perms_ensure_table($conn);
+    try {
+        $table = tn('role_permissions');
+        $stmt = $conn->prepare("SELECT action FROM `{$table}` WHERE role = ?");
+        $stmt->bind_param('s', $role);
+        $stmt->execute();
+        $rs = $stmt->get_result();
+        $rows = [];
+        while ($r = $rs->fetch_assoc()) { $rows[] = (string)$r['action']; }
+        $stmt->close();
+        return $rows;
+    } catch (Throwable) { return []; }
+}
+}
+
 /**
  * Agrupa los permisos por modulo para mostrar en el UI.
  */

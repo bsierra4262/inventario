@@ -40,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $feedbackOk = false;
     } else {
         $action = (string)($_POST['action'] ?? '');
+        $customRolesNow = custom_roles_all($conn);
 
         if ($action === 'save') {
             $role     = (string)($_POST['role'] ?? '');
@@ -56,10 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if (in_array($role, TENANT_ROLES, true)) {
+            $isBuiltin = in_array($role, TENANT_ROLES, true);
+            $isCustom  = array_key_exists($role, $customRolesNow);
+            if ($isBuiltin || $isCustom) {
                 if (role_perms_set($conn, $role, $perms)) {
-                    log_event((string)$user_id, 'PERMS_SAVE', "Permisos custom guardados para rol {$role} (" . count($perms) . " acciones)", 'auth');
-                    $feedback = 'Permisos guardados correctamente para el rol ' . role_label($role) . '.';
+                    log_event((string)$user_id, 'PERMS_SAVE', "Permisos guardados para rol {$role} (" . count($perms) . " acciones)", 'auth');
+                    $lbl = $isBuiltin ? role_label($role) : $customRolesNow[$role];
+                    $feedback = 'Permisos guardados correctamente para el rol ' . $lbl . '.';
                 } else {
                     $feedback = 'Error al guardar permisos.';
                     $feedbackOk = false;
@@ -79,18 +83,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $feedbackOk = false;
                 }
             }
+        } elseif ($action === 'create_custom') {
+            $newLabel = trim((string)($_POST['new_role_label'] ?? ''));
+            $newKey   = strtolower(preg_replace('/[^a-z0-9_]+/', '_', trim((string)($_POST['new_role_key'] ?? $newLabel))));
+            $newKey   = trim($newKey, '_');
+            if ($newLabel === '' || $newKey === '') {
+                $feedback = 'Nombre del rol vacio.'; $feedbackOk = false;
+            } elseif (in_array($newKey, TENANT_ROLES, true)) {
+                $feedback = 'Esa clave coincide con un rol del sistema.'; $feedbackOk = false;
+            } else {
+                if (custom_role_create($conn, $newKey, $newLabel)) {
+                    log_event((string)$user_id, 'ROLE_CREATE', "Rol custom creado: {$newKey} ({$newLabel})", 'auth');
+                    $feedback = 'Rol "' . htmlspecialchars($newLabel) . '" creado. Ya podés asignar permisos.';
+                } else {
+                    $feedback = 'No se pudo crear el rol (verificá que la clave sea valida).'; $feedbackOk = false;
+                }
+            }
+        } elseif ($action === 'delete_custom') {
+            $role = (string)($_POST['role'] ?? '');
+            if (in_array($role, TENANT_ROLES, true)) {
+                $feedback = 'No se pueden eliminar roles del sistema.'; $feedbackOk = false;
+            } else {
+                // Chequear que no haya usuarios asignados a este rol antes de borrar
+                $stmtChk = $conn->prepare("SELECT COUNT(*) c FROM `{$usersTable}` WHERE role = ?");
+                $stmtChk->bind_param('s', $role);
+                $stmtChk->execute();
+                $countUsers = (int)($stmtChk->get_result()->fetch_assoc()['c'] ?? 0);
+                $stmtChk->close();
+                if ($countUsers > 0) {
+                    $feedback = "No se puede eliminar — hay {$countUsers} usuario(s) con ese rol. Reasignalos primero.";
+                    $feedbackOk = false;
+                } else {
+                    if (custom_role_delete($conn, $role)) {
+                        log_event((string)$user_id, 'ROLE_DELETE', "Rol custom eliminado: {$role}", 'auth');
+                        $feedback = 'Rol eliminado correctamente.';
+                    } else {
+                        $feedback = 'Error al eliminar.'; $feedbackOk = false;
+                    }
+                }
+            }
         }
     }
 }
 
 $csrf_token = generateCsrfToken('roles_edit');
 
-// Cargar estado actual de cada rol
+// Cargar custom roles del tenant
+$customRoles = custom_roles_all($conn);
+
+// Cargar estado actual de cada rol (builtin + custom)
 $rolePerms     = [];
 $roleOverrides = [];
+$roleLabels    = [];
 foreach (TENANT_ROLES as $r) {
     $rolePerms[$r]     = role_perms_effective($conn, $r);
     $roleOverrides[$r] = role_perms_has_overrides($conn, $r);
+    $roleLabels[$r]    = role_label($r);
+}
+foreach ($customRoles as $rk => $rlbl) {
+    $rolePerms[$rk]     = role_perms_effective_v2($conn, $rk);
+    $roleOverrides[$rk] = true; // custom roles siempre son "custom"
+    $roleLabels[$rk]    = $rlbl;
 }
 
 $permGroups = permissions_grouped();
@@ -160,16 +213,60 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </style>
 
 <!-- Tabs de rol -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
   <?php foreach (TENANT_ROLES as $r): ?>
     <button class="role-tab" data-role="<?= $r ?>">
-      <?= htmlspecialchars(role_label($r)) ?>
+      <?= htmlspecialchars($roleLabels[$r]) ?>
       <?php if ($roleOverrides[$r]): ?><span class="badge">CUSTOM</span><?php endif; ?>
     </button>
   <?php endforeach; ?>
+  <?php foreach ($customRoles as $rk => $rlbl): ?>
+    <button class="role-tab role-tab--custom" data-role="<?= htmlspecialchars($rk) ?>" style="border-color:var(--ih-primary);">
+      <i class="bi bi-stars" style="font-size:11px;"></i>
+      <?= htmlspecialchars($rlbl) ?>
+    </button>
+  <?php endforeach; ?>
+  <button class="role-tab" data-role="__new__" style="border-style:dashed;color:var(--ih-primary);">
+    <i class="bi bi-plus-lg"></i> Nuevo rol
+  </button>
 </div>
 
-<?php foreach (TENANT_ROLES as $r): ?>
+<!-- Panel: nuevo rol -->
+<div class="role-panel" data-role-panel="__new__" style="display:none;">
+  <div class="ih-card" style="max-width:540px;">
+    <div class="ih-card__body" style="padding:24px;">
+      <h3 style="margin:0 0 6px;font-size:var(--ih-text-lg);color:var(--ih-gray-800);font-weight:700;">
+        <i class="bi bi-stars" style="color:var(--ih-primary);"></i> Crear rol personalizado
+      </h3>
+      <p style="margin:0 0 18px;color:var(--ih-gray-500);font-size:var(--ih-text-sm);">
+        Definí un nombre y una clave técnica. Después podrás asignarle permisos en su pestaña.
+      </p>
+      <form method="POST" action="/inventario/roles.php">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+        <input type="hidden" name="action" value="create_custom">
+        <div class="ih-field" style="margin-bottom:14px;">
+          <label class="ih-field__label">Nombre visible *</label>
+          <input class="ih-input" name="new_role_label" required maxlength="120" placeholder="Ej: Auditor externo">
+        </div>
+        <div class="ih-field" style="margin-bottom:18px;">
+          <label class="ih-field__label">Clave técnica (opcional)</label>
+          <input class="ih-input" name="new_role_key" maxlength="40" placeholder="auditor_externo (auto-generada del nombre)"
+                 pattern="[a-z0-9_]+" title="Solo minusculas, numeros y guion bajo">
+          <div class="ih-field__hint">Si la dejas vacía, se genera automáticamente desde el nombre.</div>
+        </div>
+        <button type="submit" class="ih-btn ih-btn--primary">
+          <i class="bi bi-plus-lg"></i> Crear rol
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<?php
+$allRoles = array_merge(TENANT_ROLES, array_keys($customRoles));
+foreach ($allRoles as $r):
+  $isBuiltin = in_array($r, TENANT_ROLES, true);
+?>
 <div class="role-panel" data-role-panel="<?= $r ?>" style="display:none;">
   <form method="POST" action="/inventario/roles.php" id="form-role-<?= $r ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -179,8 +276,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
       <div>
         <h3 style="margin:0;font-size:var(--ih-text-lg);color:var(--ih-gray-800);font-weight:700;">
-          <?= htmlspecialchars(role_label($r)) ?>
-          <?php if ($roleOverrides[$r]): ?>
+          <?= htmlspecialchars($roleLabels[$r]) ?>
+          <?php if (!$isBuiltin): ?>
+            <span class="ih-badge ih-badge--purple" style="margin-left:8px;font-size:11px;"><i class="bi bi-stars"></i> Personalizado</span>
+          <?php elseif ($roleOverrides[$r]): ?>
             <span class="ih-badge ih-badge--warning" style="margin-left:8px;font-size:11px;">Custom</span>
           <?php else: ?>
             <span class="ih-badge ih-badge--success" style="margin-left:8px;font-size:11px;">Default</span>
@@ -188,17 +287,25 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </h3>
         <p style="margin:4px 0 0;color:var(--ih-gray-500);font-size:var(--ih-text-sm);">
           <?= count($rolePerms[$r]) ?> permisos activos
+          <?php if (!$isBuiltin): ?>
+            · <code style="font-size:11px;color:var(--ih-gray-400);"><?= htmlspecialchars($r) ?></code>
+          <?php endif; ?>
         </p>
       </div>
       <div style="display:flex;gap:8px;">
         <button type="submit" class="ih-btn ih-btn--primary">
           <i class="bi bi-check2"></i> Guardar cambios
         </button>
-        <?php if ($roleOverrides[$r]): ?>
+        <?php if ($isBuiltin && $roleOverrides[$r]): ?>
           <button type="submit" class="ih-btn ih-btn--ghost"
-                  formaction="/inventario/roles.php"
-                  onclick="if(!confirm('Restaurar permisos por defecto?')){return false;} this.form.action.value='reset';">
+                  onclick="if(!confirm('Restaurar permisos por defecto?')){return false;} this.form.elements['action'].value='reset';">
             <i class="bi bi-arrow-counterclockwise"></i> Restaurar default
+          </button>
+        <?php endif; ?>
+        <?php if (!$isBuiltin): ?>
+          <button type="submit" class="ih-btn ih-btn--danger"
+                  onclick="if(!confirm('Eliminar el rol <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Esta accion no se puede deshacer.')){return false;} this.form.elements['action'].value='delete_custom';">
+            <i class="bi bi-trash"></i> Eliminar rol
           </button>
         <?php endif; ?>
       </div>

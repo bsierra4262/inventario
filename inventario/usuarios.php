@@ -9,6 +9,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/security/permissions_db.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -148,13 +149,14 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
             <div class="ih-field">
               <label class="ih-field__label">Rol <span class="req">*</span></label>
               <select class="ih-select" name="role" required>
-                <option value="user">Usuario (CRUD parcial)</option>
-                <option value="manager">Gerente (CRUD + reportes)</option>
-                <option value="admin">Administrador (todo)</option>
-                <option value="viewer">Solo lectura</option>
+                <?php foreach (all_assignable_roles($conn) as $rk => $rlbl): ?>
+                  <option value="<?= htmlspecialchars($rk) ?>" <?= $rk === 'user' ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($rlbl) ?>
+                  </option>
+                <?php endforeach; ?>
               </select>
               <div class="ih-field__hint">
-                Admin: gestiona todo. Gerente: CRUD activos + reportes. Usuario: ver/crear/editar. Viewer: solo lectura.
+                Crea roles personalizados desde <a href="/inventario/roles.php" style="color:var(--ih-primary);">Roles y permisos</a>.
               </div>
             </div>
           </div>
@@ -259,10 +261,9 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
           <div class="ih-field">
             <label class="ih-field__label">Rol</label>
             <select name="role" id="editRole" class="ih-select">
-              <option value="viewer">Solo lectura</option>
-              <option value="user">Usuario</option>
-              <option value="manager">Gerente</option>
-              <option value="admin">Administrador</option>
+              <?php foreach (all_assignable_roles($conn) as $rk => $rlbl): ?>
+                <option value="<?= htmlspecialchars($rk) ?>"><?= htmlspecialchars($rlbl) ?></option>
+              <?php endforeach; ?>
             </select>
           </div>
           <div class="ih-field">
