@@ -98,8 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sql_update = "UPDATE `{$usersTable}` SET password = ?, must_change_password = 0 WHERE id = ?";
                 $stmt_update = $conn->prepare($sql_update);
                 $stmt_update->bind_param('si', $hashed_password, $user_id);
-                $stmt_update->execute();
+                $okExec = $stmt_update->execute();
+                $affected = $stmt_update->affected_rows;
                 $stmt_update->close();
+
+                if (!$okExec || $affected < 1) {
+                    log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "UPDATE no afecto filas (affected={$affected}, ok={$okExec})", "auth");
+                    $msg_html = '<div class="alert alert-danger">No se pudo actualizar la contraseña. Probá de nuevo o contactá al administrador.</div>';
+                    goto end_post;
+                }
 
                 log_event(
                     $user['email'] ?? ("UsuarioID:$user_id"),
@@ -115,34 +122,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
-                // Modo voluntario: cerrar sesión completa y volver al login
+                // Modo voluntario: cerrar sesion preservando company_id (para que el login
+                // posterior vaya a la MISMA empresa donde el usuario existe — sin esto el login
+                // caia a la company default y no encontraba al usuario)
+                $cid_keep = (int)($_SESSION['company_id'] ?? 0);
                 $accessToken = $_SESSION['access_token']['access_token'] ?? null;
                 if ($accessToken) {
                     @file_get_contents('https://accounts.google.com/o/oauth2/revoke?token=' . urlencode($accessToken));
                 }
                 $_SESSION = [];
-                if (ini_get("session.use_cookies")) {
-                    setcookie(session_name(), '', [
-                        'expires'  => time() - 42000,
-                        'path'     => '/',
-                        'domain'   => (str_contains($_SERVER['HTTP_HOST'] ?? '', '.') ? $_SERVER['HTTP_HOST'] : ''),
-                        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-                        'httponly' => true,
-                        'samesite' => 'Lax'
-                    ]);
-                }
-                session_destroy();
+                if ($cid_keep > 0) $_SESSION['company_id'] = $cid_keep;
 
+                // Redirigir al login con el company_id para preservar el tenant
+                $loginUrl = '/auth/login.php' . ($cid_keep > 0 ? '?company=' . $cid_keep : '');
                 echo '<script>
                     alert("Contraseña cambiada exitosamente. Por favor, iniciá sesión nuevamente.");
-                    window.location.href = "/auth/login.php";
+                    window.location.href = ' . json_encode($loginUrl) . ';
                 </script>';
                 exit;
 
             } catch (Throwable $e) {
                 log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "DB error al actualizar: ".$e->getMessage(), "auth");
-                $msg_html = '<div class="alert alert-danger">Error al actualizar la contraseña.</div>';
+                $msg_html = '<div class="alert alert-danger">Error al actualizar la contraseña: ' . htmlspecialchars($e->getMessage()) . '</div>';
             }
+            end_post:
         }
     }
 }

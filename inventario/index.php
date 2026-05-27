@@ -326,39 +326,43 @@ require __DIR__ . '/../includes/layout/head.php';
           <?php if ($search !== '' || $filterCat !== '' || $filterGar !== ''): ?>
             <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-x"></i> Limpiar</a>
           <?php endif; ?>
-
-          <!-- Botón Columnas (personalizar visibles) -->
-          <div style="position:relative;" id="cols-menu-wrap">
-            <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-menu-btn" title="Personalizar columnas visibles">
-              <i class="bi bi-layout-three-columns"></i> Columnas
-            </button>
-            <div id="cols-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:100;background:#fff;border:1px solid var(--ih-gray-200);border-radius:var(--ih-radius-md);box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:220px;padding:10px 14px;">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ih-gray-500);letter-spacing:.04em;margin-bottom:8px;">Mostrar columnas</div>
-              <?php
-              $colsPersonalizables = [
-                'id' => '#',
-                'modelo' => 'Activo',
-                'asignado_a' => 'Asignado a',
-                'categoria' => 'Categoría',
-                'estado' => 'Estado',
-                'fecha_garantia' => 'Garantía',
-                'valor_usd' => 'Valor USD',
-                'ubicacion' => 'Ubicación',
-                'drive' => 'Drive',
-              ];
-              foreach ($colsPersonalizables as $key => $label):
-              ?>
-                <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--ih-gray-800);cursor:pointer;">
-                  <input type="checkbox" class="col-toggle" data-col-toggle="<?= $key ?>" checked>
-                  <span><?= htmlspecialchars($label) ?></span>
-                </label>
-              <?php endforeach; ?>
-              <div style="border-top:1px solid var(--ih-gray-100);margin-top:8px;padding-top:8px;display:flex;gap:6px;">
-                <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-reset" style="flex:1;font-size:11px;">Restaurar todas</button>
-              </div>
-            </div>
-          </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ── Barra de acciones de tabla (columnas, etc) ────────────── -->
+    <div style="display:flex;justify-content:flex-end;padding:8px 20px;background:var(--ih-gray-50);border-top:1px solid var(--ih-gray-100);position:relative;z-index:50;">
+      <div style="position:relative;" id="cols-menu-wrap">
+        <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-menu-btn" title="Personalizar columnas visibles">
+          <i class="bi bi-layout-three-columns"></i> Columnas
+        </button>
+        <?php
+        $colsPersonalizables = [
+          'id' => '#',
+          'modelo' => 'Activo',
+          'asignado_a' => 'Asignado a',
+          'categoria' => 'Categoría',
+          'estado' => 'Estado',
+          'fecha_garantia' => 'Garantía',
+          'valor_usd' => 'Valor USD',
+          'ubicacion' => 'Ubicación',
+          'drive' => 'Drive',
+        ];
+        ?>
+        <div id="cols-menu" hidden style="position:absolute;right:0;top:calc(100% + 6px);z-index:1000;background:#fff;border:1px solid var(--ih-gray-200);border-radius:var(--ih-radius-md);box-shadow:0 12px 32px rgba(0,0,0,.18);min-width:240px;padding:12px 16px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ih-gray-500);letter-spacing:.04em;margin-bottom:10px;">Mostrar columnas</div>
+          <?php foreach ($colsPersonalizables as $key => $label): ?>
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--ih-gray-800);cursor:pointer;user-select:none;">
+              <input type="checkbox" class="col-toggle" data-col-toggle="<?= $key ?>" checked>
+              <span><?= htmlspecialchars($label) ?></span>
+            </label>
+          <?php endforeach; ?>
+          <div style="border-top:1px solid var(--ih-gray-100);margin-top:10px;padding-top:10px;display:flex;gap:6px;">
+            <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-reset" style="flex:1;font-size:11px;">
+              <i class="bi bi-arrow-counterclockwise"></i> Restaurar todas
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -620,14 +624,14 @@ const hidden = leerColumnasOcultas();
 colToggles.forEach(cb => { cb.checked = !hidden.includes(cb.dataset.colToggle); });
 aplicarColumnasVisibles(hidden);
 
-// Toggle dropdown
+// Toggle dropdown (usando hidden attribute para mas robustez)
 colsMenuBtn?.addEventListener('click', (e) => {
   e.preventDefault(); e.stopPropagation();
-  colsMenu.style.display = colsMenu.style.display === 'none' ? 'block' : 'none';
+  if (colsMenu) colsMenu.hidden = !colsMenu.hidden;
 });
 document.addEventListener('click', (e) => {
-  if (colsMenu && !colsMenu.contains(e.target) && e.target !== colsMenuBtn) {
-    colsMenu.style.display = 'none';
+  if (colsMenu && !colsMenu.hidden && !colsMenu.contains(e.target) && !colsMenuBtn.contains(e.target)) {
+    colsMenu.hidden = true;
   }
 });
 
