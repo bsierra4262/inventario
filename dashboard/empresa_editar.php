@@ -89,16 +89,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$err) {
         try {
+            // Orden de columnas:    nombre razon cuit provider active dbHost dbName dbUser [dbPass] subdomain loginUrl id
+            // Tipos correspondientes: s      s     s    s        i      s      s      s      [s]      s         s        i
             if ($dbPass !== '') {
+                // 12 binds, types: ssssissssssi (10s + 2i)
                 $db->pquery(
                     'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, db_pass=?, subdomain=?, login_url=? WHERE id=?',
-                    'ssssisssssssi',
+                    'ssssissssssi',
                     [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $dbPass, $subdomain ?: null, $loginUrl ?: null, $id]
                 );
             } else {
+                // 11 binds, types: ssssisssssi (9s + 2i)
                 $db->pquery(
                     'UPDATE companies SET nombre=?, razon_social=?, cuit=?, provider=?, active=?, db_host=?, db_name=?, db_user=?, subdomain=?, login_url=? WHERE id=?',
-                    'sssissssssi',
+                    'ssssisssssi',
                     [$nombre, $razon, $cuit, $provider, $active, $dbHost, $dbName, $dbUser, $subdomain ?: null, $loginUrl ?: null, $id]
                 );
             }

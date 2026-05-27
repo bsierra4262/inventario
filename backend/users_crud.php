@@ -8,6 +8,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/security/permissions_db.php';
 
 // --- Autenticación y autorización ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -26,8 +28,8 @@ $stmt->execute();
 $current = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-if (!$current || $current['role'] !== 'admin') {
-    log_event((string)$user_id, 'ACCESO_DENEGADO', 'Intento de acceso a users_crud sin rol admin', 'seguridad');
+if (!$current || !user_can('user.edit', $current)) {
+    log_event((string)$user_id, 'ACCESO_DENEGADO', 'Intento de acceso a users_crud sin permiso user.edit', 'seguridad');
     http_response_code(403);
     header('Location: /inventario/index.php');
     exit();
@@ -36,7 +38,7 @@ if (!$current || $current['role'] !== 'admin') {
 // --- Solo POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    header('Location: ../usuarios.php');
+    header('Location: /inventario/usuarios.php');
     exit();
 }
 
@@ -45,8 +47,11 @@ csrf_or_fail('users_crud', false);
 
 $action = $_POST['action'] ?? '';
 
+// Roles validos = builtin + custom del tenant (acepta cualquier rol asignable)
+$valid_roles = array_keys(all_assignable_roles($conn));
+
 function redirect_users(string $msg, string $type = 'success'): never {
-    header('Location: ../usuarios.php?msg=' . urlencode($msg) . '&type=' . $type);
+    header('Location: /inventario/usuarios.php?msg=' . urlencode($msg) . '&type=' . $type);
     exit();
 }
 
@@ -78,7 +83,7 @@ switch ($action) {
         if (!validate_password($password)) {
             redirect_users('La contraseña debe tener al menos 8 caracteres con letras y números.', 'error');
         }
-        if (!in_array($role, ['admin', 'manager', 'user', 'viewer'], true)) {
+        if (!in_array($role, $valid_roles, true)) {
             $role = 'user';
         }
 
@@ -121,13 +126,13 @@ switch ($action) {
         if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             redirect_users('Email inválido.', 'error');
         }
-        if (!in_array($role, ['admin', 'manager', 'user', 'viewer'], true)) {
+        if (!in_array($role, $valid_roles, true)) {
             redirect_users('Rol inválido.', 'error');
         }
 
-        // No puede quitarse el rol admin a sí mismo (evita lockout)
-        if ($target_id === $user_id && $role !== 'admin') {
-            redirect_users('No podés quitarte el rol de admin a vos mismo.', 'error');
+        // Anti-lockout: no puede asignarse a si mismo un rol que no tenga user.edit
+        if ($target_id === $user_id && !role_can('user.edit', $role)) {
+            redirect_users('No podés asignarte un rol que pierda el permiso de editar usuarios.', 'error');
         }
 
         // Verificar que el target existe

@@ -198,11 +198,41 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 
 <style>
-.role-tab { padding: 10px 18px; border: 1px solid var(--ih-gray-200); background: #fff; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ih-gray-700); }
-.role-tab.is-active { background: var(--ih-primary); color: #fff; border-color: var(--ih-primary); }
-.role-tab .badge { font-size: 10px; margin-left: 6px; padding: 2px 6px; border-radius: 8px; }
-.role-tab.is-active .badge { background: rgba(255,255,255,.25); }
-.role-tab:not(.is-active) .badge { background: var(--ih-warning); color: #fff; }
+.role-tab {
+  padding: 10px 18px;
+  border: 1px solid #e5e1ec;
+  background: #ffffff !important;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  color: #4a4a5e !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.role-tab:hover {
+  border-color: #663399;
+  background: #f7f5fb !important;
+}
+.role-tab.is-active {
+  background: #663399 !important;
+  color: #ffffff !important;
+  border-color: #663399;
+}
+.role-tab--custom { border-color: #663399; }
+.role-tab--new { border-style: dashed; color: #663399 !important; }
+.role-tab--new:hover { background: #f0e8fa !important; }
+.role-tab .badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-weight: 700;
+}
+.role-tab.is-active .badge { background: rgba(255,255,255,.25); color:#fff; }
 .perm-group { background: #fff; border: 1px solid var(--ih-gray-200); border-radius: 10px; margin-bottom: 14px; }
 .perm-group__title { padding: 12px 16px; border-bottom: 1px solid var(--ih-gray-100); font-weight: 700; color: var(--ih-gray-800); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; background: var(--ih-gray-50); border-radius: 10px 10px 0 0; }
 .perm-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--ih-gray-100); }
@@ -215,18 +245,18 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <!-- Tabs de rol -->
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
   <?php foreach (TENANT_ROLES as $r): ?>
-    <button class="role-tab" data-role="<?= $r ?>">
+    <button class="role-tab" data-role="<?= $r ?>" type="button">
       <?= htmlspecialchars($roleLabels[$r]) ?>
       <?php if ($roleOverrides[$r]): ?><span class="badge">CUSTOM</span><?php endif; ?>
     </button>
   <?php endforeach; ?>
   <?php foreach ($customRoles as $rk => $rlbl): ?>
-    <button class="role-tab role-tab--custom" data-role="<?= htmlspecialchars($rk) ?>" style="border-color:var(--ih-primary);">
+    <button class="role-tab role-tab--custom" data-role="<?= htmlspecialchars($rk) ?>" type="button">
       <i class="bi bi-stars" style="font-size:11px;"></i>
       <?= htmlspecialchars($rlbl) ?>
     </button>
   <?php endforeach; ?>
-  <button class="role-tab" data-role="__new__" style="border-style:dashed;color:var(--ih-primary);">
+  <button class="role-tab role-tab--new" data-role="__new__" type="button">
     <i class="bi bi-plus-lg"></i> Nuevo rol
   </button>
 </div>
