@@ -14,6 +14,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
+require_once __DIR__ . '/../includes/cloud_icons.php';
 
 try {
     $conn->set_charset('utf8mb4');
@@ -336,7 +337,11 @@ require __DIR__ . '/../includes/layout/head.php';
               </tr>
             </thead>
             <tbody>
-              <?php if ($result && $result->num_rows > 0):
+              <?php
+              // Cacheamos el icono SVG del provider una sola vez (no por fila)
+              $cloudProviderIndex = cloud_provider_actual($conn);
+              $cloudIconCached    = cloud_icon_svg($cloudProviderIndex, 18);
+              if ($result && $result->num_rows > 0):
                 while ($row = $result->fetch_assoc()):
                   $gar = garantiaInfo($row['fecha_garantia'], $row['periodo_garantia']);
                   // Filtrar por garantía si se seleccionó
@@ -398,8 +403,8 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td>
                   <?php if (!empty($row['carpeta_raiz_drive'])): ?>
                     <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($row['carpeta_raiz_drive']) ?>"
-                       target="_blank" class="ih-btn ih-btn--ghost ih-btn--sm" title="Abrir en Drive">
-                      <i class="bi bi-google"></i>
+                       target="_blank" class="ih-btn ih-btn--ghost ih-btn--sm" title="Abrir en Drive" style="padding:6px 10px;">
+                      <?= $cloudIconCached ?>
                     </a>
                   <?php else: ?>
                     <span class="ih-text-muted ih-text-sm">—</span>

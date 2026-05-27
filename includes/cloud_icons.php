@@ -53,3 +53,58 @@ function cloud_provider_actual(mysqli $conn): string {
     return 'google';
 }
 }
+
+/**
+ * Determina si el usuario actual puede subir archivos a la nube:
+ *   - Debe haber access_token de OAuth en sesion (SSO con Google/Microsoft)
+ *   - Y debe haber credenciales validas (en platform constants o en cloud_config del tenant)
+ *
+ * Si retorna false, el frontend debe OCULTAR la opcion de subir archivos.
+ * No guardamos archivos en Hostinger por politica (seguridad + costo).
+ */
+if (!function_exists('cloud_upload_disponible')) {
+function cloud_upload_disponible(mysqli $conn): bool {
+    if (empty($_SESSION['access_token'])) return false;
+
+    // Credenciales a nivel plataforma (recomendado)
+    $platformOk = (defined('GOOGLE_CLIENT_ID') && GOOGLE_CLIENT_ID !== '')
+               || (defined('MS_CLIENT_ID') && MS_CLIENT_ID !== '');
+    if ($platformOk) return true;
+
+    // Credenciales por tenant (cloud_config)
+    try {
+        $cfgTable = tn('cloud_config');
+        $r = $conn->query("SELECT 1 FROM `{$cfgTable}` WHERE config_key IN ('client_id','client_secret') AND config_value != '' LIMIT 1");
+        if ($r && $r->num_rows > 0) return true;
+    } catch (Throwable) {}
+    return false;
+}
+}
+
+/**
+ * Bloque HTML reutilizable para mostrar cuando cloud_upload_disponible() es false.
+ * Aviso amigable con CTA a configurar la integracion.
+ */
+if (!function_exists('cloud_upload_disabled_notice')) {
+function cloud_upload_disabled_notice(string $rol = ''): string {
+    $isAdmin = ($rol === 'admin');
+    $cta = $isAdmin
+        ? '<a href="/inventario/configurar_integracion.php" class="ih-btn ih-btn--primary ih-btn--sm" style="margin-top:10px;"><i class="bi bi-gear"></i> Configurar Drive / OneDrive</a>'
+        : '<div style="margin-top:8px;font-size:var(--ih-text-xs);color:var(--ih-gray-500);">Pedile al administrador que configure la integracion con Google Drive o Microsoft OneDrive.</div>';
+    return <<<HTML
+<div class="ih-alert ih-alert--info" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <i class="bi bi-cloud-slash" style="font-size:1.4rem;color:var(--ih-gray-500);"></i>
+    <div>
+      <strong>Subida de archivos no disponible</strong><br>
+      <span style="font-size:var(--ih-text-sm);color:var(--ih-gray-600);">
+        Para adjuntar archivos al activo necesitas iniciar sesion con Google o Microsoft.
+        Los archivos se guardan en tu nube (Drive / OneDrive), no en nuestro servidor.
+      </span>
+    </div>
+  </div>
+  {$cta}
+</div>
+HTML;
+}
+}

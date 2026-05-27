@@ -17,6 +17,10 @@ if (!function_exists('log_event')) { function log_event(...$a) {} }
 // Icon map para iconos dinamicos al lado de categoria/subcategoria
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
 
+// Politica: subir archivos solo si hay Drive/OneDrive configurado
+require_once __DIR__ . '/../includes/cloud_icons.php';
+$cloudUploadOk = cloud_upload_disponible($conn);
+
 try {
     if (empty($_SESSION['user_id'])) {
         header('Location: /auth/login.php');
@@ -473,8 +477,11 @@ require __DIR__ . '/../includes/layout/head.php';
           <h3 class="ih-card__title"><i class="bi bi-paperclip"></i> Archivos adjuntos</h3>
         </div>
         <div class="ih-card__body">
+        <?php if (!$cloudUploadOk): ?>
+          <?= cloud_upload_disabled_notice($user['role'] ?? '') ?>
+        <?php else: ?>
           <div class="ih-field">
-            <label class="ih-label" for="f-archivo">Subir archivos a Google Drive</label>
+            <label class="ih-label" for="f-archivo">Subir archivos a <?= strtolower(cloud_provider_actual($conn)) === 'microsoft' ? 'OneDrive' : 'Google Drive' ?></label>
             <div class="ih-dropzone" id="dropzone">
               <i class="bi bi-cloud-upload" style="font-size:2rem;color:var(--ih-gray-400);display:block;margin-bottom:8px;"></i>
               <p style="color:var(--ih-gray-500);margin:0 0 8px;">Arrastrá archivos acá o hacé click para seleccionar</p>
@@ -485,6 +492,7 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
             <div id="lista-archivos" style="margin-top:8px;"></div>
           </div>
+        <?php endif; ?>
         </div>
       </div>
 

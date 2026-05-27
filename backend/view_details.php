@@ -145,18 +145,24 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
 .vd-drive-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 10px 20px;
     background: #fff;
-    border: 2px solid var(--ih-primary);
-    color: var(--ih-primary);
+    border: 2px solid var(--ih-gray-200);
+    color: var(--ih-gray-800);
     border-radius: var(--ih-radius-full);
     font-weight: 600;
     font-size: var(--ih-text-sm);
     text-decoration: none;
-    transition: background .15s, color .15s;
+    transition: border-color .15s, box-shadow .15s, transform .05s;
 }
-.vd-drive-btn:hover { background: var(--ih-primary); color: #fff; }
+.vd-drive-btn:hover {
+    border-color: var(--ih-primary);
+    box-shadow: 0 4px 12px rgba(102, 51, 153, .15);
+    color: var(--ih-gray-800);
+    text-decoration: none;
+}
+.vd-drive-btn:active { transform: translateY(1px); }
 </style>
 
 <!-- Encabezado del activo -->

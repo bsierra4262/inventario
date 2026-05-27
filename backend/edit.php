@@ -9,6 +9,8 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
+$cloudUploadOk = cloud_upload_disponible($conn);
 
 // ======================================================
 // DETECCIÓN DEL PROVEEDOR DE ALMACENAMIENTO
@@ -907,11 +909,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Archivos ──────────────────────────────────────────────── -->
         <div class="edit-section-title"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
-        <div class="ih-field">
-          <label class="ih-field__label">Subir archivos</label>
-          <input type="file" class="ih-input" name="archivo[]" multiple id="file-input">
-          <span class="ih-field__hint">.jpg, .png, .pdf, .docx, .xlsx, .pptx · máx 5 MB por archivo</span>
-        </div>
+        <?php if (!$cloudUploadOk): ?>
+          <?= cloud_upload_disabled_notice($_SESSION['role'] ?? '') ?>
+        <?php else: ?>
+          <div class="ih-field">
+            <label class="ih-field__label">Subir archivos a <?= strtolower(cloud_provider_actual($conn)) === 'microsoft' ? 'OneDrive' : 'Google Drive' ?></label>
+            <input type="file" class="ih-input" name="archivo[]" multiple id="file-input">
+            <span class="ih-field__hint">.jpg, .png, .pdf, .docx, .xlsx, .pptx · máx 5 MB por archivo</span>
+          </div>
+        <?php endif; ?>
 
         <!-- ── Botón submit ──────────────────────────────────────────── -->
         <div style="display:flex;gap:12px;justify-content:center;margin-top:1.5rem;flex-wrap:wrap;">

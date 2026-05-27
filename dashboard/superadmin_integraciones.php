@@ -5,6 +5,7 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 
 superadmin_require_login();
 if (!platform_can('integrations.manage')) {
@@ -170,7 +171,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card" style="margin-bottom:20px">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title"><i class="bi bi-google" style="color:#4285F4"></i> Google Workspace SSO</h2>
+            <h2 class="ih-card__title" style="display:flex;align-items:center;gap:8px;"><?= cloud_icon_svg('google', 22) ?> Google Workspace SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Google</div>
           </div>
           <?php if ($current['sa_google_client_id'] !== ''): ?>
@@ -218,7 +219,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card" style="margin-bottom:20px">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title"><i class="bi bi-microsoft" style="color:#00A4EF"></i> Microsoft 365 / Azure AD SSO</h2>
+            <h2 class="ih-card__title" style="display:flex;align-items:center;gap:8px;"><?= cloud_icon_svg('microsoft', 22) ?> Microsoft 365 / Azure AD SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Microsoft</div>
           </div>
           <?php if ($current['sa_ms_client_id'] !== ''): ?>

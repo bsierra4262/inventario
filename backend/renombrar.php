@@ -170,34 +170,9 @@ if (!$carpeta_raiz_drive) {
     exit();
 }
 
-// Nombre que debe tener la subcarpeta: service tag o producto_ID
-$subFolderName = !empty($servis_tag) ? $servis_tag : ('producto_' . $productoId);
-
-// =========================
-// BUSCAR / CREAR SUBCARPETA REAL EN DRIVE
-// =========================
-$subFolders = $service->files->listFiles([
-    'q' => "name = '$subFolderName' and mimeType = 'application/vnd.google-apps.folder' and '$carpeta_raiz_drive' in parents and trashed = false",
-    'fields' => 'files(id, name)',
-    'spaces' => 'drive'
-]);
-
-if (count($subFolders->getFiles()) > 0) {
-    $subcarpeta_drive_id = $subFolders[0]->getId();
-} else {
-    $subFolderMetadata = new Google\Service\Drive\DriveFile([
-        'name'     => $subFolderName,
-        'mimeType' => 'application/vnd.google-apps.folder',
-        'parents'  => [$carpeta_raiz_drive]
-    ]);
-
-    $subFolder = $service->files->create(
-        $subFolderMetadata,
-        ['fields' => 'id']
-    );
-
-    $subcarpeta_drive_id = $subFolder->id;
-}
+// carpeta_raiz_drive en DB ya apunta a la subcarpeta especifica del activo.
+// Subimos el archivo directo ahi, sin crear otra subcarpeta adentro.
+$subcarpeta_drive_id = $carpeta_raiz_drive;
 
 // =========================
 // SUBIR EL ARCHIVO RENOMBRADO

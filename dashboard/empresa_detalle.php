@@ -5,6 +5,7 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 
 superadmin_require_login();
 
@@ -160,9 +161,9 @@ require __DIR__ . '/../includes/layout/head.php';
               <td class="ih-text-muted">Proveedor</td>
               <td>
                 <?php if ($company['provider'] === 'google'): ?>
-                  <span class="ih-badge ih-badge--green"><i class="bi bi-google"></i> Google Drive</span>
+                  <span class="ih-badge ih-badge--green" style="display:inline-flex;align-items:center;gap:6px;"><?= cloud_icon_svg('google', 14) ?> Google Drive</span>
                 <?php else: ?>
-                  <span class="ih-badge ih-badge--info"><i class="bi bi-microsoft"></i> Microsoft OneDrive</span>
+                  <span class="ih-badge ih-badge--info" style="display:inline-flex;align-items:center;gap:6px;"><?= cloud_icon_svg('microsoft', 14) ?> Microsoft OneDrive</span>
                 <?php endif; ?>
               </td>
             </tr>
