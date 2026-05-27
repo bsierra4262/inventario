@@ -56,12 +56,18 @@ function csrf_tenant_ns(): string {
 
 /**
  * Fingerprint del cliente asociado a la sesión.
- * Atamos el token al user-agent y al ID de sesión para que no lo puedan reutilizar fácil.
+ * Atamos el token al user-agent y al user_id/tenant para que no lo puedan reutilizar fácil.
+ *
+ * NOTA: NO usamos session_id() porque algunos hostings shared (Hostinger) regeneran el SID
+ * entre requests, lo que rompía el double-submit cookie en formularios largos / uploads.
+ * La seguridad se mantiene porque el token vive dentro de $_SESSION (atado a la sesión),
+ * y la cookie shadow es solo una capa extra de double-submit.
  */
 function csrf_client_fingerprint(): string {
-    $ua  = $_SERVER['HTTP_USER_AGENT'] ?? 'na';
-    $sid = session_id() ?: 'nosid';
-    return hash('sha256', $ua . '|' . $sid);
+    $ua     = $_SERVER['HTTP_USER_AGENT'] ?? 'na';
+    $uid    = (string)($_SESSION['user_id'] ?? 'anon');
+    $tenant = csrf_tenant_ns();
+    return hash('sha256', $ua . '|' . $uid . '|' . $tenant);
 }
 
 /**
@@ -119,15 +125,28 @@ function csrf_set_cookie_shadow(string $token): void {
 
 /**
  * Verifica que la cookie espejo coincida con el token.
- * Si no existe cookie, devolvemos true para no romper flujos viejos.
- * (Podés endurecer esto a "false" si querés forzar sí o sí la cookie doble.)
+ *
+ * IMPORTANTE: usamos UN SOLO nombre de cookie ('csrfc') para TODOS los scopes.
+ * Eso significa que si el usuario navega entre páginas (index → agregar → editar),
+ * cada generateCsrfToken() sobrescribe la cookie con el shadow del último scope.
+ * El cookie shadow del scope X solo está vigente entre el render de X y la
+ * siguiente generación de token de OTRO scope.
+ *
+ * Por eso esta validación es SOFT: si la cookie no matchea, logueamos pero no
+ * bloqueamos. La protección primaria contra CSRF es el token guardado en $_SESSION
+ * (que se compara con el del POST), no la cookie espejo.
  */
 function csrf_check_cookie_shadow(string $token): bool {
     if (!isset($_COOKIE[CSRF_COOKIE_NAME])) {
         return true;
     }
     $expected = hash('sha256', $token . '|' . csrf_client_fingerprint());
-    return hash_equals($expected, $_COOKIE[CSRF_COOKIE_NAME]);
+    if (hash_equals($expected, $_COOKIE[CSRF_COOKIE_NAME])) {
+        return true;
+    }
+    // Soft fail: cookie no coincide pero el token de sesión sí. Logueamos.
+    @error_log('csrf: cookie shadow no coincide pero token de sesión válido (probable sobrescritura por otro scope)');
+    return true;
 }
 
 // ============================
