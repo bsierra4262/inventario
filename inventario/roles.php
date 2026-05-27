@@ -85,13 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'create_custom') {
             $newLabel = trim((string)($_POST['new_role_label'] ?? ''));
-            // BUG fix: '?? $newLabel' no aplicaba cuando new_role_key venia como
-            // string vacia ('' no es null). Resultado: clave quedaba vacia y
-            // la creacion fallaba con 'Nombre del rol vacio.' aunque el usuario
-            // si habia escrito el nombre visible.
             $rawKey = trim((string)($_POST['new_role_key'] ?? ''));
             if ($rawKey === '') $rawKey = $newLabel; // fallback al nombre visible
-            $newKey = strtolower(preg_replace('/[^a-z0-9_]+/', '_', $rawKey));
+            // ORDEN CORRECTO: strtolower PRIMERO, despues preg_replace.
+            // Antes era al reves y las mayusculas se trataban como char invalido
+            // (ej: "Auditor externo" → "_uditor_externo" → trim _ → "uditor_externo").
+            $newKey = preg_replace('/[^a-z0-9_]+/', '_', strtolower($rawKey));
             $newKey = trim($newKey, '_');
             if ($newLabel === '') {
                 $feedback = 'El nombre visible es obligatorio.'; $feedbackOk = false;

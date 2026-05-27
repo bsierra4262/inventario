@@ -182,8 +182,10 @@ function custom_roles_all(mysqli $conn): array {
 if (!function_exists('custom_role_create')) {
 function custom_role_create(mysqli $conn, string $key, string $label): bool {
     custom_roles_ensure_table($conn);
-    // Sanitizar key: minusculas, sin espacios, solo letras y guiones bajos
-    $key = strtolower(preg_replace('/[^a-z0-9_]/', '_', $key));
+    // Sanitizar key: minusculas PRIMERO (sino las mayusculas se tratan como invalidas
+    // y se reemplazan por _, lo que con trim al final puede comerse letras).
+    $key = preg_replace('/[^a-z0-9_]/', '_', strtolower($key));
+    $key = trim($key, '_');
     if ($key === '' || in_array($key, TENANT_ROLES, true)) return false;
     if (strlen($key) > 40 || $label === '') return false;
     try {
