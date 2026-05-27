@@ -326,6 +326,38 @@ require __DIR__ . '/../includes/layout/head.php';
           <?php if ($search !== '' || $filterCat !== '' || $filterGar !== ''): ?>
             <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-x"></i> Limpiar</a>
           <?php endif; ?>
+
+          <!-- Botón Columnas (personalizar visibles) -->
+          <div style="position:relative;" id="cols-menu-wrap">
+            <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-menu-btn" title="Personalizar columnas visibles">
+              <i class="bi bi-layout-three-columns"></i> Columnas
+            </button>
+            <div id="cols-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:100;background:#fff;border:1px solid var(--ih-gray-200);border-radius:var(--ih-radius-md);box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:220px;padding:10px 14px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ih-gray-500);letter-spacing:.04em;margin-bottom:8px;">Mostrar columnas</div>
+              <?php
+              $colsPersonalizables = [
+                'id' => '#',
+                'modelo' => 'Activo',
+                'asignado_a' => 'Asignado a',
+                'categoria' => 'Categoría',
+                'estado' => 'Estado',
+                'fecha_garantia' => 'Garantía',
+                'valor_usd' => 'Valor USD',
+                'ubicacion' => 'Ubicación',
+                'drive' => 'Drive',
+              ];
+              foreach ($colsPersonalizables as $key => $label):
+              ?>
+                <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--ih-gray-800);cursor:pointer;">
+                  <input type="checkbox" class="col-toggle" data-col-toggle="<?= $key ?>" checked>
+                  <span><?= htmlspecialchars($label) ?></span>
+                </label>
+              <?php endforeach; ?>
+              <div style="border-top:1px solid var(--ih-gray-100);margin-top:8px;padding-top:8px;display:flex;gap:6px;">
+                <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-reset" style="flex:1;font-size:11px;">Restaurar todas</button>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
     </div>
@@ -354,11 +386,11 @@ require __DIR__ . '/../includes/layout/head.php';
                     $icon = $isActive ? ($order === 'ASC' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-chevron-expand';
                     $q = http_build_query(['q' => $search, 'cat' => $filterCat, 'gar' => $filterGar, 'per_page' => $per_page, 'page' => 1, 'sort' => $col, 'order' => $nextOrder]);
                 ?>
-                <th><a href="?<?= $q ?>" class="ih-sort-link <?= $isActive ? 'is-active' : '' ?>">
+                <th data-col-key="<?= htmlspecialchars($col) ?>"><a href="?<?= $q ?>" class="ih-sort-link <?= $isActive ? 'is-active' : '' ?>">
                   <?= $label ?> <i class="bi <?= $icon ?>"></i>
                 </a></th>
                 <?php endforeach; ?>
-                <th>Drive</th>
+                <th data-col-key="drive">Drive</th>
                 <th style="text-align:center;">Acciones</th>
               </tr>
             </thead>
@@ -378,8 +410,8 @@ require __DIR__ . '/../includes/layout/head.php';
               $iconCat = $iconMap[$row['categoria'] ?? '']    ?? 'bi bi-folder';
               ?>
               <tr>
-                <td><span class="ih-text-muted ih-text-sm">#<?= $row['id'] ?></span></td>
-                <td>
+                <td data-col-key="id"><span class="ih-text-muted ih-text-sm">#<?= $row['id'] ?></span></td>
+                <td data-col-key="modelo">
                   <div style="display:flex;align-items:center;gap:8px;">
                     <i class="<?= $iconSub ?>" style="font-size:18px;color:var(--ih-primary);flex-shrink:0;"></i>
                     <div style="min-width:0;">
@@ -393,14 +425,14 @@ require __DIR__ . '/../includes/layout/head.php';
                     </div>
                   </div>
                 </td>
-                <td>
+                <td data-col-key="asignado_a">
                   <?php if (!empty($row['asignado_a'])): ?>
                     <span><?= htmlspecialchars($row['asignado_a']) ?></span>
                   <?php else: ?>
                     <span class="ih-badge">Sin asignar</span>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td data-col-key="categoria">
                   <span class="ih-text-sm" style="display:inline-flex;align-items:center;gap:6px;">
                     <i class="<?= $iconCat ?>" style="color:var(--ih-gray-500);"></i>
                     <?= htmlspecialchars($row['categoria'] ?? '—') ?>
@@ -411,7 +443,7 @@ require __DIR__ . '/../includes/layout/head.php';
                     </div>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td data-col-key="estado">
                   <?php
                   $estadoBadge = match(strtolower($row['estado'] ?? '')) {
                     'nuevo'  => 'ih-badge--success',
@@ -423,7 +455,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   ?>
                   <span class="ih-badge <?= $estadoBadge ?>"><?= htmlspecialchars($row['estado'] ?? '—') ?></span>
                 </td>
-                <td>
+                <td data-col-key="fecha_garantia">
                   <?php if ($gar['text'] !== 'N/A' && $gar['fin_iso'] !== ''): ?>
                     <span class="ih-badge <?= $gar['badge'] ?>"
                           data-warranty-end="<?= htmlspecialchars($gar['fin_iso']) ?>"
@@ -434,7 +466,7 @@ require __DIR__ . '/../includes/layout/head.php';
                     <span class="ih-text-muted ih-text-sm">—</span>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td data-col-key="valor_usd">
                   <?php if ($row['valor_usd'] > 0): ?>
                     <span style="font-weight:600;">USD <?= number_format((float)$row['valor_usd'], 2, ',', '.') ?></span>
                     <?php if ((int)$row['cantidad'] > 1): ?>
@@ -444,10 +476,10 @@ require __DIR__ . '/../includes/layout/head.php';
                     <span class="ih-text-muted">—</span>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td data-col-key="ubicacion">
                   <span class="ih-text-sm"><?= htmlspecialchars($row['ubicacion'] ?? '—') ?></span>
                 </td>
-                <td>
+                <td data-col-key="drive">
                   <?php if (!empty($row['carpeta_raiz_drive'])): ?>
                     <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($row['carpeta_raiz_drive']) ?>"
                        target="_blank" class="ih-btn ih-btn--ghost ih-btn--sm" title="Abrir en Drive" style="padding:6px 10px;">
@@ -556,6 +588,63 @@ function debounceSubmit() {
 // Auto-dismiss flash messages
 document.querySelectorAll('.ih-flash').forEach(el => {
   setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 4000);
+});
+
+// ── Personalizar columnas visibles ───────────────────────────────────
+const COLS_STORAGE_KEY = 'av_cols_visibles_v1';
+const colsMenuBtn  = document.getElementById('cols-menu-btn');
+const colsMenu     = document.getElementById('cols-menu');
+const colsReset    = document.getElementById('cols-reset');
+const colToggles   = document.querySelectorAll('.col-toggle');
+
+function aplicarColumnasVisibles(hiddenKeys) {
+  document.querySelectorAll('[data-col-key]').forEach(el => {
+    const k = el.dataset.colKey;
+    el.style.display = hiddenKeys.includes(k) ? 'none' : '';
+  });
+}
+function leerColumnasOcultas() {
+  try {
+    const raw = localStorage.getItem(COLS_STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function guardarColumnasOcultas(hiddenKeys) {
+  try { localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(hiddenKeys)); } catch {}
+}
+
+// Estado inicial
+const hidden = leerColumnasOcultas();
+colToggles.forEach(cb => { cb.checked = !hidden.includes(cb.dataset.colToggle); });
+aplicarColumnasVisibles(hidden);
+
+// Toggle dropdown
+colsMenuBtn?.addEventListener('click', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  colsMenu.style.display = colsMenu.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', (e) => {
+  if (colsMenu && !colsMenu.contains(e.target) && e.target !== colsMenuBtn) {
+    colsMenu.style.display = 'none';
+  }
+});
+
+// Cambios en checkboxes
+colToggles.forEach(cb => {
+  cb.addEventListener('change', () => {
+    const hiddenNow = Array.from(colToggles).filter(c => !c.checked).map(c => c.dataset.colToggle);
+    guardarColumnasOcultas(hiddenNow);
+    aplicarColumnasVisibles(hiddenNow);
+  });
+});
+
+// Restaurar todas
+colsReset?.addEventListener('click', () => {
+  colToggles.forEach(cb => cb.checked = true);
+  guardarColumnasOcultas([]);
+  aplicarColumnasVisibles([]);
 });
 
 // ── Garantia dinamica — actualiza badges en tiempo real ────────────
