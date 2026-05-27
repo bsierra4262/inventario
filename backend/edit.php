@@ -249,25 +249,39 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $subcarpeta_drive_id = '';
 
     if ($storageProvider === 'google' && $googleService instanceof Google\Service\Drive) {
-        // === 4.1 Carpeta raíz asociada al producto ===
-        $carpeta_raiz_drive = drive_buscarOCrearCarpetaRaizProducto(
-            $googleService,
-            $parentFolderId,
-            $valores,
-            $producto,
-            $conn,
-            $producto_id
-        );
+        // carpeta_raiz_drive en DB YA apunta a la subcarpeta especifica del activo
+        // (creada por upload_to_drive.php). No hay que crear nada extra: los archivos
+        // van directo ahi.
+        if (!empty($producto['carpeta_raiz_drive'])) {
+            $carpeta_raiz_drive  = $producto['carpeta_raiz_drive'];
+            $subcarpeta_drive_id = $producto['carpeta_raiz_drive'];
+        } else {
+            // Legacy/importado sin carpeta — replicamos estructura de upload_to_drive:
+            // Root tenant → Modelo-Marca → Servicetag/activo_X
+            $modeloFolderId = drive_buscarOCrearCarpetaRaizProducto(
+                $googleService,
+                $parentFolderId,
+                $valores,
+                ['carpeta_raiz_drive' => ''] + $producto,
+                $conn,
+                $producto_id
+            );
+            $subcarpeta_drive_id = drive_buscarOCrearSubcarpetaProducto(
+                $googleService,
+                $modeloFolderId,
+                $valores['servis_tag'] ?? ($producto['servis_tag'] ?? ''),
+                $producto_id
+            );
+            $carpeta_raiz_drive = $subcarpeta_drive_id;
 
-        // === 4.2 Subcarpeta por servicetag o producto_id ===
-        $subcarpeta_drive_id = drive_buscarOCrearSubcarpetaProducto(
-            $googleService,
-            $carpeta_raiz_drive,
-            $valores['servis_tag'] ?? ($producto['servis_tag'] ?? ''),
-            $producto_id
-        );
+            // Persistir el ID de la subcarpeta del activo (coherente con upload_to_drive)
+            $upd = $conn->prepare("UPDATE `" . tn('productos') . "` SET carpeta_raiz_drive = ? WHERE id = ?");
+            $upd->bind_param('si', $carpeta_raiz_drive, $producto_id);
+            $upd->execute();
+            $upd->close();
+        }
 
-        // === 4.3 Procesar uploads ===
+        // === 4.3 Procesar uploads (directo a la carpeta del activo) ===
         if (!empty($_FILES['archivo']['name'][0])) {
             foreach ($_FILES['archivo']['name'] as $index => $fileName) {
 
