@@ -1,28 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// ── DIAGNÓSTICO TEMPORAL ───────────────────────────────────────────────────
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
-register_shutdown_function(function(): void {
-    $e = error_get_last();
-    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_RECOVERABLE_ERROR, E_USER_ERROR], true)) {
-        @file_put_contents(
-            __DIR__ . '/../logs/fatal_diagnostic.log',
-            sprintf("[%s] view_details [%d] %s in %s:%d\n", date('Y-m-d H:i:s'), $e['type'], $e['message'], $e['file'], $e['line']),
-            FILE_APPEND
-        );
-        if (!headers_sent()) {
-            header('Content-Type: text/plain; charset=utf-8');
-            http_response_code(200);
-        }
-        echo "VIEW_DETAILS FATAL DIAGNOSTIC:\n";
-        echo sprintf("[%d] %s\nin %s:%d\n", $e['type'], $e['message'], $e['file'], $e['line']);
-    }
-});
-// ────────────────────────────────────────────────────────────────────────────
-
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 require_once __DIR__ . '/../core/config/platform.php';

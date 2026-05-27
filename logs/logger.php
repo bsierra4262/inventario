@@ -27,8 +27,11 @@ if (!defined('LOG_PATH')) {
  * @param string $tag     Tag/módulo (auth, app, install, etc.)
  */
 if (!function_exists('log_event')) {
-function log_event(string $origin, string $type, string $msg, string $tag = 'app'): void
+function log_event(string|int $origin, string $type, string $msg, string $tag = 'app'): void
 {
+    // Acepta int o string (user_id casteado a int en sesion, o nombre de script).
+    $origin = (string)$origin;
+
     $logFile = LOG_PATH;
     $logDir  = dirname($logFile);
 
