@@ -226,10 +226,14 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-field">
                 <label class="ih-field__label">Rol</label>
                 <select class="ih-select" name="role">
-                  <option value="admin">Admin — acceso total al tenant</option>
-                  <option value="manager">Gerente — CRUD activos + reportes</option>
-                  <option value="user" selected>Usuario — ver, crear, editar</option>
-                  <option value="viewer">Viewer — solo lectura</option>
+                  <?php
+                  global $conn; $prevConn = $conn ?? null; $conn = $tconn;
+                  foreach (all_assignable_roles($tconn) as $rk => $rlbl):
+                  ?>
+                    <option value="<?= htmlspecialchars($rk) ?>" <?= $rk === 'user' ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($rlbl) ?>
+                    </option>
+                  <?php endforeach; $conn = $prevConn; ?>
                 </select>
               </div>
             </div>
@@ -356,10 +360,12 @@ require __DIR__ . '/../includes/layout/head.php';
           <div class="ih-field">
             <label class="ih-field__label">Rol</label>
             <select name="role" id="editRole" class="ih-select">
-              <option value="admin">Admin — acceso total al tenant</option>
-              <option value="manager">Gerente — CRUD activos + reportes</option>
-              <option value="user">Usuario — ver, crear, editar</option>
-              <option value="viewer">Viewer — solo lectura</option>
+              <?php
+              global $conn; $prevConnE = $conn ?? null; $conn = $tconn;
+              foreach (all_assignable_roles($tconn) as $rk => $rlbl):
+              ?>
+                <option value="<?= htmlspecialchars($rk) ?>"><?= htmlspecialchars($rlbl) ?></option>
+              <?php endforeach; $conn = $prevConnE; ?>
             </select>
           </div>
         </div>
