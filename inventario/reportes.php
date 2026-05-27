@@ -924,71 +924,108 @@ require __DIR__ . '/../includes/layout/topbar.php';
     table.querySelectorAll('thead th, tbody td').forEach(el => el.style.display = '');
   }
 
+  // ── Generador de PDF profesional ─────────────────────────────────
   function tableToPdf(tableId, tituloReporte) {
     ensureAllColumnsVisible(tableId);
     const table = document.getElementById(tableId);
     const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-    const totalColumns = headers.length;
     const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const totalColumns = headers.length;
 
-    if (totalColumns > 11) {
-      let contentBlocks = [];
-      const filasPorHoja = 2;
-      let currentPage = [];
-      let registroEnHoja = 0;
-      for (let r = 0; r < rows.length; r++) {
-        const cells = rows[r].querySelectorAll('td');
-        const transposedRow = headers.map((header, colIdx) => {
-          const cleanText = cells[colIdx]?.innerText.replace(/\s+/g, ' ').trim() || '—';
-          return [
-            { text: header, style: 'tableHeader', fontSize: 8, fillColor: '#663399', color: '#fff', margin: [2,2,2,2], bold: true, border: [false,false,false,false] },
-            { text: cleanText, style: 'tableCell', fontSize: 8, color: '#4E247A', fillColor: (r%2===0?'#fff':'#F8F7FC'), margin: [2,2,2,2], border: [false,false,false,false] }
-          ];
-        });
-        currentPage = currentPage.concat(transposedRow);
-        registroEnHoja++;
-        const esUltimoEnHoja = registroEnHoja === filasPorHoja;
-        const esUltimoEnTotal = r === rows.length - 1;
-        if (!esUltimoEnHoja && !esUltimoEnTotal) {
-          currentPage.push([{ text:'', colSpan:2, border:[false,false,false,false], margin:[0,16,0,16], fillColor:'#fff'},{}]);
-        }
-        if (esUltimoEnHoja || esUltimoEnTotal) {
-          if (registroEnHoja < filasPorHoja) {
-            currentPage.push([{ text:'', colSpan:2, border:[false,false,false,false], margin:[0,120,0,120], fillColor:'#fff'},{}]);
-          }
-          contentBlocks.push({
-            table:{ headerRows:1, widths:['*','*'], body:currentPage },
-            layout:{ hLineWidth:()=>0.25, vLineWidth:()=>0.25, hLineColor:()=>'#ccc', vLineColor:()=>'#ccc'},
-            pageBreak:(!esUltimoEnTotal)?'after':undefined
-          });
-          currentPage = []; registroEnHoja = 0;
-        }
-      }
-      pdfMake.createPdf({
-        pageOrientation:'portrait', pageMargins:[20,30,20,20],
-        content:[{columns:[[{text:tituloReporte,style:'header',margin:[0,0,0,4]},{text:'Generado: '+new Date().toLocaleString(),style:'subheader'}]]},{text:' ',margin:[0,8]},...contentBlocks],
-        styles:{header:{fontSize:14,bold:true,color:'#4E247A'},subheader:{fontSize:9,color:'#8B5EB7'},tableHeader:{bold:true,color:'#fff'},tableCell:{color:'#4E247A'}},
-        defaultStyle:{fontSize:8}
-      }).download(`${tituloReporte}.pdf`);
-    } else {
-      let body = [];
-      const headerRow = headers.map(text => ({text, style:'tableHeader', fontSize:8, fillColor:'#663399', color:'#fff', bold:true, margin:[2,2,2,2], alignment:'center'}));
-      body.push(headerRow);
-      rows.forEach((row, idx) => {
-        const cells = row.querySelectorAll('td');
-        const dataRow = headers.map((_,i) => {
-          const cleanText = cells[i]?.innerText.replace(/\s+/g,' ').trim()||'—';
-          return {text:cleanText, fontSize:8, margin:[2,2,2,2], alignment:'center', fillColor:idx%2===0?'#fff':'#F8F7FC', color:'#4E247A'};
-        });
-        body.push(dataRow);
+    // Colores corporativos
+    const PURPLE      = '#663399';
+    const PURPLE_DARK = '#4E247A';
+    const TEXT        = '#1a1a2e';
+    const TEXT_MUTED  = '#6b6b7b';
+    const STRIPE      = '#f7f5fb';
+    const BORDER      = '#e5e1ec';
+
+    // Orientation segun cantidad de columnas
+    const orientation = totalColumns > 6 ? 'landscape' : 'portrait';
+
+    // Construir body con header + filas
+    const headerRow = headers.map(h => ({
+      text: h,
+      bold: true,
+      color: '#fff',
+      fillColor: PURPLE,
+      fontSize: 8.5,
+      margin: [5, 7, 5, 7],
+      alignment: 'left'
+    }));
+    const body = [headerRow];
+
+    rows.forEach((row, idx) => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      const dataRow = headers.map((_, i) => {
+        const text = (cells[i]?.innerText || '').replace(/\s+/g, ' ').trim() || '—';
+        return {
+          text,
+          fontSize: 8,
+          color: TEXT,
+          fillColor: idx % 2 === 0 ? '#ffffff' : STRIPE,
+          margin: [5, 6, 5, 6],
+          alignment: 'left'
+        };
       });
-      pdfMake.createPdf({
-        pageOrientation:totalColumns>8?'landscape':'portrait', pageMargins:[20,30,20,20],
-        content:[{columns:[[{text:tituloReporte,style:'header',margin:[0,0,0,4]},{text:'Generado: '+new Date().toLocaleString(),style:'subheader'}]]},{text:' ',margin:[0,8]},{table:{headerRows:1,widths:Array(totalColumns).fill('*'),body},layout:{hLineWidth:()=>0.25,vLineWidth:()=>0.25,hLineColor:()=>'#ccc',vLineColor:()=>'#ccc'}}],
-        styles:{header:{fontSize:14,bold:true,color:'#4E247A'},subheader:{fontSize:9,color:'#8B5EB7'},tableHeader:{bold:true,color:'#fff'},tableCell:{color:'#4E247A'}},
-        defaultStyle:{fontSize:8}
-      }).download(`${tituloReporte}.pdf`);
-    }
+      body.push(dataRow);
+    });
+
+    // Subtitulo con fecha y cantidad
+    const fechaStr = new Date().toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' });
+    const cantStr  = rows.length + ' ' + (rows.length === 1 ? 'registro' : 'registros');
+
+    const docDef = {
+      pageSize: 'A4',
+      pageOrientation: orientation,
+      pageMargins: [25, 75, 25, 45],
+
+      header: function() {
+        return {
+          margin: [25, 22, 25, 0],
+          stack: [
+            {
+              columns: [
+                { text: 'ASSET VAULT', bold: true, color: PURPLE, fontSize: 11, letterSpacing: 1.5 },
+                { text: 'INTELLIHELP S.A.', alignment: 'right', color: TEXT_MUTED, fontSize: 8 }
+              ]
+            },
+            { canvas: [{ type: 'line', x1: 0, y1: 6, x2: orientation === 'landscape' ? 792 : 545, y2: 6, lineWidth: 1, lineColor: PURPLE }] }
+          ]
+        };
+      },
+
+      footer: function(currentPage, pageCount) {
+        return {
+          margin: [25, 5, 25, 0],
+          columns: [
+            { text: 'Generado: ' + fechaStr, fontSize: 7, color: TEXT_MUTED },
+            { text: 'Pagina ' + currentPage + ' de ' + pageCount, fontSize: 7, color: TEXT_MUTED, alignment: 'right' }
+          ]
+        };
+      },
+
+      content: [
+        { text: tituloReporte, fontSize: 18, bold: true, color: TEXT, margin: [0, 0, 0, 3] },
+        { text: cantStr, fontSize: 9, color: TEXT_MUTED, margin: [0, 0, 0, 14] },
+        {
+          table: { headerRows: 1, widths: Array(totalColumns).fill('*'), body: body },
+          layout: {
+            hLineWidth: function(i, node) { return i === 0 || i === 1 || i === node.table.body.length ? 0.8 : 0.3; },
+            vLineWidth: function() { return 0; },
+            hLineColor: function(i) { return i === 0 || i === 1 ? PURPLE_DARK : BORDER; },
+            paddingLeft: function() { return 0; },
+            paddingRight: function() { return 0; },
+            paddingTop: function() { return 0; },
+            paddingBottom: function() { return 0; }
+          }
+        }
+      ],
+
+      defaultStyle: { fontSize: 8 }
+    };
+
+    pdfMake.createPdf(docDef).download(tituloReporte.replace(/\s+/g, '_') + '.pdf');
   }
 
   document.querySelectorAll('.export-pdf-btn').forEach(btn => {

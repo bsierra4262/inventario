@@ -15,6 +15,7 @@ require_once __DIR__ . '/../backend/csrf.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 require_once __DIR__ . '/../includes/cloud_icons.php';
+$iconMap = require __DIR__ . '/../includes/iconMap.php';
 
 try {
     $conn->set_charset('utf8mb4');
@@ -164,25 +165,50 @@ try {
 }
 
 // ── Función para calcular estado de garantía ───────────────────────────
+function garantiaFormatear(int $dias, bool $vencido = false): string {
+    if ($vencido) {
+        if ($dias < 30)   return "Venció hace {$dias} día" . ($dias === 1 ? '' : 's');
+        if ($dias < 365) {
+            $m = (int)floor($dias / 30);
+            return "Venció hace {$m} mes" . ($m === 1 ? '' : 'es');
+        }
+        $a = (int)floor($dias / 365);
+        return "Venció hace {$a} año" . ($a === 1 ? '' : 's');
+    }
+    if ($dias === 0)  return 'Vence hoy';
+    if ($dias < 30)   return "Vence en {$dias} día" . ($dias === 1 ? '' : 's');
+    if ($dias < 365) {
+        $m = (int)floor($dias / 30);
+        $d = $dias - ($m * 30);
+        return $d > 0 ? "Vence en {$m} mes" . ($m === 1 ? '' : 'es') . " y {$d} día" . ($d === 1 ? '' : 's')
+                      : "Vence en {$m} mes" . ($m === 1 ? '' : 'es');
+    }
+    $a = (int)floor($dias / 365);
+    $m = (int)floor(($dias - $a * 365) / 30);
+    return $m > 0 ? "Vence en {$a} año" . ($a === 1 ? '' : 's') . " y {$m} mes" . ($m === 1 ? '' : 'es')
+                  : "Vence en {$a} año" . ($a === 1 ? '' : 's');
+}
+
 function garantiaInfo(mixed $fechaInicioRaw, mixed $mesesRaw): array {
     $meses = (int)$mesesRaw;
     if (!$meses || !$fechaInicioRaw || str_starts_with((string)$fechaInicioRaw, '0000')) {
-        return ['status' => 'no-aplica', 'text' => 'N/A', 'badge' => ''];
+        return ['status' => 'no-aplica', 'text' => 'N/A', 'badge' => '', 'fin_iso' => ''];
     }
     try {
         $inicio = new DateTime((string)$fechaInicioRaw);
         $fin    = (clone $inicio)->modify("+{$meses} months");
         $hoy    = new DateTime();
+        $finIso = $fin->format('Y-m-d');
         if ($fin < $hoy) {
-            return ['status' => 'caducado', 'text' => 'Caducado', 'badge' => 'ih-badge--danger'];
+            $dias = (int)$hoy->diff($fin)->days;
+            return ['status' => 'caducado', 'text' => garantiaFormatear($dias, true), 'badge' => 'ih-badge--danger', 'fin_iso' => $finIso];
         }
         $dias = (int)$hoy->diff($fin)->days;
-        if ($dias <= 30) {
-            return ['status' => 'por-caducar', 'text' => "Vence en {$dias}d", 'badge' => 'ih-badge--warning'];
-        }
-        return ['status' => 'vigente', 'text' => "Vence en {$dias}d", 'badge' => 'ih-badge--success'];
+        $badge = $dias <= 30 ? 'ih-badge--warning' : 'ih-badge--success';
+        $status = $dias <= 30 ? 'por-caducar' : 'vigente';
+        return ['status' => $status, 'text' => garantiaFormatear($dias, false), 'badge' => $badge, 'fin_iso' => $finIso];
     } catch (Throwable) {
-        return ['status' => 'no-aplica', 'text' => 'N/A', 'badge' => ''];
+        return ['status' => 'no-aplica', 'text' => 'N/A', 'badge' => '', 'fin_iso' => ''];
     }
 }
 
@@ -347,16 +373,25 @@ require __DIR__ . '/../includes/layout/head.php';
                   // Filtrar por garantía si se seleccionó
                   if ($filterGar !== '' && $gar['status'] !== $filterGar) continue;
               ?>
+              <?php
+              $iconSub = $iconMap[$row['subcategoria'] ?? ''] ?? 'bi bi-box';
+              $iconCat = $iconMap[$row['categoria'] ?? '']    ?? 'bi bi-folder';
+              ?>
               <tr>
                 <td><span class="ih-text-muted ih-text-sm">#<?= $row['id'] ?></span></td>
                 <td>
-                  <div style="font-weight:600;color:var(--ih-gray-900);"><?= htmlspecialchars($row['modelo'] ?? '—') ?></div>
-                  <?php if (!empty($row['marca'])): ?>
-                    <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars($row['marca']) ?></div>
-                  <?php endif; ?>
-                  <?php if (!empty($row['subcategoria'])): ?>
-                    <div><span class="ih-badge ih-badge--purple" style="font-size:10px;"><?= htmlspecialchars($row['subcategoria']) ?></span></div>
-                  <?php endif; ?>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <i class="<?= $iconSub ?>" style="font-size:18px;color:var(--ih-primary);flex-shrink:0;"></i>
+                    <div style="min-width:0;">
+                      <div style="font-weight:600;color:var(--ih-gray-900);"><?= htmlspecialchars($row['modelo'] ?? '—') ?></div>
+                      <?php if (!empty($row['marca'])): ?>
+                        <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars($row['marca']) ?></div>
+                      <?php endif; ?>
+                      <?php if (!empty($row['subcategoria'])): ?>
+                        <div><span class="ih-badge ih-badge--purple" style="font-size:10px;"><?= htmlspecialchars($row['subcategoria']) ?></span></div>
+                      <?php endif; ?>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <?php if (!empty($row['asignado_a'])): ?>
@@ -366,7 +401,15 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?php endif; ?>
                 </td>
                 <td>
-                  <span class="ih-text-sm"><?= htmlspecialchars($row['categoria'] ?? '—') ?></span>
+                  <span class="ih-text-sm" style="display:inline-flex;align-items:center;gap:6px;">
+                    <i class="<?= $iconCat ?>" style="color:var(--ih-gray-500);"></i>
+                    <?= htmlspecialchars($row['categoria'] ?? '—') ?>
+                  </span>
+                  <?php if (!empty($row['subcategoria'])): ?>
+                    <div class="ih-text-xs ih-text-muted" style="margin-top:2px;padding-left:20px;">
+                      <?= htmlspecialchars($row['subcategoria']) ?>
+                    </div>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <?php
@@ -381,8 +424,12 @@ require __DIR__ . '/../includes/layout/head.php';
                   <span class="ih-badge <?= $estadoBadge ?>"><?= htmlspecialchars($row['estado'] ?? '—') ?></span>
                 </td>
                 <td>
-                  <?php if ($gar['text'] !== 'N/A'): ?>
-                    <span class="ih-badge <?= $gar['badge'] ?>"><?= htmlspecialchars($gar['text']) ?></span>
+                  <?php if ($gar['text'] !== 'N/A' && $gar['fin_iso'] !== ''): ?>
+                    <span class="ih-badge <?= $gar['badge'] ?>"
+                          data-warranty-end="<?= htmlspecialchars($gar['fin_iso']) ?>"
+                          title="Fin de garantía: <?= htmlspecialchars($gar['fin_iso']) ?>">
+                      <?= htmlspecialchars($gar['text']) ?>
+                    </span>
                   <?php else: ?>
                     <span class="ih-text-muted ih-text-sm">—</span>
                   <?php endif; ?>
@@ -510,6 +557,47 @@ function debounceSubmit() {
 document.querySelectorAll('.ih-flash').forEach(el => {
   setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 4000);
 });
+
+// ── Garantia dinamica — actualiza badges en tiempo real ────────────
+function pluralES(n, sing, plu) { return n === 1 ? sing : plu; }
+function formatGarantia(dias, vencido) {
+  if (vencido) {
+    if (dias < 30)  return `Venció hace ${dias} ${pluralES(dias,'día','días')}`;
+    if (dias < 365) { const m = Math.floor(dias/30); return `Venció hace ${m} ${pluralES(m,'mes','meses')}`; }
+    const a = Math.floor(dias/365); return `Venció hace ${a} ${pluralES(a,'año','años')}`;
+  }
+  if (dias === 0)  return 'Vence hoy';
+  if (dias < 30)   return `Vence en ${dias} ${pluralES(dias,'día','días')}`;
+  if (dias < 365) {
+    const m = Math.floor(dias/30), d = dias - m*30;
+    return d > 0
+      ? `Vence en ${m} ${pluralES(m,'mes','meses')} y ${d} ${pluralES(d,'día','días')}`
+      : `Vence en ${m} ${pluralES(m,'mes','meses')}`;
+  }
+  const a = Math.floor(dias/365), m = Math.floor((dias - a*365)/30);
+  return m > 0
+    ? `Vence en ${a} ${pluralES(a,'año','años')} y ${m} ${pluralES(m,'mes','meses')}`
+    : `Vence en ${a} ${pluralES(a,'año','años')}`;
+}
+function actualizarGarantias() {
+  const ahora = new Date();
+  document.querySelectorAll('[data-warranty-end]').forEach(el => {
+    const finStr = el.dataset.warrantyEnd;
+    if (!finStr) return;
+    const fin = new Date(finStr + 'T23:59:59');
+    const diffMs = fin - ahora;
+    const dias = Math.floor(Math.abs(diffMs) / 86400000);
+    const vencido = diffMs < 0;
+    el.textContent = formatGarantia(dias, vencido);
+    // Reasignar clase de badge segun estado actual (puede cambiar con el paso del tiempo)
+    el.classList.remove('ih-badge--success','ih-badge--warning','ih-badge--danger');
+    if (vencido)        el.classList.add('ih-badge--danger');
+    else if (dias <= 30) el.classList.add('ih-badge--warning');
+    else                 el.classList.add('ih-badge--success');
+  });
+}
+actualizarGarantias();
+setInterval(actualizarGarantias, 60000); // refresca cada minuto
 </script>
 
 <?php require __DIR__ . '/../includes/layout/foot.php'; ?>
