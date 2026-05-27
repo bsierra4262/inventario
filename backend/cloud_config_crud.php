@@ -64,7 +64,7 @@ $action   = $_POST['action']   ?? '';
 $provider = $_POST['provider'] ?? '';
 
 if (!in_array($provider, ['google', 'microsoft'], true)) {
-    header('Location: ../configurar_integracion.php?msg=' . urlencode('Proveedor inválido.') . '&type=error');
+    header('Location: /inventario/configurar_integracion.php?msg=' . urlencode('Proveedor inválido.') . '&type=error');
     exit();
 }
 

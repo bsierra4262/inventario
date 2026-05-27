@@ -33,6 +33,10 @@ if (!$currentUser) {
 // Solo admin del tenant puede gestionar usuarios
 require_permission('user.view', $currentUser);
 
+// Migracion lazy: asegurar que la columna role sea VARCHAR para soportar custom roles
+// (las empresas viejas tienen ENUM('admin','manager','user','viewer') que los rechaza)
+try { @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'"); } catch (Throwable) {}
+
 $allUsers = [];
 $res = $conn->query("SELECT id, username, email, role, created_at FROM `{$usersTable}` ORDER BY id ASC");
 while ($row = $res->fetch_assoc()) {

@@ -41,11 +41,19 @@ try {
     $usrTable = $pf . 'users';
 
     // Asegurar columnas extra en el tenant (silencioso)
+    // IMPORTANTE: role es VARCHAR para soportar custom roles, no ENUM (que solo permite los 4 builtin)
     foreach ([
         "ALTER TABLE `{$usrTable}` ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1",
         "ALTER TABLE `{$usrTable}` ADD COLUMN IF NOT EXISTS `must_change_password` TINYINT(1) NOT NULL DEFAULT 0",
-        "ALTER TABLE `{$usrTable}` MODIFY COLUMN `role` ENUM('admin','manager','user','viewer') NOT NULL DEFAULT 'user'",
+        "ALTER TABLE `{$usrTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'",
     ] as $ddl) { try { $tconn->query($ddl); } catch (Throwable) {} }
+
+    // Cargar roles asignables (builtin + custom) para el validador
+    require_once __DIR__ . '/../core/security/permissions.php';
+    require_once __DIR__ . '/../core/security/permissions_db.php';
+    global $conn; $prevConn = $conn ?? null; $conn = $tconn;
+    $rolesValidos = array_keys(all_assignable_roles($tconn));
+    $conn = $prevConn;
 
 } catch (Throwable $ex) {
     $dbError = 'No se pudo conectar a la base de datos del tenant: ' . $ex->getMessage();
@@ -65,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tconn && $canManage) {
             $u = trim($_POST['username'] ?? '');
             $p = (string)($_POST['password'] ?? '');
             $e = strtolower(trim($_POST['email'] ?? ''));
-            $r = in_array($_POST['role'] ?? '', ['admin','manager','user','viewer'], true)
+            $r = in_array($_POST['role'] ?? '', $rolesValidos ?? ['admin','manager','user','viewer'], true)
                 ? $_POST['role'] : 'user';
 
             if ($u === '' || strlen($p) < 8) {
@@ -84,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tconn && $canManage) {
         } elseif ($action === 'edit') {
             $id = (int)($_POST['id'] ?? 0);
             $e  = strtolower(trim($_POST['email'] ?? ''));
-            $r  = in_array($_POST['role'] ?? '', ['admin','manager','user','viewer'], true)
+            $r  = in_array($_POST['role'] ?? '', $rolesValidos ?? ['admin','manager','user','viewer'], true)
                 ? $_POST['role'] : 'user';
             if ($e !== '' && !filter_var($e, FILTER_VALIDATE_EMAIL)) {
                 $err = 'El email no tiene formato válido.';

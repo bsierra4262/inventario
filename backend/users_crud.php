@@ -35,6 +35,9 @@ if (!$current || !user_can('user.edit', $current)) {
     exit();
 }
 
+// Migracion lazy: asegurar VARCHAR(40) en columna role (empresas viejas tienen ENUM)
+try { @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'"); } catch (Throwable) {}
+
 // --- Solo POST ---
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

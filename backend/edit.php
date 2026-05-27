@@ -438,8 +438,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             WHERE id = ?";
 
         $upd = $conn->prepare($sql);
+        // Types: 7 strings + periodo_garantia(i) + 5 strings + cantidad(i) + valor_usd(d) + 15 strings + archivado(i) + id(i)
+        // = sssssss i sssss i d sssssssssssssss i i = sssssssissssssidsssssssssssssssii (32 chars)
         $upd->bind_param(
-            'sssssssisssssdsssssssssssssssssi',
+            'sssssssissssssidsssssssssssssssii',
             $valores['modelo'],
             $valores['marca'],
             $valores['descripcion'],

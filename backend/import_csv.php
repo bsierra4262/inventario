@@ -218,10 +218,8 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
             subsoftware,
             subsoftware_otros
             /* , tenant_id */
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-            /* , ? */
-        )
-    ";
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    "; // 29 placeholders (matches 29 columns above)
 
     $stmtProd = $conn->prepare($sqlProd);
     if (!$stmtProd) {
@@ -229,12 +227,16 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         continue;
     }
 
+    // Types (29 params, matching 29 columns):
+    //  asignado_a, modelo, marca, descripcion, servis_tag (5s)
+    //  + cantidad(i), valor_usd(d) + estado, categoria, subcategoria (3s)
+    //  + periodo_garantia(i) + fecha_garantia, fecha_ingreso, fecha_egreso, ubicacion (4s)
+    //  + 14 strings de detalles (patchcord_tipo, _longitud, switch_gestion, antenas_tipo,
+    //    bobina_categoria/_ubicacion/_longitud, conectores_tipo, detalle_conectores,
+    //    cintas_generacion, detalle_repuesto, _otros, subsoftware, _otros)
+    //  = 5s + i + d + 3s + i + 4s + 14s = 29 chars
     $stmtProd->bind_param(
-        'sssssidssssissssssssssssssssss' . /* <- 30 params = 30 letras
-                                             Ajustamos al número real de ? arriba
-                                             y al tipo correcto: i=int, d=double, s=string
-                                          */
-        '' /* si agregás tenant_id sería 'i' acá */,
+        'sssssidsssissssssssssssssssss',
         $registro['asignado_a'],
         $registro['modelo'],
         $registro['marca'],
@@ -339,45 +341,16 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         $detalleTecnico = ''; // vacío al importar
         $carpetaRaizDrive = null; // aún no creada
 
+        // Types (33 params) corregido:
+        // i producto_id + 7s + i cantidad + d valor_usd + 7s + i periodo_garantia + 14s + s carpeta_raiz_drive
+        // = i + sssssss + i + d + sssssss + i + ssssssssssssss + s = 33 chars
+        // Resultado: isssssssidsssssssissssssssssssss
+        //
+        // (antes habia DOS strings duplicadas con espacios — invalido — que confundian
+        //  el orden de los binds; ademas el item 32 era subsoftware repetido en vez
+        //  de subsoftware_otros)
         $stmtMov->bind_param(
-            'isssssssids sssssssis sssssssssssss',
-            /* Vamos a construir el string de tipos bien.
-               Contemos campos:
-               1 producto_id               i
-               2 accion                    s
-               3 descripcion               s
-               4 detalle_tecnico           s
-               5 realizado_por             s
-               6 modelo                    s
-               7 marca                     s
-               8 servis_tag                s
-               9 cantidad                  i
-               10 valor_usd                d
-               11 estado                   s
-               12 categoria                s
-               13 subcategoria             s
-               14 asignado_a               s
-               15 ubicacion                s
-               16 fecha_ingreso            s
-               17 fecha_garantia           s
-               18 periodo_garantia         i
-               19 patchcord_tipo           s
-               20 patchcord_longitud       s
-               21 switch_gestion           s
-               22 antenas_tipo             s
-               23 bobina_categoria         s
-               24 bobina_ubicacion         s
-               25 bobina_longitud          s
-               26 conectores_tipo          s
-               27 detalle_conectores       s
-               28 cintas_generacion        s
-               29 detalle_repuesto         s
-               30 detalle_otros            s
-               31 subsoftware              s
-               32 subsoftware_otros        s
-               33 carpeta_raiz_drive       s (NULL -> pasamos null)
-            */
-            'isssssssids sssssssis sssssssssssss', // <- ESTE STRING TENÉS QUE AJUSTARLO MANUALMENTE
+            'isssssssidsssssssissssssssssssss',
             $nuevo_id,
             $accion,
             $descripcionMov,
@@ -409,7 +382,7 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
             $registro['detalle_repuesto'],
             $registro['detalle_otros'],
             $registro['subsoftware'],
-            $registro['subsoftware'],
+            $registro['subsoftware_otros'],
             $carpetaRaizDrive
         );
         // IMPORTANTE:
