@@ -24,19 +24,9 @@ if ($topbar_user) {
     foreach ($parts as $p) { if ($initials === '' || strlen($initials) < 2) $initials .= strtoupper(substr($p, 0, 1)); }
 }
 ?>
-<style>
-.ih-user-chip__photo { width:28px; height:28px; border-radius:50%; object-fit:cover; display:block; flex-shrink:0; }
-.ih-topbar__brand { display:flex; align-items:center; gap:.6rem; flex-shrink:0; text-decoration:none; color:inherit; }
-.ih-topbar__brand:hover { text-decoration:none; }
-.ih-topbar__brand-logo { width:32px; height:32px; border-radius:9px; overflow:hidden; flex:none;
-  background:var(--primary,#663399); color:#fff; display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-size:15px; }
-.ih-topbar__brand-text { line-height:1.15; }
-.ih-topbar__brand-text strong { display:block; font-size:13.5px; font-weight:800; letter-spacing:-.02em; }
-.ih-topbar__brand-text span { display:block; font-size:11px; color:var(--muted,#6f6a7d); }
-.ih-topbar__sep { width:1px; height:26px; background:var(--line,#e7e4ef); flex:none; }
-@media (max-width:640px){ .ih-topbar__brand-text, .ih-topbar__sep { display:none; } }
-</style>
+<?php /* Los estilos de la marca y del chip de usuario viven en assets/css/app.css
+         (y en intellihelp.css para el panel superadmin), no acá: un <style>
+         inline por include se repite en cada página y no se puede cachear. */ ?>
 <header class="ih-topbar ih-app__topbar">
   <a class="ih-topbar__brand" href="/inventario/index.php" title="Ir al inventario">
     <span class="ih-topbar__brand-logo"><?= platform_logo_html() ?></span>

@@ -42,8 +42,9 @@
     # backend/temp/ recibe uploads con el nombre original del archivo.
     RewriteRule ^logs(/|$)          - [F,L]
     RewriteRule ^backend/temp(/|$)  - [F,L]
-    RewriteRule ^tools(/|$)         - [F,L]
-    RewriteRule ^tests(/|$)         - [F,L]
+    RewriteRule ^bin(/|$)           - [F,L]
+    RewriteRule ^test(/|$)          - [F,L]
+    RewriteRule ^md(/|$)            - [F,L]
 </IfModule>
 
 # ── Archivos sensibles: nunca por HTTP ────────────────────────────

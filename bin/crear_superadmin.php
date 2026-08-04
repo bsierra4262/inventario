@@ -3,10 +3,10 @@
  * Crea (o repone) el usuario superadmin de la plataforma.
  *
  * Reemplaza el auto-seed que vivía en `auth/superadmin_login.php` e `install.php`:
- * esas páginas son PÚBLICAS y re-creaban `bsierra` con la contraseña fija
- * `***SECRETO-PURGADO***` cada vez que `users_platform` quedaba vacía. Encadenado con
- * el reset abierto de `bay.php`, eso permitía tomar la plataforma completa sin
- * ninguna credencial previa.
+ * esas páginas son PÚBLICAS y re-creaban `bsierra` con una contraseña fija
+ * escrita en el código cada vez que `users_platform` quedaba vacía. Encadenado
+ * con el reset abierto de `bay.php`, eso permitía tomar la plataforma completa
+ * sin ninguna credencial previa.
  *
  * Ahora la contraseña se genera al azar y se muestra UNA sola vez.
  *

@@ -35,6 +35,7 @@
   /* Alias --ih-*: hay estilos inline en el PHP que los usan
      (var(--ih-purple), var(--ih-gray-400), …). Se mapean a los tokens de
      arriba para que todo hable un solo idioma de color. */
+  --ih-primary:var(--primary);
   --ih-purple:var(--primary); --ih-purple-dark:var(--primary-700);
   --ih-purple-light:#8C5BB8; --ih-purple-50:var(--primary-050);
   --ih-purple-100:var(--primary-100); --ih-purple-200:#d0bfea; --ih-purple-300:#b69bda;
@@ -112,9 +113,25 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
 .ih-topbar__spacer{flex:1 1 auto;min-width:0}
 .ih-topbar__actions{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
 
+.ih-topbar__brand{display:flex;align-items:center;gap:.6rem;flex-shrink:0;text-decoration:none;color:inherit}
+.ih-topbar__brand:hover{text-decoration:none}
+.ih-topbar__brand-logo{width:32px;height:32px;border-radius:9px;overflow:hidden;flex:none;
+  background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px}
+.ih-topbar__brand-text{line-height:1.15}
+.ih-topbar__brand-text strong{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.02em}
+.ih-topbar__brand-text span{display:block;font-size:11px;color:var(--muted)}
+.ih-topbar__sep{width:1px;height:26px;background:var(--line);flex:none}
+@media (max-width:640px){.ih-topbar__brand-text,.ih-topbar__sep{display:none}}
+
 .ih-user-chip{display:flex;align-items:center;gap:.55rem;padding:.3rem .6rem;
   border:1px solid var(--line);border-radius:var(--pill);font-size:12.5px;font-weight:600;
   color:var(--ink);background:var(--surface)}
+.ih-user-chip__photo{width:28px;height:28px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0}
+
+/* Clase del <body>: identifica el portal (tenant / superadmin) para depurar y
+   para poder colgar reglas específicas si alguna vez hiciera falta. */
+.ih-portal-tenant{background:var(--bg)}
 .ih-user-chip__avatar{display:inline-flex;align-items:center;justify-content:center;
   width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;
   font-weight:700;font-size:12px;flex:none}

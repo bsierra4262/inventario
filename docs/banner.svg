@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 260" width="1200" height="260" role="img" aria-label="Asset Vault — INTELLIHELP">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#663399"/>
+      <stop offset="100%" stop-color="#3f1f63"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9CC930"/>
+      <stop offset="100%" stop-color="#b7dc5f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="260" rx="20" fill="url(#g)"/>
+
+  <!-- cajas decorativas -->
+  <g opacity=".13" fill="none" stroke="#ffffff" stroke-width="2">
+    <rect x="905" y="52"  width="86" height="66" rx="8"/>
+    <rect x="1001" y="52"  width="86" height="66" rx="8"/>
+    <rect x="953" y="128" width="86" height="66" rx="8"/>
+    <path d="M948 85h48M1044 85h48M996 161h48"/>
+  </g>
+
+  <!-- logo -->
+  <g transform="translate(64,86)">
+    <rect width="88" height="88" rx="22" fill="#ffffff"/>
+    <text x="44" y="63" font-family="Saira,Segoe UI,sans-serif" font-size="46" font-weight="800"
+          fill="#663399" text-anchor="middle">i</text>
+    <circle cx="76" cy="76" r="12" fill="url(#acc)"/>
+  </g>
+
+  <text x="184" y="118" font-family="Saira,Segoe UI,sans-serif" font-size="46" font-weight="800"
+        fill="#ffffff" letter-spacing="-1">Asset Vault</text>
+  <text x="184" y="156" font-family="Saira,Segoe UI,sans-serif" font-size="19" font-weight="500"
+        fill="#e9dff5">Inventario de activos de IT · multiempresa</text>
+  <rect x="184" y="176" width="58" height="4" rx="2" fill="url(#acc)"/>
+  <text x="184" y="208" font-family="Saira,Segoe UI,sans-serif" font-size="15" font-weight="600"
+        fill="#c9b6e4" letter-spacing="2">INTELLIHELP S.A.</text>
+</svg>

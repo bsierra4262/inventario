@@ -55,8 +55,8 @@ try {
 
     // NO se siembra ningún superadmin desde acá.
     //
-    // Esta página es pública. Cuando re-creaba `bsierra` con la contraseña fija
-    // `***SECRETO-PURGADO***` al encontrar la tabla vacía, encadenada con el reset
+    // Esta página es pública. Cuando re-creaba `bsierra` con una contraseña fija
+    // escrita en el código al encontrar la tabla vacía, encadenada con el reset
     // abierto de bay.php permitía tomar la plataforma entera sin credenciales:
     // vaciar users_platform → cargar esta página → entrar con la contraseña del repo.
     //
