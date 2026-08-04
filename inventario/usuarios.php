@@ -33,21 +33,9 @@ if (!$currentUser) {
 // Solo admin del tenant puede gestionar usuarios
 require_permission('user.view', $currentUser);
 
-// Migracion lazy robusta: chequea si role es ENUM y solo migra en ese caso
-try {
-    $colInfo = $conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
-    if ($colInfo && $row = $colInfo->fetch_assoc()) {
-        if (str_starts_with(strtolower((string)$row['Type']), 'enum')) {
-            if ($conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'")) {
-                log_event((string)$user_id, 'MIGRATION', "role ENUM→VARCHAR aplicado en {$usersTable}", 'usuarios');
-            } else {
-                log_event((string)$user_id, 'MIGRATION_ERROR', "ALTER role fallo: " . $conn->error, 'usuarios');
-            }
-        }
-    }
-} catch (Throwable $e) {
-    log_event((string)$user_id, 'MIGRATION_ERROR', "Exception migracion role: " . $e->getMessage(), 'usuarios');
-}
+// La migración de `role` ENUM→VARCHAR vivía acá y corría en cada carga de la
+// pantalla. Ahora es la migración 1 de core/db/migraciones.php, que se aplica
+// una sola vez con `php bin/migrar.php`.
 
 $allUsers = [];
 $res = $conn->query("SELECT id, username, email, role, created_at FROM `{$usersTable}` ORDER BY id ASC");
@@ -59,64 +47,36 @@ $csrf = generateCsrfToken('users_crud');
 
 $feedbackMsg  = $_GET['msg']  ?? '';
 $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
+
+// Nombre de la empresa para la marca del topbar
+$tenant_name = 'Mi empresa';
+try {
+    require_once __DIR__ . '/../core/db/master_connection.php';
+    $masterDb  = new MasterDB();
+    $companyId = (int)($_SESSION['company_id'] ?? 0);
+    if ($companyId > 0) {
+        $cst  = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
+        $crow = $cst->get_result()->fetch_assoc();
+        if ($crow) { $tenant_name = $crow['nombre']; }
+        $cst->close();
+    }
+} catch (Throwable) {}
+
+$page_title      = 'Usuarios';
+$page_section    = 'usuarios';
+$topbar_title    = 'Usuarios';
+$topbar_subtitle = count($allUsers) . ' en la empresa';
+$topbar_user     = $currentUser['username'] ?? '';
+$topbar_email    = $currentUser['email']    ?? '';
+
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#663399">
-<title>Usuarios del tenant · Asset Vault · INTELLIHELP</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" rel="modulepreload">
-<link href="/assets/css/intellihelp.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-  /* Modales: usamos Bootstrap pero con estilo INTELLIHELP */
-  .modal-content { border-radius: 16px; border: 0; box-shadow: 0 20px 60px rgba(102,51,153,.18); }
-  .modal-header { background: #663399; color: #fff; border-radius: 16px 16px 0 0; padding: 16px 22px; border-bottom: 0; }
-  .modal-header .modal-title { font-weight: 700; font-size: 16px; }
-  .modal-body { padding: 22px; }
-  .modal-footer { border-top: 1px solid #E4E4E7; padding: 14px 22px; }
-  .form-label { font-size: 12px; font-weight: 600; color: #3F3F46; text-transform: uppercase; letter-spacing: .3px; }
-  .form-control, .form-select { border-radius: 10px; border-color: #D4D4D8; font-family: 'Saira', sans-serif; }
-  .form-control:focus, .form-select:focus { border-color: #663399; box-shadow: 0 0 0 3px rgba(102,51,153,.12); }
-</style>
-</head>
-<body>
 
-<!-- Topbar simple (compartido con index del tenant) -->
-<style>
-  header.ih-topbar-tenant { display: flex; align-items: center; padding: 0 16px; height: 64px; background: #fff; border-bottom: 1px solid #E4E4E7; position: sticky; top: 0; z-index: 900; box-shadow: 0 1px 3px rgba(17,20,24,.04); }
-  header.ih-topbar-tenant .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-  header.ih-topbar-tenant .brand__logo { width: 36px; height: 36px; background: #663399; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; position: relative; }
-  header.ih-topbar-tenant .brand__logo::after { display: none; }
-  header.ih-topbar-tenant .brand__text strong { font-size: 15px; color: #18181B; font-weight: 700; letter-spacing: -.3px; display: block; line-height: 1.1; }
-  header.ih-topbar-tenant .brand__text span { font-size: 11px; color: #71717A; }
-  header.ih-topbar-tenant .topbar-spacer { flex: 1; }
-  header.ih-topbar-tenant a.back { color: #663399; font-weight: 600; font-size: 13px; text-decoration: none; padding: 8px 14px; border-radius: 10px; border: 1px solid #D0BFEA; background: #fff; transition: all .15s; }
-  header.ih-topbar-tenant a.back:hover { background: #F4F1F9; }
-</style>
-<header class="ih-topbar-tenant">
-  <a class="brand" href="/inventario/index.php">
-    <div class="brand__logo"><?= platform_logo_html() ?></div>
-    <div class="brand__text">
-      <strong>Asset Vault</strong>
-      <span>INTELLIHELP · Inventario</span>
-    </div>
-  </a>
-  <div class="topbar-spacer"></div>
-  <a class="back" href="/inventario/index.php"><i class="bi bi-arrow-left"></i> Volver al inventario</a>
-</header>
+<div class="ih-app">
+  <?php require __DIR__ . '/../includes/layout/sidebar_tenant.php'; ?>
+  <?php require __DIR__ . '/../includes/layout/topbar.php'; ?>
 
-<main style="max-width:1100px;margin:0 auto;padding:24px 16px 60px;">
-
-  <div class="ih-page-header">
-    <div>
-      <h1 class="ih-page-header__title"><i class="bi bi-people-fill" style="color:#663399"></i> Usuarios del tenant</h1>
-      <div class="ih-page-header__subtitle">Administrá los usuarios de esta empresa cliente</div>
-    </div>
-  </div>
+<main class="ih-app__main ih-anim-fade">
 
   <?php if ($feedbackMsg !== ''): ?>
     <div class="ih-alert ih-alert--<?= $feedbackType === 'danger' ? 'danger' : 'success' ?>">
@@ -255,17 +215,20 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
     <?php endif; ?>
   </div>
 </main>
+</div><!-- /ih-app -->
+
+<?php /* Modales nativos <dialog>. Antes eran de Bootstrap: traían una hoja de
+         estilos entera y un bundle de JS sólo para estas dos ventanitas, y el
+         reset de Bootstrap peleaba con el sistema de diseño de la app. */ ?>
 
 <!-- Modal Editar -->
-<div class="modal fade" id="modalEditar" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Editar: <span id="editUsername"></span></h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<dialog class="ih-modal" id="modalEditar">
+      <div class="ih-modal__header">
+        <h5 class="ih-modal__title"><i class="bi bi-pencil-square"></i> Editar: <span id="editUsername"></span></h5>
+        <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
       </div>
       <form method="POST" action="/backend/users_crud.php" autocomplete="off">
-        <div class="modal-body">
+        <div class="ih-modal__body">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="edit">
           <input type="hidden" name="target_id" id="editTargetId">
@@ -288,29 +251,25 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
             <div class="ih-field__hint">Mínimo 8 caracteres si la modificás.</div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="ih-btn ih-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+        <div class="ih-modal__footer">
+          <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
           <button type="submit" class="ih-btn ih-btn--primary">Guardar cambios</button>
         </div>
       </form>
-    </div>
-  </div>
-</div>
+</dialog>
 
 <!-- Modal Eliminar -->
-<div class="modal fade" id="modalEliminar" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header" style="background:#DC2626">
-        <h5 class="modal-title"><i class="bi bi-trash"></i> Eliminar usuario</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<dialog class="ih-modal" id="modalEliminar" style="width:min(420px,calc(100vw - 2rem))">
+      <div class="ih-modal__header" style="background:var(--danger)">
+        <h5 class="ih-modal__title"><i class="bi bi-trash"></i> Eliminar usuario</h5>
+        <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="ih-modal__body">
         ¿Confirmás eliminar a <strong id="deleteUsername"></strong>?
         <div class="ih-text-xs ih-text-muted ih-mt-2">Esta acción no se puede deshacer.</div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="ih-btn ih-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+      <div class="ih-modal__footer">
+        <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
         <form method="POST" action="/backend/users_crud.php" style="display:inline">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="delete">
@@ -318,24 +277,27 @@ $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
           <button type="submit" class="ih-btn ih-btn--danger">Eliminar</button>
         </form>
       </div>
-    </div>
-  </div>
-</div>
+</dialog>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function abrirEditar(id, username, email, role) {
   document.getElementById('editTargetId').value = id;
   document.getElementById('editUsername').textContent = username;
   document.getElementById('editEmail').value = email;
   document.getElementById('editRole').value = role;
-  new bootstrap.Modal(document.getElementById('modalEditar')).show();
+  document.getElementById('modalEditar').showModal();
 }
 function confirmarEliminar(id, username) {
   document.getElementById('deleteTargetId').value = id;
   document.getElementById('deleteUsername').textContent = username;
-  new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+  document.getElementById('modalEliminar').showModal();
 }
+// Cerrar: botones marcados con data-cerrar y clic en el fondo oscuro.
+document.addEventListener('click', function (e) {
+  const cerrar = e.target.closest('[data-cerrar]');
+  if (cerrar) { cerrar.closest('dialog')?.close(); return; }
+  if (e.target.tagName === 'DIALOG') { e.target.close(); }
+});
 </script>
-</body>
-</html>
+
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>

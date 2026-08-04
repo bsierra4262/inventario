@@ -1,0 +1,461 @@
+/* ============================================================
+   INTELLIHELP · Asset Vault — Sistema de diseño (portal tenant)
+
+   Mismo lenguaje visual que APP Remitos, APP Tickets y el CRM:
+   Saira, violeta de marca, sombras con tinte violeta, radios de 15px,
+   pills, gris-violáceo. Mobile-first, sin scroll horizontal.
+
+   Los tokens (:root) son EXACTAMENTE los de esas apps. Las clases mantienen
+   el prefijo `ih-` del markup existente, así que ninguna pantalla necesita
+   reescribirse: cambia la piel, no el HTML.
+
+   El panel superadmin sigue con assets/css/intellihelp.css (ver head.php).
+   ============================================================ */
+
+/* ------------------------------------------------------------------
+   1. TOKENS — idénticos a CMR / APP Tickets
+   ------------------------------------------------------------------ */
+:root{
+  --ink:#161922; --muted:#6f6a7d; --line:#e7e4ef; --line-soft:#f0edf6;
+  --surface:#ffffff; --bg:#f6f5fa; --soft:#faf9fc;
+  --primary:#663399; --primary-700:#522a7a; --primary-050:#f2ecf9; --primary-100:#e6d9f5;
+  --accent:#9CC930; --accent-050:#eef6dc; --accent-600:#5f8a12;
+  --warn:#a8620a; --warn-bg:#fdf3e3;
+  --danger:#a12a1e; --danger-bg:#fdeceb; --danger-line:#f3c9c4;
+  --info:#1f6f9c; --info-bg:#e7f2f9;
+
+  --shadow:0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
+  --shadow-lg:0 24px 60px -20px rgba(74,36,112,.42);
+
+  --font:'Saira',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --radius:15px; --radius-sm:10px; --radius-xs:9px; --pill:20px;
+
+  --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem; --sp-5:1.25rem; --sp-6:1.5rem; --sp-8:2rem;
+
+  /* Alias --ih-*: hay estilos inline en el PHP que los usan
+     (var(--ih-purple), var(--ih-gray-400), …). Se mapean a los tokens de
+     arriba para que todo hable un solo idioma de color. */
+  --ih-purple:var(--primary); --ih-purple-dark:var(--primary-700);
+  --ih-purple-light:#8C5BB8; --ih-purple-50:var(--primary-050);
+  --ih-purple-100:var(--primary-100); --ih-purple-200:#d0bfea; --ih-purple-300:#b69bda;
+  --ih-green:var(--accent); --ih-green-dark:var(--accent-600);
+  --ih-green-light:#b7dc5f; --ih-green-50:var(--accent-050); --ih-green-100:#e5f1c7;
+  --ih-white:var(--surface); --ih-black:var(--ink);
+  --ih-gray-50:var(--soft);  --ih-gray-100:var(--bg);   --ih-gray-200:var(--line);
+  --ih-gray-300:#cfcbd8;     --ih-gray-400:#a7a3b4;     --ih-gray-500:var(--muted);
+  --ih-gray-600:#5b566a;     --ih-gray-700:#434050;     --ih-gray-800:#2b2836;
+  --ih-gray-900:var(--ink);
+  --ih-success:var(--accent-600); --ih-success-bg:var(--accent-050);
+  --ih-warning:var(--warn);       --ih-warning-bg:var(--warn-bg);
+  --ih-danger:var(--danger);      --ih-danger-bg:var(--danger-bg);
+  --ih-info:var(--info);          --ih-info-bg:var(--info-bg);
+  --ih-shadow-xs:0 1px 2px rgba(16,20,30,.05);
+  --ih-shadow-sm:var(--shadow); --ih-shadow-md:var(--shadow);
+  --ih-shadow-lg:var(--shadow-lg); --ih-shadow-xl:var(--shadow-lg);
+  --ih-radius-sm:var(--radius-xs); --ih-radius-md:var(--radius-sm);
+  --ih-radius-lg:var(--radius);    --ih-radius-xl:var(--radius);
+  --ih-radius-full:9999px;
+  --ih-font:var(--font);
+  --ih-topbar-h:58px; --ih-content-max:1500px;
+  --ih-trans-fast:.15s; --ih-trans-base:.2s;
+}
+
+/* ------------------------------------------------------------------
+   2. RESET / BASE
+   ------------------------------------------------------------------ */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font); color:var(--ink); background:var(--bg);
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{font-weight:800;letter-spacing:-.02em;margin:0 0 .2rem;line-height:1.2;color:var(--ink)}
+h1{font-size:22px} h2{font-size:15.5px;font-weight:700} h3{font-size:14px;font-weight:700}
+h4{font-size:13px;font-weight:700}
+img{max-width:100%}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:var(--primary-050);color:var(--primary-700);padding:.1em .4em;border-radius:6px}
+hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
+::selection{background:var(--primary-100)}
+*{scrollbar-width:thin;scrollbar-color:#d4d7de transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#d8d4e2;border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#c4bed4;background-clip:padding-box}
+
+/* ------------------------------------------------------------------
+   3. SHELL — topbar + topnav (igual que CRM y Tickets)
+
+   El markup sigue diciendo `.ih-sidebar`, pero acá se dibuja como una barra
+   de pestañas horizontal debajo del topbar. Así el portal queda con la misma
+   silueta que las otras apps sin tocar los 12 archivos que arman la página.
+   ------------------------------------------------------------------ */
+.ih-app{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+/* Las páginas incluyen el sidebar ANTES del topbar (así estaba armado el layout
+   de columnas). Con `order` los reubicamos sin tocar los 12 archivos que
+   componen la página: topbar arriba, pestañas debajo, contenido al final. */
+.ih-app__topbar,.ih-topbar{order:1}
+.ih-app__sidebar,.ih-sidebar{order:2}
+.ih-app__main{order:3}
+
+.ih-topbar,.ih-app__topbar{
+  background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:0 1.25rem;height:58px;
+  position:sticky;top:0;z-index:30;
+}
+.ih-topbar__burger{display:none}
+.ih-topbar__title{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ih-topbar__title small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0}
+.ih-topbar__spacer{flex:1 1 auto;min-width:0}
+.ih-topbar__actions{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+
+.ih-user-chip{display:flex;align-items:center;gap:.55rem;padding:.3rem .6rem;
+  border:1px solid var(--line);border-radius:var(--pill);font-size:12.5px;font-weight:600;
+  color:var(--ink);background:var(--surface)}
+.ih-user-chip__avatar{display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;
+  font-weight:700;font-size:12px;flex:none}
+
+/* Navegación: `.ih-sidebar` se dibuja como fila de pestañas */
+.ih-sidebar,.ih-app__sidebar{
+  background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:.25rem;padding:0 1.25rem;
+  overflow-x:auto;scrollbar-width:none;position:sticky;top:58px;z-index:29;
+}
+.ih-sidebar::-webkit-scrollbar{display:none}
+.ih-sidebar__brand{display:none}          /* la marca ya está en el topbar */
+.ih-sidebar__footer{display:none}
+.ih-sidebar__nav{display:flex;align-items:center;gap:.25rem;flex:1;min-width:0}
+.ih-sidebar__group{display:flex;align-items:center;gap:.25rem}
+.ih-sidebar__group-title{display:none}    /* los títulos de grupo no aplican en horizontal */
+.ih-sidebar__link{
+  display:inline-flex;align-items:center;gap:.4rem;padding:.7rem .7rem;
+  color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap;
+  border-bottom:2px solid transparent;border-radius:0;text-decoration:none;
+  transition:color var(--ih-trans-fast),border-color var(--ih-trans-fast);
+}
+.ih-sidebar__link:hover{color:var(--ink);text-decoration:none}
+.ih-sidebar__link.is-active{color:var(--primary);border-bottom-color:var(--primary)}
+.ih-sidebar__link i,.ih-sidebar__link svg{flex:none}
+
+.ih-app__main{
+  flex:1;width:100%;max-width:var(--ih-content-max);margin:0 auto;
+  padding:1.5rem clamp(1rem,3vw,2rem);
+}
+.ih-container{width:100%;max-width:var(--ih-content-max);margin:0 auto;
+  padding:0 clamp(1rem,3vw,2rem)}
+.ih-backdrop{display:none}
+
+.ih-page-header{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.ih-page-header__title{font-size:20px;font-weight:800;margin:0}
+.ih-page-header__subtitle{color:var(--muted);font-size:13px}
+.ih-section{margin-bottom:var(--sp-6)}
+.ih-section__title{font-size:14px;font-weight:700;margin:0 0 .6rem;color:var(--ink)}
+
+/* ------------------------------------------------------------------
+   4. BOTONES
+   ------------------------------------------------------------------ */
+.ih-btn{
+  display:inline-flex;align-items:center;gap:.45rem;justify-content:center;
+  font-family:inherit;font-size:13.5px;font-weight:600;line-height:1;
+  padding:.5rem .9rem;border-radius:var(--radius-sm);border:1px solid transparent;
+  cursor:pointer;transition:.15s;white-space:nowrap;min-height:36px;text-decoration:none;
+}
+.ih-btn:hover{text-decoration:none}
+.ih-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.ih-btn:disabled,.ih-btn.is-disabled{opacity:.5;cursor:not-allowed}
+.ih-btn--primary{background:var(--primary);color:#fff}
+.ih-btn--primary:hover{background:var(--primary-700);color:#fff}
+.ih-btn--accent,.ih-btn--success{background:var(--accent);color:#233010}
+.ih-btn--accent:hover,.ih-btn--success:hover{filter:brightness(.96);color:#233010}
+.ih-btn--ghost,.ih-btn--outline{background:var(--surface);color:var(--primary);border-color:var(--line)}
+.ih-btn--ghost:hover,.ih-btn--outline:hover{background:var(--primary-050);color:var(--primary)}
+.ih-btn--danger{background:#fff;color:var(--danger);border-color:var(--danger-line)}
+.ih-btn--danger:hover{background:var(--danger-bg);color:var(--danger)}
+.ih-btn--warning{background:#fff;color:var(--warn);border-color:#eccfa4}
+.ih-btn--warning:hover{background:var(--warn-bg);color:var(--warn)}
+.ih-btn--google{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
+.ih-btn--google:hover{background:#f7f8fa;color:#3c4043}
+.ih-btn--microsoft{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
+.ih-btn--microsoft:hover{background:#f7f8fa;color:#3c4043}
+.ih-btn--block{width:100%}
+.ih-btn--sm{padding:.42rem .8rem;font-size:12.5px;min-height:34px;border-radius:9px}
+.ih-btn--lg{padding:.7rem 1.1rem;font-size:14.5px;min-height:44px}
+
+/* ------------------------------------------------------------------
+   5. FORMULARIOS
+   ------------------------------------------------------------------ */
+.ih-form{display:block}
+.ih-field{margin-bottom:var(--sp-4);min-width:0}
+.ih-field__label,.ih-label{display:block;font-size:13px;font-weight:600;
+  margin-bottom:.35rem;color:var(--ink)}
+.ih-field--required > .ih-field__label::after,
+.ih-field--required > .ih-label::after{content:" *";color:var(--danger);font-weight:700}
+.req{color:var(--danger);font-weight:700}
+.ih-field__hint{display:block;font-size:11.5px;color:var(--muted);margin-top:.3rem}
+.ih-field__error{display:block;font-size:11.5px;color:var(--danger);margin-top:.3rem}
+
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+.ih-input,.ih-select,.ih-textarea,
+input[type=text],input[type=search],input[type=email],input[type=tel],input[type=url],
+input[type=number],input[type=password],input[type=date],input[type=time],
+input[type=datetime-local],input[type=month],select,textarea{
+  width:100%;padding:.6rem .75rem;border:1px solid var(--line);
+  border-radius:var(--radius-xs);background:var(--surface);transition:.15s;
+  min-height:40px;max-width:100%;
+}
+.ih-input--lg{min-height:46px;font-size:15px}
+textarea,.ih-textarea{min-height:90px;resize:vertical;line-height:1.5}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-050)}
+input:hover:not(:focus),select:hover:not(:focus),textarea:hover:not(:focus){border-color:#cfcbd8}
+input::placeholder,textarea::placeholder{color:#a7a3b4}
+input:disabled,select:disabled,textarea:disabled{background:var(--soft);color:var(--muted);cursor:not-allowed}
+input[type=checkbox],input[type=radio]{accent-color:var(--primary);width:16px;height:16px;
+  cursor:pointer;margin:0;min-height:0}
+input[type=file]{padding:.45rem .6rem}
+
+/* Desplegables: el control nativo no se parece al resto de los campos y cada
+   sistema lo dibuja distinto. Se le saca la apariencia del sistema y se le
+   pone la flecha nuestra. */
+select,.ih-select{
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;padding-right:2rem;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b6577' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .7rem center;background-size:14px;
+}
+select:focus,.ih-select:focus{
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23663399' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
+select::-ms-expand{display:none}
+
+.ih-switch{position:relative;display:inline-flex;align-items:center;width:44px;height:24px;
+  background:var(--line);border-radius:var(--pill);cursor:pointer;transition:.15s;flex:none}
+.ih-switch input{position:absolute;opacity:0;width:0;height:0}
+.ih-switch__slider{position:absolute;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(16,20,30,.25);transition:.15s}
+.ih-switch input:checked + .ih-switch__slider{transform:translateX(20px)}
+.ih-switch:has(input:checked){background:var(--primary)}
+
+.ih-dropzone{
+  border:1.5px dashed var(--line);border-radius:var(--radius);background:var(--soft);
+  padding:1.5rem 1rem;text-align:center;color:var(--muted);font-size:13px;
+  transition:.15s;cursor:pointer;
+}
+.ih-dropzone:hover,.ih-dropzone.is-over{border-color:var(--primary);background:var(--primary-050);color:var(--primary-700)}
+
+/* ------------------------------------------------------------------
+   6. TARJETAS
+   ------------------------------------------------------------------ */
+.ih-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:var(--sp-5)}
+.ih-card__header{padding:1rem 1.15rem;border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.ih-card__title{font-size:14.5px;font-weight:700;margin:0;color:var(--ink)}
+.ih-card__subtitle{font-size:12.5px;color:var(--muted);margin:.15rem 0 0}
+.ih-card__body{padding:1.15rem}
+.ih-card__footer{padding:.9rem 1.15rem;border-top:1px solid var(--line-soft);background:var(--soft)}
+
+/* ------------------------------------------------------------------
+   7. TABLAS  (scroll propio: la página nunca scrollea a lo ancho)
+   ------------------------------------------------------------------ */
+.ih-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface)}
+.ih-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface)}
+.ih-table th{
+  text-align:left;font-weight:700;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--muted);padding:.7rem .8rem;background:var(--soft);
+  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:1;
+}
+.ih-table td{padding:.7rem .8rem;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.ih-table tbody tr:last-child td{border-bottom:0}
+.ih-table tbody tr:hover{background:var(--primary-050)}
+.ih-table--clickable tbody tr{cursor:pointer}
+.ih-table a{font-weight:600}
+.ih-sort{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem}
+.ih-sort:hover{color:var(--primary);text-decoration:none}
+.ih-sort i{font-size:10px;opacity:.6}
+
+/* ------------------------------------------------------------------
+   8. BADGES / PILLS
+   ------------------------------------------------------------------ */
+.ih-badge{
+  display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;
+  border-radius:var(--pill);font-size:11.5px;font-weight:700;line-height:1.6;
+  background:var(--primary-050);color:var(--primary-700);white-space:nowrap;
+}
+.ih-badge--purple  {background:var(--primary-050);color:var(--primary-700)}
+.ih-badge--success,
+.ih-badge--green   {background:var(--accent-050);color:var(--accent-600)}
+.ih-badge--warning,
+.ih-badge--warn    {background:var(--warn-bg);color:var(--warn)}
+.ih-badge--danger  {background:var(--danger-bg);color:var(--danger)}
+.ih-badge--info    {background:var(--info-bg);color:var(--info)}
+.ih-badge--neutral {background:var(--bg);color:var(--muted)}
+.ih-badge--dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* ------------------------------------------------------------------
+   9. KPIs
+   ------------------------------------------------------------------ */
+.ih-stats{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  margin-bottom:var(--sp-6)}
+.ih-stat{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);
+  border-radius:var(--radius);padding:1rem 1.1rem;box-shadow:var(--shadow)}
+.ih-stat--green{border-left-color:var(--accent)}
+.ih-stat--warn {border-left-color:var(--warn)}
+.ih-stat--danger{border-left-color:var(--danger)}
+.ih-stat--info {border-left-color:var(--info)}
+.ih-stat__label{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.ih-stat__label i{font-size:15px;opacity:.55}
+.ih-stat__value{font-size:26px;font-weight:800;letter-spacing:-.03em;margin:.25rem 0 .1rem;color:var(--ink)}
+.ih-stat__delta{font-size:11.5px;color:var(--muted)}
+
+/* ------------------------------------------------------------------
+   10. ALERTAS Y FLASH
+   ------------------------------------------------------------------ */
+.ih-alert,.ih-flash{
+  display:flex;align-items:flex-start;gap:.65rem;padding:.8rem 1rem;
+  border-radius:var(--radius-sm);font-size:13px;margin-bottom:var(--sp-4);
+  border:1px solid transparent;
+}
+.ih-alert i,.ih-flash i{flex:none;margin-top:.1rem;font-size:15px}
+.ih-alert__title{font-weight:700;display:block;margin-bottom:.15rem}
+.ih-alert--success,.ih-flash--success{background:var(--accent-050);color:#3d5a0c;border-color:#d6e8ac}
+.ih-alert--warning,.ih-flash--warn   {background:var(--warn-bg);  color:var(--warn); border-color:#eccfa4}
+.ih-alert--danger, .ih-flash--danger {background:var(--danger-bg);color:var(--danger);border-color:var(--danger-line)}
+.ih-alert--info,   .ih-flash--info   {background:var(--info-bg);  color:var(--info); border-color:#bcdcee}
+.ih-alert__close,.ih-flash__close{
+  margin-left:auto;background:none;border:0;color:inherit;opacity:.55;cursor:pointer;
+  font-size:18px;line-height:1;padding:0 .1rem;flex:none
+}
+.ih-alert__close:hover,.ih-flash__close:hover{opacity:1}
+
+/* ------------------------------------------------------------------
+   11. ESTADO VACÍO
+   ------------------------------------------------------------------ */
+.ih-empty{text-align:center;padding:3rem 1.5rem;color:var(--muted)}
+.ih-empty__icon{font-size:44px;color:var(--primary-100);margin-bottom:.5rem;line-height:1}
+.ih-empty__title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.2rem}
+.ih-empty__text{font-size:13px;max-width:420px;margin:0 auto}
+
+/* ------------------------------------------------------------------
+   12. LOGIN / PANTALLAS DE ACCESO
+   ------------------------------------------------------------------ */
+.ih-auth{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  background:radial-gradient(120% 120% at 50% 0,#6b3aa0 0,#3f1f63 100%);
+}
+.ih-auth__card{width:100%;max-width:420px;background:var(--surface);
+  border-radius:var(--radius);box-shadow:var(--shadow-lg);overflow:hidden}
+.ih-auth__header{padding:2rem 1.9rem 1.2rem;text-align:center}
+.ih-auth__brand{display:flex;align-items:center;justify-content:center;gap:.7rem;margin-bottom:1rem}
+.ih-auth__logo{width:44px;height:44px;border-radius:12px;background:var(--primary);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;
+  font-size:20px;flex:none;overflow:hidden}
+.ih-auth__brand-text{text-align:left;line-height:1.15}
+.ih-auth__brand-text strong{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em}
+.ih-auth__brand-text span{display:block;font-size:12px;color:var(--muted)}
+.ih-auth__title{font-size:21px;font-weight:800;margin:.4rem 0 .1rem}
+.ih-auth__subtitle{color:var(--muted);font-size:13px;margin:0}
+.ih-auth__body{padding:0 1.9rem 1.6rem}
+.ih-auth__footer{padding:1rem 1.9rem;border-top:1px solid var(--line-soft);
+  background:var(--soft);text-align:center;color:var(--muted);font-size:11.5px}
+.ih-auth__divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0;
+  color:var(--muted);font-size:12px}
+.ih-auth__divider::before,.ih-auth__divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ------------------------------------------------------------------
+   13. UTILIDADES
+   ------------------------------------------------------------------ */
+.ih-flex{display:flex}
+.ih-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(12,minmax(0,1fr))}
+.ih-col-1{grid-column:span 1} .ih-col-2{grid-column:span 2} .ih-col-3{grid-column:span 3}
+.ih-col-4{grid-column:span 4} .ih-col-5{grid-column:span 5} .ih-col-6{grid-column:span 6}
+.ih-col-8{grid-column:span 8} .ih-col-9{grid-column:span 9} .ih-col-12{grid-column:span 12}
+@media (max-width:860px){
+  .ih-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ih-col-1,.ih-col-2,.ih-col-3,.ih-col-4,.ih-col-5,.ih-col-6,.ih-col-8,.ih-col-9,.ih-col-12{grid-column:span 2}
+}
+
+/* Modales nativos <dialog>: reemplazan a los de Bootstrap, que traían una hoja
+   de estilos entera sólo para dos ventanitas y peleaban con este sistema. */
+dialog.ih-modal{
+  border:0;padding:0;border-radius:var(--radius);box-shadow:var(--shadow-lg);
+  width:min(520px,calc(100vw - 2rem));background:var(--surface);color:var(--ink);
+}
+dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
+.ih-modal__header{background:var(--primary);color:#fff;padding:.9rem 1.15rem;
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.ih-modal__title{font-size:15px;font-weight:700;margin:0;color:#fff}
+.ih-modal__close{background:none;border:0;color:#fff;opacity:.8;cursor:pointer;font-size:20px;line-height:1}
+.ih-modal__close:hover{opacity:1}
+.ih-modal__body{padding:1.15rem}
+.ih-modal__footer{padding:.9rem 1.15rem;border-top:1px solid var(--line-soft);background:var(--soft);
+  display:flex;gap:.5rem;justify-content:flex-end;flex-wrap:wrap}
+.ih-items-center{align-items:center}
+.ih-items-start{align-items:flex-start}
+.ih-items-end{align-items:flex-end}
+.ih-justify-between{justify-content:space-between}
+.ih-justify-center{justify-content:center}
+.ih-justify-end{justify-content:flex-end}
+.ih-fw{flex-wrap:wrap}
+.ih-col{display:flex;flex-direction:column}
+.ih-gap-1{gap:.25rem} .ih-gap-2{gap:.5rem} .ih-gap-3{gap:.75rem}
+.ih-gap-4{gap:1rem}   .ih-gap-5{gap:1.25rem} .ih-gap-6{gap:1.5rem}
+.ih-mt-1{margin-top:.25rem} .ih-mt-2{margin-top:.5rem} .ih-mt-3{margin-top:.75rem}
+.ih-mt-4{margin-top:1rem}   .ih-mt-5{margin-top:1.25rem} .ih-mt-6{margin-top:1.5rem}
+.ih-mb-1{margin-bottom:.25rem} .ih-mb-2{margin-bottom:.5rem} .ih-mb-3{margin-bottom:.75rem}
+.ih-mb-4{margin-bottom:1rem}   .ih-mb-5{margin-bottom:1.25rem} .ih-mb-6{margin-bottom:1.5rem}
+
+.ih-text-xs{font-size:11.5px} .ih-text-sm{font-size:12.5px} .ih-text-base{font-size:14px}
+.ih-text-md{font-size:15px}   .ih-text-lg{font-size:17px}    .ih-text-xl{font-size:20px}
+.ih-text-2xl{font-size:24px}  .ih-text-3xl{font-size:28px}
+.ih-text-muted{color:var(--muted)}
+.ih-text-primary{color:var(--primary)}
+.ih-text-success,.ih-text-green{color:var(--accent-600)}
+.ih-text-warning,.ih-text-warn{color:var(--warn)}
+.ih-text-danger{color:var(--danger)}
+.ih-text-info{color:var(--info)}
+.ih-text-white{color:#fff}
+.ih-text-center{text-align:center} .ih-text-right{text-align:right} .ih-text-left{text-align:left}
+.ih-text-bold{font-weight:700} .ih-text-semibold{font-weight:600}
+.ih-text-nowrap{white-space:nowrap}
+
+.ih-spinner{
+  display:inline-block;width:16px;height:16px;border:2px solid var(--primary-100);
+  border-top-color:var(--primary);border-radius:50%;animation:ih-spin .7s linear infinite;
+}
+@keyframes ih-spin{to{transform:rotate(360deg)}}
+.ih-anim-fade{animation:ih-fade .25s ease}
+@keyframes ih-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .ih-anim-fade{animation:none}
+  .ih-spinner{animation-duration:2s}
+  *{transition-duration:.01ms !important}
+}
+
+/* ------------------------------------------------------------------
+   14. RESPONSIVE
+   ------------------------------------------------------------------ */
+@media (max-width:860px){
+  .ih-hidden-mobile{display:none !important}
+  .ih-topbar{padding:0 .9rem;gap:.6rem}
+  .ih-sidebar{padding:0 .9rem;top:58px}
+  .ih-app__main{padding:1.1rem .9rem}
+  .ih-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem}
+  .ih-stat__value{font-size:22px}
+  .ih-card__body,.ih-card__header{padding:.9rem}
+  .ih-auth__header{padding:1.6rem 1.3rem 1rem}
+  .ih-auth__body{padding:0 1.3rem 1.3rem}
+}
+@media (min-width:861px){
+  .ih-hidden-desktop{display:none !important}
+}
+@media print{
+  .ih-topbar,.ih-sidebar,.ih-btn,.ih-flash{display:none !important}
+  .ih-app__main{padding:0;max-width:none}
+  .ih-card{box-shadow:none;border-color:#ddd}
+  body{background:#fff}
+}

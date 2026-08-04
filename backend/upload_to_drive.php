@@ -132,6 +132,13 @@ $valor_usd          = is_numeric($_POST['valor_usd'] ?? '') ? (float)$_POST['val
 if ($fecha_ingreso === '' || $fecha_ingreso === '0000-00-00') $fecha_ingreso = '';
 if ($fecha_compra  === '' || $fecha_compra  === '0000-00-00') $fecha_compra  = '';
 
+// "Asignado a" y "Ubicación" vienen de un catálogo. El <select> del formulario
+// es sólo comodidad visual: la validación real es acá, porque cualquiera puede
+// mandar otro valor por POST. Si no está en la lista, se descarta.
+require_once __DIR__ . '/../core/tenants/catalogos.php';
+$asignado_a = catalogo_normalizar($conn, 'asignado_a', $asignado_a);
+$ubicacion  = catalogo_normalizar($conn, 'ubicacion',  $ubicacion);
+
 $fi = $fecha_ingreso ?: null;
 $fc = $fecha_compra  ?: null;
 

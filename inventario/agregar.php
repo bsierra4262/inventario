@@ -22,6 +22,7 @@ require_once __DIR__ . '/../includes/cloud_icons.php';
 $cloudUploadOk = cloud_upload_disponible($conn);
 
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/campo_catalogo.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -46,6 +47,9 @@ try {
 
     // Verificar permiso de crear activos
     require_permission('asset.create', $user);
+
+    // ¿Puede ampliar las listas de "Asignado a" y "Ubicación"? (por defecto, admin)
+    $puedeGestionarCatalogos = user_can('catalog.manage', $user);
 
     $tenant_name = 'Mi empresa';
     try {
@@ -223,17 +227,13 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
 
             <div class="ih-field">
-              <label class="ih-label" for="f-asignado">Asignado a</label>
-              <input type="text" id="f-asignado" name="asignado_a" class="ih-input"
-                     placeholder="Nombre del responsable o área"
-                     value="<?= htmlspecialchars((string)$fv('asignado_a')) ?>">
+              <label class="ih-label" for="f-asignado_a">Asignado a</label>
+              <?php campo_catalogo($conn, 'asignado_a', (string)$fv('asignado_a'), $puedeGestionarCatalogos); ?>
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-ubicacion">Ubicación</label>
-              <input type="text" id="f-ubicacion" name="ubicacion" class="ih-input"
-                     placeholder="Ej: Oficina 2, Rack A3, Depósito…"
-                     value="<?= htmlspecialchars((string)$fv('ubicacion')) ?>">
+              <?php campo_catalogo($conn, 'ubicacion', (string)$fv('ubicacion'), $puedeGestionarCatalogos); ?>
             </div>
 
             <div class="ih-field ih-field--required">

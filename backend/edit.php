@@ -8,6 +8,8 @@ require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/tenants/catalogos.php';
+require_once __DIR__ . '/../includes/campo_catalogo.php';
 
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
@@ -15,6 +17,7 @@ $cloudUploadOk = cloud_upload_disponible($conn);
 
 // Verificar permiso de editar activos
 $_edit_uid  = (int)($_SESSION['user_id'] ?? 0);
+$_edit_user = null;
 if ($_edit_uid > 0) {
     $_edit_us   = tn('users');
     $_edit_stmt = $conn->prepare("SELECT role FROM `{$_edit_us}` WHERE id = ? LIMIT 1");
@@ -24,6 +27,8 @@ if ($_edit_uid > 0) {
     $_edit_stmt->close();
     require_permission('asset.edit', $_edit_user);
 }
+// ¿Puede ampliar las listas de "Asignado a" y "Ubicación"?
+$puedeGestionarCatalogos = $_edit_user ? user_can('catalog.manage', $_edit_user) : false;
 
 // ======================================================
 // DETECCIÓN DEL PROVEEDOR DE ALMACENAMIENTO
@@ -278,6 +283,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     // fix longitudes que pueden venir encodeadas
     $valores['patchcord_longitud'] = html_entity_decode($valores['patchcord_longitud'] ?? '', ENT_QUOTES|ENT_HTML5, 'UTF-8');
     $valores['bobina_longitud']    = html_entity_decode($valores['bobina_longitud'] ?? '',    ENT_QUOTES|ENT_HTML5, 'UTF-8');
+
+    // "Asignado a" y "Ubicación" salen de un catálogo: el <select> del formulario
+    // no alcanza como control, cualquiera puede mandar otro valor por POST. Se
+    // valida contra la lista; si no pertenece, se descarta. Se acepta el valor
+    // que el activo ya tenía para no romper la edición de activos viejos.
+    $valores['asignado_a'] = catalogo_normalizar($conn, 'asignado_a', $valores['asignado_a'] ?? '', $producto['asignado_a'] ?? null);
+    $valores['ubicacion']  = catalogo_normalizar($conn, 'ubicacion',  $valores['ubicacion']  ?? '', $producto['ubicacion']  ?? null);
 
     // Guardar en sesión para fallback si hay error
     $_SESSION['form_data'] = $valores;
@@ -712,9 +724,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <div class="edit-section-title"><i class="bi bi-person-badge"></i> Datos principales</div>
         <div class="edit-grid">
           <div class="ih-field">
-            <label class="ih-field__label">Asignado a</label>
-            <input type="text" class="ih-input" name="asignado_a"
-                   value="<?= htmlspecialchars($producto['asignado_a'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            <label class="ih-field__label" for="f-asignado_a">Asignado a</label>
+            <?php campo_catalogo($conn, 'asignado_a', $producto['asignado_a'] ?? '', $puedeGestionarCatalogos); ?>
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Nombre/Modelo <span class="req">*</span></label>
@@ -946,9 +957,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
                    value="<?= htmlspecialchars((string)($producto['valor_usd'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
           <div class="ih-field">
-            <label class="ih-field__label">Ubicación</label>
-            <input type="text" class="ih-input" name="ubicacion"
-                   value="<?= htmlspecialchars($producto['ubicacion'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            <label class="ih-field__label" for="f-ubicacion">Ubicación</label>
+            <?php campo_catalogo($conn, 'ubicacion', $producto['ubicacion'] ?? '', $puedeGestionarCatalogos); ?>
           </div>
         </div>
 

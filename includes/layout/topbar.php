@@ -1,18 +1,21 @@
 <?php
 /**
  * Topbar reutilizable — INTELLIHELP
+ *
  * Variables esperadas:
  *   $topbar_title    string — texto principal del topbar
  *   $topbar_subtitle string
  *   $topbar_user     string — nombre del usuario logueado (para el chip)
  *   $topbar_email    string — email del usuario
  *   $topbar_actions  string — HTML extra de botones a la derecha
+ *   $tenant_name     string — nombre de la empresa (marca del portal tenant)
  */
 $topbar_title    = $topbar_title    ?? '';
 $topbar_subtitle = $topbar_subtitle ?? '';
 $topbar_user     = $topbar_user     ?? '';
 $topbar_email    = $topbar_email    ?? '';
 $topbar_actions  = $topbar_actions  ?? '';
+$tenant_name     = $tenant_name     ?? '';
 // Foto de perfil: superadmin (Google SSO) o usuario tenant (Google Drive OAuth)
 $topbar_pic = $topbar_pic ?? $_SESSION['superadmin_pic'] ?? $_SESSION['user_picture'] ?? '';
 $initials = '';
@@ -22,17 +25,30 @@ if ($topbar_user) {
 }
 ?>
 <style>
-.ih-user-chip__photo {
-  width: 28px; height: 28px; border-radius: 50%;
-  object-fit: cover; display: block; flex-shrink: 0;
-}
+.ih-user-chip__photo { width:28px; height:28px; border-radius:50%; object-fit:cover; display:block; flex-shrink:0; }
+.ih-topbar__brand { display:flex; align-items:center; gap:.6rem; flex-shrink:0; text-decoration:none; color:inherit; }
+.ih-topbar__brand:hover { text-decoration:none; }
+.ih-topbar__brand-logo { width:32px; height:32px; border-radius:9px; overflow:hidden; flex:none;
+  background:var(--primary,#663399); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:15px; }
+.ih-topbar__brand-text { line-height:1.15; }
+.ih-topbar__brand-text strong { display:block; font-size:13.5px; font-weight:800; letter-spacing:-.02em; }
+.ih-topbar__brand-text span { display:block; font-size:11px; color:var(--muted,#6f6a7d); }
+.ih-topbar__sep { width:1px; height:26px; background:var(--line,#e7e4ef); flex:none; }
+@media (max-width:640px){ .ih-topbar__brand-text, .ih-topbar__sep { display:none; } }
 </style>
 <header class="ih-topbar ih-app__topbar">
-  <button class="ih-topbar__burger" type="button" aria-label="Abrir menú" onclick="document.querySelector('.ih-app').classList.toggle('is-open')">
-    <i class="bi bi-list"></i>
-  </button>
+  <a class="ih-topbar__brand" href="/inventario/index.php" title="Ir al inventario">
+    <span class="ih-topbar__brand-logo"><?= platform_logo_html() ?></span>
+    <span class="ih-topbar__brand-text">
+      <strong>Asset Vault</strong>
+      <span><?= htmlspecialchars($tenant_name ?: 'INTELLIHELP') ?></span>
+    </span>
+  </a>
 
-  <div>
+  <span class="ih-topbar__sep"></span>
+
+  <div style="min-width:0">
     <h1 class="ih-topbar__title">
       <?= htmlspecialchars($topbar_title) ?>
       <?php if ($topbar_subtitle): ?><small><?= htmlspecialchars($topbar_subtitle) ?></small><?php endif; ?>
@@ -55,6 +71,3 @@ if ($topbar_user) {
     <?php endif; ?>
   </div>
 </header>
-
-<!-- Backdrop para sidebar mobile -->
-<div class="ih-backdrop" onclick="document.querySelector('.ih-app').classList.remove('is-open')"></div>

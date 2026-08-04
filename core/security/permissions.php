@@ -143,7 +143,8 @@ if (!function_exists('require_permission')) {
             ?>
             <!doctype html>
             <html lang="es"><head><meta charset="utf-8"><title>403</title>
-            <link href="/assets/css/intellihelp.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <link href="/assets/css/app.css" rel="stylesheet">
             <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
             </head><body>
             <div class="ih-auth">

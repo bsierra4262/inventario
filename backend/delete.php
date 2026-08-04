@@ -62,11 +62,17 @@ if (
 
     $conn->begin_transaction();
     try {
-        // Marcar como archivado con fecha de baja
+        // Marcar como archivado con fecha de baja.
+        // Se guarda además quién, cuándo y por qué, para que la papelera pueda
+        // mostrarlo y para poder restaurar con contexto.
+        $quien = (string)($_SESSION['user_email'] ?? ($_me['username'] ?? ('id:' . $user_id)));
         $stmt_update = $conn->prepare(
-            "UPDATE `" . tn('productos') . "` SET archivado = 1, fecha_baja = ? WHERE id = ?"
+            "UPDATE `" . tn('productos') . "`
+                SET archivado = 1, fecha_baja = ?, archivado_en = NOW(),
+                    archivado_por = ?, archivado_motivo = ?
+              WHERE id = ?"
         );
-        $stmt_update->bind_param('si', $fecha_baja, $producto_id);
+        $stmt_update->bind_param('sssi', $fecha_baja, $quien, $motivo, $producto_id);
         $stmt_update->execute();
         $stmt_update->close();
 
@@ -131,64 +137,33 @@ if (
             'archivo'
         );
 
-        // ── Renombrar carpeta en Drive para marcarla como archivada ──────────
-        $driveMsg = '';
-        $carpetaId = $producto['carpeta_raiz_drive'] ?? '';
-        if ($carpetaId !== '' && isset($_SESSION['access_token'])) {
-            try {
-                require_once __DIR__ . '/../core/config/platform.php';
-                $driveClientId     = GOOGLE_CLIENT_ID;
-                $driveClientSecret = GOOGLE_CLIENT_SECRET;
-                $driveRedirectUri  = GOOGLE_REDIRECT_URI ?: ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/auth/superadmin_callback.php');
-
-                // Override con config del tenant
-                $cfgT = tn('cloud_config');
-                $cfgR = $conn->query("SELECT config_key, config_value FROM `{$cfgT}` WHERE provider = 'google'");
-                if ($cfgR) {
-                    while ($cfgRow = $cfgR->fetch_assoc()) {
-                        match ($cfgRow['config_key']) {
-                            'client_id'     => $driveClientId     = $cfgRow['config_value'],
-                            'client_secret' => $driveClientSecret = $cfgRow['config_value'],
-                            'redirect_uri'  => $driveRedirectUri  = $cfgRow['config_value'],
-                            default         => null,
-                        };
-                    }
+        // ── Mover la carpeta del activo a "Archivados" en Drive ──────────────
+        //
+        // Antes sólo se le anteponía "[ARCHIVADO]" al nombre y la carpeta se
+        // quedaba mezclada con las de los activos en uso. Ahora se mueve a una
+        // carpeta "Archivados" colgada de la raíz del tenant, y se recuerda de
+        // dónde salió para poder devolverla si el activo se restaura.
+        //
+        // Si Drive no está configurado o el token venció, no pasa nada: el
+        // archivado en la base ya se hizo y no se bloquea por esto.
+        $driveMsg  = '';
+        $carpetaId = (string)($producto['carpeta_raiz_drive'] ?? '');
+        if ($carpetaId !== '') {
+            require_once __DIR__ . '/../core/integraciones/drive.php';
+            $res = drive_archivar_carpeta($conn, $carpetaId, $fecha_baja);
+            if ($res['ok']) {
+                $driveMsg = $res['mensaje'];
+                if ($res['padre_previo']) {
+                    $stPP = $conn->prepare("UPDATE `" . tn('productos') . "` SET drive_padre_previo = ? WHERE id = ?");
+                    $stPP->bind_param('si', $res['padre_previo'], $producto_id);
+                    $stPP->execute();
+                    $stPP->close();
                 }
-
-                if ($driveClientId && $driveClientSecret) {
-                    $gClient = new Google\Client();
-                    $gClient->setClientId($driveClientId);
-                    $gClient->setClientSecret($driveClientSecret);
-                    $gClient->setRedirectUri($driveRedirectUri);
-                    $gClient->setAccessToken($_SESSION['access_token']);
-
-                    if ($gClient->isAccessTokenExpired()) {
-                        $rt = $gClient->getRefreshToken();
-                        if ($rt) {
-                            $_SESSION['access_token'] = $gClient->fetchAccessTokenWithRefreshToken($rt);
-                        } else {
-                            throw new Exception('Token Drive expirado al archivar.');
-                        }
-                    }
-
-                    $driveService = new Google\Service\Drive($gClient);
-
-                    // Obtener nombre actual de la carpeta
-                    $fileInfo  = $driveService->files->get($carpetaId, ['fields' => 'name']);
-                    $nombreOrig = $fileInfo->getName();
-
-                    // Renombrar solo si no tiene el prefijo ya
-                    if (!str_starts_with($nombreOrig, '[ARCHIVADO]')) {
-                        $nuevoNombre = '[ARCHIVADO ' . $fecha_baja . '] ' . $nombreOrig;
-                        $updatedFile = new Google\Service\Drive\DriveFile(['name' => $nuevoNombre]);
-                        $driveService->files->update($carpetaId, $updatedFile);
-                        $driveMsg = ' La carpeta en Drive fue renombrada como archivada.';
-                        log_event((string)$user_id, 'ARCHIVO_DRIVE', "Carpeta Drive $carpetaId renombrada a '$nuevoNombre'", 'archivo');
-                    }
-                }
-            } catch (Throwable $driveEx) {
-                // Drive error no bloquea el archivado — solo logueamos
-                log_event((string)$user_id, 'WARN', "No se pudo renombrar carpeta Drive al archivar: " . $driveEx->getMessage(), 'archivo');
+                log_event((string)$user_id, 'ARCHIVO_DRIVE',
+                    "Carpeta Drive {$carpetaId} movida a Archivados (padre previo: " . ($res['padre_previo'] ?? '—') . ")", 'archivo');
+            } else {
+                log_event((string)$user_id, 'WARN',
+                    "No se pudo mover la carpeta Drive {$carpetaId} al archivar (Drive no disponible o sin token)", 'archivo');
             }
         }
 
