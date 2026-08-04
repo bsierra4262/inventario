@@ -20,6 +20,25 @@
 
 declare(strict_types=1);
 
+/**
+ * Nombre propio de la cookie de sesión.
+ *
+ * Se dejó de usar `PHPSESSID` porque colisionaba. `auth/logout.php` seteaba la
+ * cookie con `Domain=desarrollo.intellihelp.tech` (cookie de dominio) mientras
+ * que el login la setea host-only: para el navegador son DOS cookies distintas
+ * con el mismo nombre y el mismo path. Las manda a las dos y PHP se queda con
+ * una sola — a veces la vieja. Resultado: el login funcionaba (el TENANT_LOGIN
+ * quedaba en el log) y un segundo después la sesión aparecía vacía y volvía a
+ * la pantalla de acceso.
+ *
+ * Con un nombre propio, cualquier PHPSESSID viejo que haya quedado en el
+ * navegador deja de importar, y tampoco puede chocar con las otras aplicaciones
+ * PHP que conviven en el dominio (WordPress, CRM, remitos, GLPI, osticket).
+ */
+if (!defined('APP_SESSION_NAME')) {
+    define('APP_SESSION_NAME', 'AVSESSID');
+}
+
 if (!function_exists('app_session_cookie_params')) {
     /**
      * Parámetros de cookie de sesión. Refuerza lo que ya declara `.user.ini`
@@ -47,9 +66,35 @@ if (!function_exists('app_session_start')) {
         if (!headers_sent()) {
             @ini_set('session.use_strict_mode', '1');
             @ini_set('session.use_only_cookies', '1');
+            if (session_name() !== APP_SESSION_NAME) { session_name(APP_SESSION_NAME); }
             session_set_cookie_params(app_session_cookie_params());
         }
         session_start();
+        app_session_limpiar_legado();
+    }
+}
+
+if (!function_exists('app_session_limpiar_legado')) {
+    /**
+     * Borra del navegador cualquier cookie `PHPSESSID` que haya quedado, en sus
+     * dos alcances posibles (host-only y de dominio). Sin esto, el usuario que
+     * ya tenía la cookie rota tendría que limpiarla a mano para poder entrar.
+     */
+    function app_session_limpiar_legado(): void {
+        if (headers_sent() || !isset($_COOKIE['PHPSESSID'])) { return; }
+        $host   = (string)($_SERVER['HTTP_HOST'] ?? '');
+        $host   = explode(':', $host)[0];
+        $vencida = ['expires' => time() - 42000, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'Lax'];
+
+        setcookie('PHPSESSID', '', $vencida);                                  // host-only
+        if ($host !== '' && str_contains($host, '.')) {
+            setcookie('PHPSESSID', '', $vencida + ['domain' => $host]);        // de dominio
+            $padre = implode('.', array_slice(explode('.', $host), -2));
+            if ($padre !== $host) {
+                setcookie('PHPSESSID', '', $vencida + ['domain' => '.' . $padre]);
+            }
+        }
+        unset($_COOKIE['PHPSESSID']);
     }
 }
 

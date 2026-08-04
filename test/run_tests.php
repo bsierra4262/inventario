@@ -343,6 +343,34 @@ foreach (['auth/login.php' => 'app_session_rotar', 'auth/superadmin_callback.php
           'core/security/session_role.php' => 'app_session_rotar'] as $t => $fn) {
     chequear("{$t} rota la sesión al autenticar", str_contains(leer($t), $fn));
 }
+
+// El login entraba (quedaba TENANT_LOGIN en el log) y un segundo después la
+// sesión aparecía vacía: convivían DOS cookies PHPSESSID —una host-only del
+// login y otra con Domain= que dejaba logout.php—, el navegador mandaba las dos
+// y PHP se quedaba con la que no era.
+chequear('La cookie de sesión tiene nombre propio, no PHPSESSID',
+    preg_match("/define\s*\(\s*'APP_SESSION_NAME'\s*,\s*'(?!PHPSESSID)[A-Z0-9_]+'/", $sg) === 1);
+chequear('app_session_start() aplica ese nombre', str_contains($sg, 'session_name(APP_SESSION_NAME)'));
+chequear('Se expiran las cookies PHPSESSID que quedaron en el navegador',
+    str_contains($sg, 'app_session_limpiar_legado'));
+chequear('El .htaccess fija session.name (este hosting no lee .user.ini)',
+    preg_match('/php_value\s+session\.name\s+\S+/', $ht = leer('.htaccess')) === 1);
+foreach (['session.cookie_httponly', 'session.cookie_secure', 'session.cookie_samesite',
+          'session.use_strict_mode'] as $flag) {
+    chequear(".htaccess fija {$flag}", preg_match('/php_value\s+' . preg_quote($flag, '/') . '\s+\S+/', $ht) === 1);
+}
+
+// Nadie puede volver a fijar un domain propio: eso es lo que creaba la segunda cookie.
+$conDominio = [];
+foreach (archivos_php() as $f) {
+    $r = rel($f);
+    if (str_contains($r, 'session_guard.php')) { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (preg_match("/'domain'\s*=>\s*\\\$(host|cookieDomain)/", $src)) { $conDominio[] = $r; }
+}
+chequear('Ningún archivo fija un domain propio para la cookie de sesión', $conDominio === [], implode(', ', $conDominio));
+chequear('logout.php borra la cookie con los mismos parámetros con que se creó',
+    str_contains(leer('auth/logout.php'), 'app_session_cookie_params()'));
 chequear('login.php valida el company_id del POST contra las empresas activas',
     preg_match('/REQUEST_METHOD.*POST.*company_id/s', leer('auth/login.php')) === 1
  && str_contains(leer('auth/login.php'), 'foreach ($companies as $c)'));

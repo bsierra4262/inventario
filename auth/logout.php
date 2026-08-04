@@ -11,21 +11,12 @@
 
 declare(strict_types=1);
 
-// Iniciar sesión con parámetros seguros
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$cookieDomain = str_contains($host, '.') ? $host : '';
-
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path'     => '/',
-        'domain'   => $cookieDomain,
-        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-    session_start();
-}
+// Los parámetros de la cookie salen de session_guard.php, los MISMOS que usa el
+// login. Antes acá se seteaba `domain => $host`, lo que crea una cookie de
+// dominio: para el navegador era una cookie distinta de la host-only del login,
+// convivían las dos con el mismo nombre y PHP se quedaba con la que no era.
+require_once __DIR__ . '/../core/security/session_guard.php';
+app_session_start();
 
 // Logger opcional
 $loggerPath = __DIR__ . '/../logs/logger.php';
@@ -54,20 +45,13 @@ if (!empty($_SESSION['access_token']['access_token'])) {
 // Limpiar sesión completa
 $_SESSION = [];
 
-// Borrar cookie
+// Borrar cookie con los MISMOS parámetros con los que se creó: si el domain no
+// coincide, el navegador no la borra y queda una sesión huérfana dando vueltas.
 if (ini_get('session.use_cookies')) {
-    setcookie(
-        session_name(),
-        '',
-        [
-            'expires'  => time() - 42000,
-            'path'     => '/',
-            'domain'   => $cookieDomain,
-            'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]
-    );
+    $params = app_session_cookie_params();
+    $params['expires'] = time() - 42000;
+    unset($params['lifetime']);
+    setcookie(session_name(), '', $params);
 }
 
 // Destruir y regenerar
