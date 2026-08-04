@@ -5,9 +5,11 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/security/session_role.php';
+require_once __DIR__ . '/../core/security/session_guard.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
-csrf_start(); // arranca sesión
+app_session_start(); // sesión con cookie HttpOnly + SameSite
+csrf_start();
 
 // Ya autenticado → directo al resumen
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
@@ -51,21 +53,16 @@ try {
         "ALTER TABLE `users_platform` MODIFY COLUMN `password` VARCHAR(255) DEFAULT NULL",
     ] as $a) { try { $db->conn->query($a); } catch (Throwable) {} }
 
+    // NO se siembra ningún superadmin desde acá.
+    //
+    // Esta página es pública. Cuando re-creaba `bsierra` con la contraseña fija
+    // `***SECRETO-PURGADO***` al encontrar la tabla vacía, encadenada con el reset
+    // abierto de bay.php permitía tomar la plataforma entera sin credenciales:
+    // vaciar users_platform → cargar esta página → entrar con la contraseña del repo.
+    //
+    // El alta inicial vive ahora en:  php bin/crear_superadmin.php <usuario> <email>
     $cnt = (int)($db->conn->query("SELECT COUNT(*) AS c FROM users_platform")->fetch_assoc()['c'] ?? 0);
-    if ($cnt === 0) {
-        $isFirstRun = true;
-        $u = 'bsierra';
-        $h = password_hash('***SECRETO-PURGADO***', PASSWORD_DEFAULT);
-        $e = 'bsierra@intellihelp.tech';
-        $st = $db->conn->prepare("INSERT INTO users_platform (username, password, email, role) VALUES (?, ?, ?, 'superadmin')");
-        $st->bind_param('sss', $u, $h, $e);
-        $st->execute();
-        $st->close();
-    } else {
-        try {
-            $db->conn->query("UPDATE users_platform SET email = 'bsierra@intellihelp.tech' WHERE username = 'bsierra' AND email = 'bsierra4262@gmail.com'");
-        } catch (Throwable) {}
-    }
+    $isFirstRun = ($cnt === 0);
 } catch (Throwable $be) {
     $bootstrapError = $be->getMessage();
 }
@@ -193,13 +190,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
             superadmin_login($uid, $role);
             $_SESSION['superadmin_email'] = $email;
             $_SESSION['superadmin_name']  = $user;
+            // session_write_close() ANTES del redirect: en hosting compartido, si
+            // el Location sale primero, el request siguiente puede leer la sesión
+            // todavía vacía. Ese era el síntoma que se atribuía a regenerate_id.
             if (!$ssoConfigured && $role === 'superadmin') {
                 $_SESSION['pending_sso_setup'] = true;
-                header('Location: /dashboard/superadmin_integraciones.php');
-            } else {
-                header('Location: /dashboard/dashboard_resumen.php');
+                app_session_cerrar_y_redirigir('/dashboard/superadmin_integraciones.php');
             }
-            exit;
+            app_session_cerrar_y_redirigir('/dashboard/dashboard_resumen.php');
         }
         $stmt->close();
         $err = 'Usuario o contraseña inválidos.';
@@ -242,10 +240,11 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-alert ih-alert--warning">
           <i class="bi bi-shield-lock-fill"></i>
           <div>
-            <div class="ih-alert__title">Primera ejecución</div>
-            Se creó el superadmin inicial:<br>
-            Usuario: <code>bsierra</code> · Contraseña: <code>***SECRETO-PURGADO***</code><br>
-            <small>Al ingresar serás redirigido a configurar SSO.</small>
+            <div class="ih-alert__title">Todavía no hay ningún superadmin</div>
+            El alta inicial se hace por consola, para que la contraseña no viaje
+            por la web ni quede escrita en el código:<br>
+            <code>php bin/crear_superadmin.php &lt;usuario&gt; &lt;email&gt;</code><br>
+            <small>El comando genera una contraseña al azar y la muestra una sola vez.</small>
           </div>
         </div>
       <?php endif; ?>

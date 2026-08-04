@@ -341,55 +341,50 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         $detalleTecnico = ''; // vacío al importar
         $carpetaRaizDrive = null; // aún no creada
 
-        // Types (33 params) corregido:
-        // i producto_id + 7s + i cantidad + d valor_usd + 7s + i periodo_garantia + 14s + s carpeta_raiz_drive
-        // = i + sssssss + i + d + sssssss + i + ssssssssssssss + s = 33 chars
-        // Resultado: isssssssidsssssssissssssssssssss
-        //
-        // (antes habia DOS strings duplicadas con espacios — invalido — que confundian
-        //  el orden de los binds; ademas el item 32 era subsoftware repetido en vez
-        //  de subsoftware_otros)
-        $stmtMov->bind_param(
-            'isssssssidsssssssissssssssssssss',
-            $nuevo_id,
-            $accion,
-            $descripcionMov,
-            $detalleTecnico,
-            $user_id,
-            $registro['modelo'],
-            $registro['marca'],
-            $registro['servis_tag'],
-            $registro['cantidad'],
-            $registro['valor_usd'],
-            $registro['estado'],
-            $registro['categoria'],
-            $registro['subcategoria'],
-            $registro['asignado_a'],
-            $registro['ubicacion'],
-            $registro['fecha_ingreso'],
-            $registro['fecha_garantia'],
-            $registro['periodo_garantia'],
-            $registro['patchcord_tipo'],
-            $registro['patchcord_longitud'],
-            $registro['switch_gestion'],
-            $registro['antenas_tipo'],
-            $registro['bobina_categoria'],
-            $registro['bobina_ubicacion'],
-            $registro['bobina_longitud'],
-            $registro['conectores_tipo'],
-            $registro['detalle_conectores'],
-            $registro['cintas_generacion'],
-            $registro['detalle_repuesto'],
-            $registro['detalle_otros'],
-            $registro['subsoftware'],
-            $registro['subsoftware_otros'],
-            $carpetaRaizDrive
-        );
-        // IMPORTANTE:
-        // - Ajustar el string de tipos ('isss...') EXACTAMENTE a la cantidad/categoría
-        //   de columnas de bind_param. No puedo inferir 100% porque no tengo el CREATE TABLE real.
-        // - También revisá que en el penúltimo parámetro no dupliques subsoftware accidentalmente:
-        //   debería ser $registro['subsoftware_otros'] en la anteúltima posición.
+        // Igual que en edit.php: los tipos se derivan de la lista de valores, no se
+        // escriben a mano. El string anterior tenía 32 caracteres para 33 parámetros
+        // → ArgumentCountError (fatal) en PHP 8, así que la importación de CSV
+        // moría al registrar el movimiento del primer activo.
+        // [tipo, valor] en el MISMO orden que las columnas del INSERT de arriba.
+        $bindMov = [
+            ['i', $nuevo_id],
+            ['s', $accion],
+            ['s', $descripcionMov],
+            ['s', $detalleTecnico],
+            ['s', $user_id],
+            ['s', $registro['modelo']],
+            ['s', $registro['marca']],
+            ['s', $registro['servis_tag']],
+            ['i', $registro['cantidad']],
+            ['d', $registro['valor_usd']],
+            ['s', $registro['estado']],
+            ['s', $registro['categoria']],
+            ['s', $registro['subcategoria']],
+            ['s', $registro['asignado_a']],
+            ['s', $registro['ubicacion']],
+            ['s', $registro['fecha_ingreso']],
+            ['s', $registro['fecha_garantia']],
+            ['i', $registro['periodo_garantia']],
+            ['s', $registro['patchcord_tipo']],
+            ['s', $registro['patchcord_longitud']],
+            ['s', $registro['switch_gestion']],
+            ['s', $registro['antenas_tipo']],
+            ['s', $registro['bobina_categoria']],
+            ['s', $registro['bobina_ubicacion']],
+            ['s', $registro['bobina_longitud']],
+            ['s', $registro['conectores_tipo']],
+            ['s', $registro['detalle_conectores']],
+            ['s', $registro['cintas_generacion']],
+            ['s', $registro['detalle_repuesto']],
+            ['s', $registro['detalle_otros']],
+            ['s', $registro['subsoftware']],
+            ['s', $registro['subsoftware_otros']],
+            ['s', $carpetaRaizDrive],
+        ];
+
+        $tiposMov  = implode('', array_column($bindMov, 0));
+        $paramsMov = array_column($bindMov, 1);
+        $stmtMov->bind_param($tiposMov, ...$paramsMov);
 
         $stmtMov->execute();
         $stmtMov->close();

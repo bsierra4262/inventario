@@ -156,20 +156,14 @@ try {
     log_event("install.php", "INSTALACION", "Tabla platform_config OK", "instalacion");
 
     // ── Seed superadmin ──────────────────────────────────────────────────────
+    // El superadmin NO se crea desde acá: esta página es pública y la contraseña
+    // quedaría impresa en pantalla y escrita en el repositorio. El alta inicial
+    // se hace por consola con una contraseña generada al azar.
     $cntSA = (int)($master->conn->query("SELECT COUNT(*) c FROM users_platform")->fetch_assoc()['c'] ?? 0);
     if ($cntSA === 0) {
-        $saUser  = 'bsierra';
-        $saEmail = 'bsierra@intellihelp.tech';
-        $saPass  = '***SECRETO-PURGADO***';
-        $saHash  = password_hash($saPass, PASSWORD_DEFAULT);
-        $saStmt  = $master->conn->prepare(
-            "INSERT INTO users_platform (username, password, email, role) VALUES (?, ?, ?, 'superadmin')"
-        );
-        $saStmt->bind_param('sss', $saUser, $saHash, $saEmail);
-        $saStmt->execute();
-        $saStmt->close();
-        installStep('person-check-fill', 'step-ok', 'SuperAdmin <strong>bsierra</strong> creado (contraseña inicial: <code>***SECRETO-PURGADO***</code>).');
-        log_event("install.php", "INSTALACION", "SuperAdmin bsierra creado.", "instalacion");
+        installStep('terminal-fill', 'step-info',
+            'Falta el superadmin. Crealo por consola: <code>php bin/crear_superadmin.php &lt;usuario&gt; &lt;email&gt;</code>');
+        log_event("install.php", "INSTALACION", "Estructura lista; falta crear el superadmin por CLI.", "instalacion");
     } else {
         installStep('person-fill', 'step-info', "SuperAdmin ya existente ($cntSA usuario/s) — no se sobreescribió.");
     }

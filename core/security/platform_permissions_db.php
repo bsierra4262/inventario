@@ -132,6 +132,7 @@ function platform_perms_grouped(): array {
             'company.create' => 'Crear nuevas empresas',
             'company.edit'   => 'Editar datos de empresa',
             'company.delete' => 'Eliminar empresas',
+            'company.backup' => 'Descargar respaldo completo (incluye hashes y secretos)',
         ],
         'Usuarios de plataforma' => [
             'platform_user.manage' => 'Gestionar usuarios superadmin',

@@ -31,7 +31,45 @@
     # Forzar HTTPS
     RewriteCond %{HTTPS} !=on
     RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+    # Bloquear el árbol .git completo. Hoy Hostinger lo tapa por su cuenta,
+    # pero eso es configuración del hosting, no del proyecto: si migramos,
+    # /.git/config queda descargable y con él todo el código y su historia.
+    RewriteRule (^|/)\.git(/|$) - [F,L]
+
+    # Directorios que nunca deben servirse por HTTP.
+    # logs/ contenía audit.log descargable (IPs, emails, eventos de login).
+    # backend/temp/ recibe uploads con el nombre original del archivo.
+    RewriteRule ^logs(/|$)          - [F,L]
+    RewriteRule ^backend/temp(/|$)  - [F,L]
+    RewriteRule ^tools(/|$)         - [F,L]
+    RewriteRule ^tests(/|$)         - [F,L]
+</IfModule>
+
+# ── Archivos sensibles: nunca por HTTP ────────────────────────────
+# composer.lock revelaba la versión exacta de cada dependencia;
+# deploy.sh, la mecánica del despliegue.
+<FilesMatch "(^\.|composer\.(json|lock)$|\.(sh|md|lock|sql|log|ini|bak|orig|dist|example)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# ── Cabeceras de seguridad ────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    # Oculta la versión de PHP (expose_php=1 en el php.ini del hosting)
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
 </IfModule>
 
 # Bloquear listado de directorios
 Options -Indexes
+ServerSignature Off

@@ -27,7 +27,9 @@ require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
 superadmin_require_login();
 
-if (!platform_can('company.view')) {
+// El dump incluye `users` (hashes de contraseña) y `cloud_config` (client_secret
+// de OAuth del tenant). Con `company.view` lo podía bajar hasta un rol `viewer`.
+if (!platform_can('company.backup')) {
     http_response_code(403);
     echo 'Sin permiso para descargar respaldos.';
     exit;

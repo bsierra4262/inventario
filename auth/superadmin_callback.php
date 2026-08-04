@@ -17,9 +17,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/security/session_role.php';
+require_once __DIR__ . '/../core/security/session_guard.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+app_session_start();
 
 // Ya autenticado como superadmin — SOLO si NO viene de un flujo tenant (tg: o tm:)
 $_incomingState = $_GET['state'] ?? '';
@@ -143,10 +144,10 @@ if ($isTenantFlow) {
 
             if ($email === '') { $tenantCbError('Google no devolvió un email válido.'); }
 
-            // Limpiar TODA la sesión (quita flag SA y datos previos) sin regenerar ID
-            // session_regenerate_id(true) tiene un bug en algunos hostings shared:
-            // envía Set-Cookie con nuevo ID pero no escribe el archivo → sesión vacía en el redirect.
-            session_unset();
+            // Rotar el ID de sesión al autenticar (anti fijación) y limpiar todo
+            // lo anterior, incluido el flag de superadmin si venía de otra sesión.
+            require_once __DIR__ . '/../core/security/session_guard.php';
+            app_session_rotar();
 
             $_SESSION['company_id']           = $tenantCompanyId;
             $_SESSION['google_authenticated'] = true;
@@ -201,8 +202,9 @@ if ($isTenantFlow) {
 
             if ($email === '') { $tenantCbError('Microsoft no devolvió un email válido.'); }
 
-            // Limpiar TODA la sesión sin regenerar ID (ver nota en flujo Google)
-            session_unset();
+            // Rotar el ID de sesión al autenticar (ver nota en el flujo Google)
+            require_once __DIR__ . '/../core/security/session_guard.php';
+            app_session_rotar();
 
             $_SESSION['company_id']              = $tenantCompanyId;
             $_SESSION['ms_authenticated']        = true;
@@ -386,8 +388,8 @@ try {
         sa_cb_error('Proveedor OAuth desconocido.');
     }
 
-    header('Location: /dashboard/dashboard_resumen.php');
-    exit;
+    // Escribir la sesión antes de redirigir (ver nota en session_guard.php).
+    app_session_cerrar_y_redirigir('/dashboard/dashboard_resumen.php');
 
 } catch (Throwable $e) {
     sa_cb_error('Error de autenticación: ' . $e->getMessage());

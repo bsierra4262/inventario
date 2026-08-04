@@ -9,6 +9,15 @@ require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 
 superadmin_require_login();
+if (!platform_can('company.view')) {
+    http_response_code(403);
+    exit('Sin permiso para ver empresas.');
+}
+// Las acciones de esta pantalla (resetear contraseñas de usuarios del tenant,
+// activarlos/desactivarlos, borrar cloud_config) son de gestión, no de lectura.
+// Antes alcanzaba con estar logueado: un rol `viewer` podía resetear la
+// contraseña de cualquier usuario de cualquier empresa.
+$puedeGestionar = platform_can('tenant_user.manage');
 csrf_start();
 
 $id = (int)($_GET['id'] ?? 0);
@@ -57,6 +66,9 @@ try {
 
         if (!$csrfOk) {
             $adminFeedback = 'CSRF invalido. Recargá la página.';
+            $adminFeedbackOk = false;
+        } elseif (!$puedeGestionar) {
+            $adminFeedback = 'Tu rol no tiene permiso para administrar usuarios de empresas.';
             $adminFeedbackOk = false;
         } else {
             $action = (string)$_POST['admin_action'];
@@ -526,9 +538,13 @@ require __DIR__ . '/../includes/layout/head.php';
               </span>
             </td>
             <td style="text-align:right;padding:12px 0;">
-              <a href="/dashboard/empresa_backup.php?id=<?= (int)$id ?>" class="ih-btn ih-btn--primary ih-btn--sm">
-                <i class="bi bi-download"></i> Descargar respaldo
-              </a>
+              <?php if (platform_can('company.backup')): ?>
+                <a href="/dashboard/empresa_backup.php?id=<?= (int)$id ?>" class="ih-btn ih-btn--primary ih-btn--sm">
+                  <i class="bi bi-download"></i> Descargar respaldo
+                </a>
+              <?php else: ?>
+                <span class="ih-text-xs ih-text-muted">Requiere rol superadmin</span>
+              <?php endif; ?>
             </td>
           </tr>
         </table>

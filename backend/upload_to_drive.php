@@ -91,8 +91,9 @@ if ($driveEnabled) {
 
         if ($driveEnabled) {
             $service = new Google\Service\Drive($client);
-            $tempDir = __DIR__ . '/temp';
-            if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
+            // Fuera del web root: secure/ está bloqueado por su propio .htaccess.
+            $tempDir = __DIR__ . '/../secure/tmp';
+            if (!is_dir($tempDir)) { @mkdir($tempDir, 0700, true); }
         }
     } catch (Throwable $e) {
         $driveEnabled = false;
@@ -324,7 +325,10 @@ try {
             ]);
 
             if (count($existingFile->getFiles()) > 0) {
-                $uniqueName = uniqid('dup_') . '_' . basename($fileName);
+                // Nombre en disco sin la extensión que eligió el usuario: un
+                // polyglot (imagen válida + código PHP) llamado .php pasaba el
+                // chequeo de MIME y quedaba escrito con esa extensión.
+                $uniqueName = bin2hex(random_bytes(16)) . '.bin';
                 $destPath   = $tempDir . '/' . $uniqueName;
                 move_uploaded_file($tmpPath, $destPath);
                 $archivos_duplicados[] = [

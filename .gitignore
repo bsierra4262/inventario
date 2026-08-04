@@ -7,8 +7,14 @@ logs/*.log
 backend/debug.log
 *.log
 
-# Credenciales Google OAuth — NUNCA en git
+# Credenciales — NUNCA en git
 auth/credentials.json
+secure/config/
+secure/tenants/
+
+# Uploads temporales del flujo de duplicados en Drive
+secure/tmp/
+backend/temp/
 
 # Archivos de entorno locales
 .env

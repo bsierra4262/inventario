@@ -37,8 +37,11 @@ $storageProvider = strtolower((string)($_SESSION['storage_provider'] ?? 'google'
 // ======================================================
 $googleService  = null;
 $parentFolderId = '';
-$tempDir        = __DIR__ . '/temp';
-if (!is_dir($tempDir)) { mkdir($tempDir, 0750, true); }
+// Los temporales del flujo de duplicados van a secure/tmp, que ya está bloqueado
+// por secure/.htaccess (Require all denied). Antes iban a backend/temp/, dentro
+// del web root y sin ningún .htaccess propio.
+$tempDir        = __DIR__ . '/../secure/tmp';
+if (!is_dir($tempDir)) { @mkdir($tempDir, 0700, true); }
 
 if ($storageProvider === 'google') {
     // Plataforma como primario, tenant override vía cloud_config
@@ -130,6 +133,37 @@ if (!$producto) {
 // ======================================================
 // HELPERS DRIVE (GOOGLE). Para MS vamos a dejar TODO en blanco seguro.
 // ======================================================
+
+/**
+ * Escapa un valor para interpolarlo dentro de una query `q` de la API de Drive.
+ *
+ * Los nombres de archivo y de carpeta se venían metiendo crudos entre comillas
+ * simples: un activo llamado  x' or trashed=false or '  cambiaba el sentido de
+ * la consulta y podía hacer coincidir archivos de otras carpetas del Drive.
+ * La API pide escapar la barra invertida y la comilla simple.
+ */
+if (!function_exists('drive_q_escape')) {
+    function drive_q_escape(string $valor): string {
+        return str_replace(["\\", "'"], ["\\\\", "\\'"], $valor);
+    }
+}
+
+/**
+ * Devuelve el primer archivo de un listado de Drive, o null si no hay ninguno.
+ *
+ * `Google\Service\Drive\FileList` extiende `Google\Collection`, que implementa
+ * `Iterator` y `Countable` pero NO `ArrayAccess`. Escribir `$lista[0]` lanzaba
+ * "Cannot use object of type ... as array" — un error fatal que el navegador
+ * muestra como HTTP 500. Era exactamente lo que rompía al guardar una edición
+ * cuando el activo no tenía todavía carpeta en Drive.
+ */
+if (!function_exists('drive_primer_archivo')) {
+    function drive_primer_archivo($lista): ?Google\Service\Drive\DriveFile {
+        $archivos = $lista->getFiles();
+        return $archivos ? $archivos[0] : null;
+    }
+}
+
 if (!function_exists('drive_buscarOCrearCarpetaRaizProducto')) {
 function drive_buscarOCrearCarpetaRaizProducto(
     Google\Service\Drive $service,
@@ -149,13 +183,16 @@ function drive_buscarOCrearCarpetaRaizProducto(
     $folderName = preg_replace('/[^\w\s\-]/u', '', $folderName);
     $folderName = trim(preg_replace('/\s+/', ' ', $folderName));
 
+    $qName   = drive_q_escape($folderName);
+    $qParent = drive_q_escape($parentFolderId);
     $existingFolders = $service->files->listFiles([
-        'q' => "name = '$folderName' and mimeType = 'application/vnd.google-apps.folder' and '$parentFolderId' in parents and trashed = false",
+        'q' => "name = '{$qName}' and mimeType = 'application/vnd.google-apps.folder' and '{$qParent}' in parents and trashed = false",
         'fields' => 'files(id, name)',
         'spaces' => 'drive'
     ]);
-    if (count($existingFolders->getFiles()) > 0) {
-        $carpeta_raiz_drive = $existingFolders[0]->getId();
+    $encontrada = drive_primer_archivo($existingFolders);
+    if ($encontrada !== null) {
+        $carpeta_raiz_drive = $encontrada->getId();
     } else {
         $folderMetadata = new Google\Service\Drive\DriveFile([
             'name' => $folderName,
@@ -185,14 +222,17 @@ function drive_buscarOCrearSubcarpetaProducto(
 ): string {
     $subFolderName = trim($servis_tag) !== '' ? $servis_tag : 'producto_' . $producto_id;
 
+    $qSub    = drive_q_escape($subFolderName);
+    $qParent = drive_q_escape($carpeta_raiz_drive);
     $subFolders = $service->files->listFiles([
-        'q' => "name = '$subFolderName' and mimeType = 'application/vnd.google-apps.folder' and '$carpeta_raiz_drive' in parents and trashed = false",
+        'q' => "name = '{$qSub}' and mimeType = 'application/vnd.google-apps.folder' and '{$qParent}' in parents and trashed = false",
         'fields' => 'files(id, name)',
         'spaces' => 'drive'
     ]);
 
-    if (count($subFolders->getFiles()) > 0) {
-        return $subFolders[0]->getId();
+    $sub = drive_primer_archivo($subFolders);
+    if ($sub !== null) {
+        return $sub->getId();
     } else {
         $subFolderMetadata = new Google\Service\Drive\DriveFile([
             'name' => $subFolderName,
@@ -315,21 +355,29 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                 }
 
                 // ¿Existe ya?
+                $qFile   = drive_q_escape($fileName);
+                $qFolder = drive_q_escape($subcarpeta_drive_id);
                 $filesList = $googleService->files->listFiles([
-                    'q' => "name = '$fileName' and '$subcarpeta_drive_id' in parents and trashed = false",
+                    'q' => "name = '{$qFile}' and '{$qFolder}' in parents and trashed = false",
                     'fields' => 'files(id, name)',
                     'spaces' => 'drive'
                 ]);
 
-                if (count($filesList->getFiles()) > 0) {
-                    // Duplicado: lo guardamos temporal para que el usuario decida
-                    $uniqueName = uniqid('dup_') . '_' . basename($fileName);
+                $duplicado = drive_primer_archivo($filesList);
+                if ($duplicado !== null) {
+                    // Duplicado: lo guardamos temporal para que el usuario decida.
+                    // El nombre en disco NO conserva el original: se guarda un hash
+                    // sin extensión y fuera del web root. Antes se escribía
+                    // "dup_<uniqid>_<nombre original>" dentro de backend/temp/, así
+                    // que un polyglot (cabecera de imagen + código PHP) llamado
+                    // .php pasaba el chequeo de MIME y quedaba servible por HTTP.
+                    $uniqueName = bin2hex(random_bytes(16)) . '.bin';
                     $destPath   = $tempDir . '/' . $uniqueName;
                     move_uploaded_file($tmpPath, $destPath);
 
                     $archivos_duplicados[] = [
                         'file_name'   => $fileName,
-                        'file_id'     => $filesList[0]->getId(),
+                        'file_id'     => $duplicado->getId(),
                         'tmpPath'     => $destPath,
                         'mimeType'    => $mimeType,
                         'folder_id'   => $subcarpeta_drive_id,
@@ -423,58 +471,68 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     // ==================================================
     if ($hayCambios) {
 
-        $sql = "UPDATE `" . tn('productos') . "` SET
-                modelo             = ?, marca             = ?, descripcion        = ?,
-                servis_tag         = ?, estado            = ?, categoria          = ?,
-                subcategoria       = ?, periodo_garantia  = ?, fecha_garantia     = ?,
-                ubicacion          = ?, fecha_ingreso     = ?, fecha_egreso       = ?,
-                asignado_a         = ?, cantidad          = ?, valor_usd          = ?,
-                detalle_repuesto   = ?, detalle_otros     = ?, patchcord_tipo     = ?,
-                patchcord_longitud = ?, switch_gestion    = ?, antenas_tipo       = ?,
-                bobina_categoria   = ?, bobina_ubicacion  = ?, bobina_longitud    = ?,
-                conectores_tipo    = ?, detalle_conectores= ?, cintas_generacion  = ?,
-                subsoftware        = ?, subsoftware_otros = ?, detalle_tecnico    = ?,
-                archivado          = ?
-            WHERE id = ?";
+        // El string de tipos se DERIVA del mapa de columnas, no se escribe a mano.
+        //
+        // La versión anterior lo tenía hardcodeado como
+        //   'sssssssissssssidsssssssssssssssii'  → 33 caracteres para 32 parámetros
+        // (el comentario de al lado incluso decía "(32 chars)"). En PHP 8 ese
+        // desajuste lanza ArgumentCountError, que no está atrapado: fatal error y
+        // el navegador muestra HTTP 500 justo al guardar la edición.
+        //
+        // Con el mapa, agregar o sacar una columna ajusta los tipos solo.
+        $columnas = [
+            'modelo'             => 's',
+            'marca'              => 's',
+            'descripcion'        => 's',
+            'servis_tag'         => 's',
+            'estado'             => 's',
+            'categoria'          => 's',
+            'subcategoria'       => 's',
+            'periodo_garantia'   => 'i',
+            'fecha_garantia'     => 's',
+            'ubicacion'          => 's',
+            'fecha_ingreso'      => 's',
+            'fecha_egreso'       => 's',
+            'asignado_a'         => 's',
+            'cantidad'           => 'i',
+            'valor_usd'          => 'd',
+            'detalle_repuesto'   => 's',
+            'detalle_otros'      => 's',
+            'patchcord_tipo'     => 's',
+            'patchcord_longitud' => 's',
+            'switch_gestion'     => 's',
+            'antenas_tipo'       => 's',
+            'bobina_categoria'   => 's',
+            'bobina_ubicacion'   => 's',
+            'bobina_longitud'    => 's',
+            'conectores_tipo'    => 's',
+            'detalle_conectores' => 's',
+            'cintas_generacion'  => 's',
+            'subsoftware'        => 's',
+            'subsoftware_otros'  => 's',
+            'detalle_tecnico'    => 's',
+            'archivado'          => 'i',
+        ];
+
+        $asignaciones = [];
+        foreach (array_keys($columnas) as $col) { $asignaciones[] = "`{$col}` = ?"; }
+        $sql = "UPDATE `" . tn('productos') . "` SET " . implode(', ', $asignaciones) . " WHERE id = ?";
 
         $upd = $conn->prepare($sql);
-        // Types: 7 strings + periodo_garantia(i) + 5 strings + cantidad(i) + valor_usd(d) + 15 strings + archivado(i) + id(i)
-        // = sssssss i sssss i d sssssssssssssss i i = sssssssissssssidsssssssssssssssii (32 chars)
-        $upd->bind_param(
-            'sssssssissssssidsssssssssssssssii',
-            $valores['modelo'],
-            $valores['marca'],
-            $valores['descripcion'],
-            $valores['servis_tag'],
-            $valores['estado'],
-            $valores['categoria'],
-            $valores['subcategoria'],
-            $valores['periodo_garantia'],
-            $valores['fecha_garantia'],
-            $valores['ubicacion'],
-            $valores['fecha_ingreso'],
-            $valores['fecha_egreso'],
-            $valores['asignado_a'],
-            $valores['cantidad'],
-            $valores['valor_usd'],
-            $valores['detalle_repuesto'],
-            $valores['detalle_otros'],
-            $valores['patchcord_tipo'],
-            $valores['patchcord_longitud'],
-            $valores['switch_gestion'],
-            $valores['antenas_tipo'],
-            $valores['bobina_categoria'],
-            $valores['bobina_ubicacion'],
-            $valores['bobina_longitud'],
-            $valores['conectores_tipo'],
-            $valores['detalle_conectores'],
-            $valores['cintas_generacion'],
-            $valores['subsoftware'],
-            $valores['subsoftware_otros'],
-            $valores['detalle_tecnico'],
-            $valores['archivado'],
-            $producto_id
-        );
+        if (!$upd) {
+            log_event("UsuarioID:{$_SESSION['user_id']}", "ERROR",
+                "Prepare update ID:$producto_id - " . $conn->error, "transaccion");
+            header('Location: resultado.php?status=error&origen=editar&msg='
+                . urlencode('Error al preparar la actualización.'));
+            exit();
+        }
+
+        $tipos  = implode('', array_values($columnas)) . 'i';   // + id del WHERE
+        $params = [];
+        foreach ($columnas as $col => $_t) { $params[] = $valores[$col] ?? null; }
+        $params[] = $producto_id;
+
+        $upd->bind_param($tipos, ...$params);
 
         if (!$upd->execute()) {
             log_event("UsuarioID:{$_SESSION['user_id']}", "ERROR",

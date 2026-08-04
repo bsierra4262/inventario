@@ -7,7 +7,8 @@ $_errLog = __DIR__ . '/../logs/php_errors.log';
 @ini_set('error_log', $_errLog);
 error_reporting(E_ALL);
 
-if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+require_once __DIR__ . '/../core/security/session_guard.php';
+app_session_start(); // sesión con cookie HttpOnly + SameSite + strict mode
 
 // ── Logger y vendor ───────────────────────────────────────────────────────────
 $loggerPath = __DIR__ . '/../logs/logger.php';
@@ -87,8 +88,14 @@ if (!empty($_GET['company']) && empty($_SESSION['company_id'])) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['company_id']) && ctype_digit($_POST['company_id'])) {
-    $_SESSION['company_id'] = (int)$_POST['company_id'];
+// El company_id del POST se valida contra la lista de empresas ACTIVAS, igual que
+// el del querystring. Antes se aceptaba cualquier número, así que se podía forzar
+// la sesión sobre una empresa desactivada.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['company_id']) && ctype_digit((string)$_POST['company_id'])) {
+    $postCid = (int)$_POST['company_id'];
+    foreach ($companies as $c) {
+        if ((int)$c['id'] === $postCid) { $_SESSION['company_id'] = $postCid; break; }
+    }
 }
 
 $must_choose_company = false;
@@ -274,13 +281,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         }
 
         if ($user && password_verify($password, $user['password'])) {
-            // Preservar company_id y limpiar el resto de la sesión sin regenerar ID.
-            // session_regenerate_id(true) en algunos hostings shared envía cookie con nuevo
-            // ID pero no escribe el archivo → sesión vacía en el siguiente request.
-            $cid_login = (int)($_SESSION['company_id'] ?? 0);
-            session_unset();
+            // Rotar el ID de sesión al autenticar (anti fijación de sesión).
+            // app_session_rotar() conserva company_id, descarta el resto y cierra
+            // la sesión antes del redirect, que era el problema real que en su
+            // momento se atribuyó a session_regenerate_id().
+            require_once __DIR__ . '/../core/security/session_guard.php';
+            app_session_rotar(['company_id']);
 
-            if ($cid_login > 0) $_SESSION['company_id'] = $cid_login;
             $_SESSION['user_id']    = (int)$user['id'];
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
+require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 
 superadmin_require_login();
+csrf_start();
 
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
@@ -233,6 +235,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   </a>
                   <form method="post" action="/dashboard/empresa_eliminar.php" style="display:inline"
                         onsubmit="return confirm('<?= $isActive ? '¿Desactivar esta empresa?' : '¿Activar esta empresa?' ?>')">
+                    <?php csrf_input(); ?>
                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                     <input type="hidden" name="action" value="<?= $isActive ? 'deactivate' : 'activate' ?>">
                     <button type="submit" class="ih-btn ih-btn--<?= $isActive ? 'ghost' : 'accent' ?> ih-btn--sm">

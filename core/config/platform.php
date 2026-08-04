@@ -3,17 +3,47 @@
  * Configuración de plataforma (Hostinger)
  * Todas las constantes usan defined() guard para ser seguras ante doble inclusión
  * (ocurre en subdominios virtuales donde realpath() resuelve distinto según el path de acceso).
+ *
+ * Los secretos NO viven acá. Se leen, en este orden:
+ *   1. secure/config/secrets.php   (archivo real por entorno, nunca versionado)
+ *   2. variables de entorno        (MASTER_DB_PASS, GOOGLE_CLIENT_ID, ...)
+ * Plantilla en core/config/secrets.example.php.
  */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Carga de secretos
+// ─────────────────────────────────────────────────────────────────────────────
+if (!function_exists('platform_secret')) {
+    /**
+     * Devuelve un secreto por clave. Cachea el archivo una sola vez por request.
+     */
+    function platform_secret(string $key, string $default = ''): string {
+        static $secrets = null;
+        if ($secrets === null) {
+            $secrets = [];
+            $file = __DIR__ . '/../../secure/config/secrets.php';
+            if (is_file($file)) {
+                $loaded = @include $file;
+                if (is_array($loaded)) { $secrets = $loaded; }
+            }
+        }
+        if (array_key_exists($key, $secrets) && $secrets[$key] !== '') {
+            return (string)$secrets[$key];
+        }
+        $env = getenv($key);
+        return ($env !== false && $env !== '') ? (string)$env : $default;
+    }
+}
 
 defined('PLATFORM_ENV')          || define('PLATFORM_ENV',          'prod');
 
 // === MASTER DB (plataforma) ===
-defined('MASTER_DB_HOST')        || define('MASTER_DB_HOST',        'localhost');
-defined('MASTER_DB_NAME')        || define('MASTER_DB_NAME',        'u566451014_master');
-defined('MASTER_DB_USER')        || define('MASTER_DB_USER',        'u566451014_admin');
-defined('MASTER_DB_PASS')        || define('MASTER_DB_PASS',        '***SECRETO-PURGADO***');
+defined('MASTER_DB_HOST')        || define('MASTER_DB_HOST',        platform_secret('MASTER_DB_HOST', 'localhost'));
+defined('MASTER_DB_NAME')        || define('MASTER_DB_NAME',        platform_secret('MASTER_DB_NAME'));
+defined('MASTER_DB_USER')        || define('MASTER_DB_USER',        platform_secret('MASTER_DB_USER'));
+defined('MASTER_DB_PASS')        || define('MASTER_DB_PASS',        platform_secret('MASTER_DB_PASS'));
 
-// === Paths seguros (dentro de public_html) ===
+// === Paths seguros ===
 defined('SECURE_BASE')           || define('SECURE_BASE',           __DIR__ . '/../../secure');
 defined('TENANTS_SECURE_PATH')   || define('TENANTS_SECURE_PATH',   SECURE_BASE . '/tenants');
 defined('LOG_PATH')              || define('LOG_PATH',              __DIR__ . '/../../logs/audit.log');
@@ -22,18 +52,17 @@ defined('LOG_PATH')              || define('LOG_PATH',              __DIR__ . '/
 defined('PROVIDERS')             || define('PROVIDERS',             ['google', 'microsoft']);
 
 // === OAuth Google — credenciales de plataforma ===
-// Completar en el servidor editando este archivo (o vía variable de entorno).
 // Si están vacías el sistema usa las credenciales por tenant (cloud_config).
-defined('GOOGLE_CLIENT_ID')     || define('GOOGLE_CLIENT_ID',     getenv('GOOGLE_CLIENT_ID')     ?: '');
-defined('GOOGLE_CLIENT_SECRET') || define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
+defined('GOOGLE_CLIENT_ID')     || define('GOOGLE_CLIENT_ID',     platform_secret('GOOGLE_CLIENT_ID'));
+defined('GOOGLE_CLIENT_SECRET') || define('GOOGLE_CLIENT_SECRET', platform_secret('GOOGLE_CLIENT_SECRET'));
 // URI de callback registrada en Google Cloud Console — dejar vacío para auto-detectar
-defined('GOOGLE_REDIRECT_URI')  || define('GOOGLE_REDIRECT_URI',  getenv('GOOGLE_REDIRECT_URI')  ?: '');
+defined('GOOGLE_REDIRECT_URI')  || define('GOOGLE_REDIRECT_URI',  platform_secret('GOOGLE_REDIRECT_URI'));
 
 // === OAuth Microsoft — credenciales de plataforma ===
-defined('MS_CLIENT_ID')         || define('MS_CLIENT_ID',     getenv('MS_CLIENT_ID')     ?: '');
-defined('MS_CLIENT_SECRET')     || define('MS_CLIENT_SECRET', getenv('MS_CLIENT_SECRET') ?: '');
-defined('MS_TENANT_ID')         || define('MS_TENANT_ID',     getenv('MS_TENANT_ID')     ?: 'common');
-defined('MS_REDIRECT_URI')      || define('MS_REDIRECT_URI',  getenv('MS_REDIRECT_URI')  ?: '');
+defined('MS_CLIENT_ID')         || define('MS_CLIENT_ID',     platform_secret('MS_CLIENT_ID'));
+defined('MS_CLIENT_SECRET')     || define('MS_CLIENT_SECRET', platform_secret('MS_CLIENT_SECRET'));
+defined('MS_TENANT_ID')         || define('MS_TENANT_ID',     platform_secret('MS_TENANT_ID', 'common'));
+defined('MS_REDIRECT_URI')      || define('MS_REDIRECT_URI',  platform_secret('MS_REDIRECT_URI'));
 
 // === Modo de alta de empresa ===
 defined('DEFAULT_TENANT_MODE')   || define('DEFAULT_TENANT_MODE',   'prefix');

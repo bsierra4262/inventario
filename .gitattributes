@@ -1,0 +1,23 @@
+# Normalizar finales de línea: el repo guarda LF, Windows recibe CRLF al checkout.
+# Sin esto el repo tenía finales mezclados y cada archivo editado en Windows
+# aparecía como "modificado entero" en los diffs.
+* text=auto eol=lf
+
+*.php   text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.md    text eol=lf
+*.sql   text eol=lf
+*.sh    text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.ini   text eol=lf
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary

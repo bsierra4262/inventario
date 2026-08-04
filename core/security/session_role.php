@@ -12,6 +12,10 @@ function platform_permissions_matrix(): array {
         'company.create'        => ['superadmin', 'admin'],
         'company.edit'          => ['superadmin', 'admin'],
         'company.delete'        => ['superadmin'],
+        // El respaldo incluye hashes de contraseña y el client_secret de OAuth
+        // del tenant, así que no puede depender de `company.view` (que tiene
+        // hasta el rol `viewer`): es una acción de superadmin.
+        'company.backup'        => ['superadmin'],
         // Usuarios de plataforma
         'platform_user.manage'  => ['superadmin'],
         // Usuarios de empresas (tenant)
@@ -82,7 +86,11 @@ function superadmin_require_login(): void {
 }
 
 function superadmin_login(int $userId, string $role = ''): void {
-    if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
+    // Rotar el ID de sesión al autenticar: invalida cualquier PHPSESSID que un
+    // atacante hubiera fijado antes del login (fijación de sesión).
+    require_once __DIR__ . '/session_guard.php';
+    app_session_rotar();
+
     $_SESSION[SESSION_SUPERADMIN_FLAG] = true;
     $_SESSION['superadmin_user_id']    = $userId;
     if ($role !== '') {
