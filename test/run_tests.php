@@ -249,19 +249,61 @@ grupo('SEGURIDAD · secretos');
 // ═══════════════════════════════════════════════════════════════════════════
 // La contraseña del master DB estaba escrita en core/config/platform.php, que
 // está versionado; y el superadmin se re-sembraba con una contraseña fija desde
-// una página pública.
-$secretos = ['***SECRETO-PURGADO***', '***SECRETO-PURGADO***', '***SECRETO-PURGADO***'];
-$conSecretos = [];
-foreach (array_merge(archivos_php(), [RAIZ . '/.htaccess', RAIZ . '/deploy.sh']) as $f) {
-    if (!is_file($f)) { continue; }
-    $r = rel($f);
-    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR)) { continue; }   // este archivo los nombra a propósito
-    $src = (string)file_get_contents($f);
-    foreach ($secretos as $s) {
-        if (str_contains($src, $s)) { $conSecretos[] = "{$r} contiene «" . substr($s, 0, 4) . "…»"; }
+// una página pública. Las dos se purgaron del código y de la historia de git.
+//
+// El test NO guarda los secretos: los lee del archivo real, que no se versiona,
+// y verifica que ninguno de esos valores aparezca en un archivo que sí se
+// versiona. Escribir el secreto (o su hash) en el test sería volver a meterlo en
+// el repositorio, que es justamente lo que este chequeo trata de impedir.
+$secretosReales = [];
+$fSec = RAIZ . '/secure/config/secrets.php';
+if (is_file($fSec)) {
+    $cargado = @include $fSec;
+    if (is_array($cargado)) {
+        foreach ($cargado as $k => $v) {
+            // Sólo lo que de verdad es un secreto. `MASTER_DB_HOST = localhost` y
+            // `MS_TENANT_ID = common` son configuración, y aparecen en el código
+            // con toda razón.
+            if (!preg_match('/(PASS|SECRET|TOKEN|_KEY)$/i', (string)$k)) { continue; }
+            if (is_string($v) && strlen($v) >= 6 && !str_starts_with($v, 'CAMBIAR')) {
+                $secretosReales[$v] = $k;
+            }
+        }
     }
 }
-chequear('Ningún archivo versionado contiene credenciales', $conSecretos === [], implode('; ', $conSecretos));
+
+if (!$secretosReales) {
+    chequear('Credenciales reales fuera del repositorio (no hay secure/config/secrets.php para comparar)', true);
+} else {
+    $conSecretos = [];
+    foreach (array_merge(archivos_php(), [RAIZ . '/.htaccess', RAIZ . '/deploy.sh', RAIZ . '/README.md',
+                                          RAIZ . '/INSTALL.md', RAIZ . '/SECURITY.md']) as $f) {
+        if (!is_file($f)) { continue; }
+        $r = rel($f);
+        if (str_starts_with($r, 'secure' . DIRECTORY_SEPARATOR)) { continue; } // ese es el archivo real
+        $src = (string)file_get_contents($f);
+        foreach ($secretosReales as $valor => $clave) {
+            if (str_contains($src, $valor)) { $conSecretos[] = "{$r} filtra {$clave}"; }
+        }
+    }
+    chequear(count($secretosReales) . ' credenciales reales: ninguna aparece en un archivo versionado',
+        $conSecretos === [], implode('; ', array_unique($conSecretos)));
+}
+
+// Y ninguna credencial nueva escrita a mano en el código.
+$hardcode = [];
+foreach (archivos_php() as $f) {
+    $r = rel($f);
+    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR)) { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (preg_match('/define\s*\(\s*[\'"](?:MASTER_DB_PASS|DB_PASS|.*SECRET)[\'"]\s*,\s*[\'"][^\'"]{4,}[\'"]/i', $src)) {
+        $hardcode[] = $r;
+    }
+    if (preg_match('/password_hash\s*\(\s*[\'"][^\'"]{6,}[\'"]/', $src)) {
+        $hardcode[] = $r . ' (password_hash sobre un literal)';
+    }
+}
+chequear('Ninguna credencial escrita a mano en el código', $hardcode === [], implode('; ', array_unique($hardcode)));
 
 chequear('platform.php lee los secretos de secure/config, no los define',
     str_contains(leer('core/config/platform.php'), 'platform_secret')
