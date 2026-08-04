@@ -41,6 +41,9 @@ if (!function_exists('tenant_permissions_matrix')) {
             'asset.edit'            => ['admin', 'manager', 'user'],
             'asset.archive'         => ['admin', 'manager'],
             'asset.delete'          => ['admin'],
+            // Papelera: sacar un activo de archivados y devolverlo al inventario.
+            'asset.restore'         => ['admin', 'manager'],
+            'asset.trash.view'      => ['admin', 'manager'],
             'asset.export'          => ['admin', 'manager'],
             'asset.import_csv'      => ['admin', 'manager'],
             'asset.backup_full'     => ['admin'],
@@ -53,6 +56,10 @@ if (!function_exists('tenant_permissions_matrix')) {
             'user.create'           => ['admin'],
             'user.edit'             => ['admin'],
             'user.delete'           => ['admin'],
+
+            // Catálogos: quién puede dar de alta valores de "Asignado a" y
+            // "Ubicación". Un usuario común elige de la lista, no la amplía.
+            'catalog.manage'        => ['admin'],
 
             // Integraciones (Drive / cloud)
             'integration.view'      => ['admin'],

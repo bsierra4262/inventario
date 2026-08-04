@@ -30,7 +30,6 @@ $current_file = basename($_SERVER['PHP_SELF'] ?? '');
 try {
     require_once ROOT_PATH . '/core/tenant_bootstrap.php';
     // tenant_bootstrap expone: $tenantDb (TenantDB) y $conn (mysqli)
-    log_event("db.php", "APP", "Conexión tenant activa (multiempresa)", "bootstrap");
 } catch (Throwable $e) {
     log_event("db.php", "ERROR", "Fallo al inicializar tenant: " . $e->getMessage(), "bootstrap");
     error_log("Error en bootstrap multiempresa: " . $e->getMessage());
@@ -49,7 +48,17 @@ if (!in_array($current_file, $_excluded_from_force, true) && !empty($_SESSION['f
 }
 
 // ============================================================
-// Verificación de estructura básica (fuera de install/login/select_empresa)
+// Verificación de esquema
+//
+// Antes acá corría DDL en CADA request: SHOW TABLES, dos ALTER TABLE ...
+// ADD COLUMN IF NOT EXISTS, un SHOW COLUMNS y (hasta el commit baf64d82) un
+// ALTER que revertía `role` a ENUM. Eran 5+ consultas de metadata antes de la
+// primera consulta útil de cada página, y una de ellas rompía los roles
+// personalizados.
+//
+// Ahora el esquema se versiona (core/db/migraciones.php) y se aplica una sola
+// vez con `php bin/migrar.php`. Acá sólo se lee la versión: una consulta por
+// clave primaria contra tenant_settings.
 // ============================================================
 if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
     try {
@@ -59,41 +68,31 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
             exit();
         }
 
-        // En modo prefix la tabla real es t{N}_users, por eso usamos tn('users')
-        $usersTable = tn('users');
-        $safeTable  = $conn->real_escape_string($usersTable);
-        $check      = $conn->query("SHOW TABLES LIKE '{$safeTable}'");
+        $conn->set_charset('utf8mb4');
 
-        if (!$check) {
-            log_event("db.php", "ERROR", "Error al verificar tablas: " . $conn->error, "bootstrap");
-            throw new Exception("Error al verificar tablas: " . $conn->error);
-        }
-        if ($check->num_rows === 0) {
-            log_event("db.php", "ERROR", "Tabla `{$usersTable}` no encontrada en tenant", "bootstrap");
-            header('Location: /install.php');
-            exit();
-        }
-        log_event("db.php", "APP", "Tabla `{$usersTable}` OK en tenant", "bootstrap");
+        require_once ROOT_PATH . '/core/db/migraciones.php';
+        $_prefijo   = $tenantDb->mode === 'prefix' ? $tenantDb->prefix : '';
+        $_versionOk = schema_version_actual($conn, $_prefijo);
 
-        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-        $conn->set_charset("utf8mb4");
-        log_event("db.php", "APP", "Charset utf8mb4 aplicado (tenant)", "bootstrap");
-
-        // Migraciones silenciosas idempotentes
-        // IMPORTANTE: role debe ser VARCHAR(40) para soportar roles personalizados
-        // (no ENUM, que solo permite los 4 builtin y descarta los customs como '').
-        try {
-            @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1");
-            @$conn->query("ALTER TABLE `{$usersTable}` ADD COLUMN IF NOT EXISTS `must_change_password` TINYINT(1) NOT NULL DEFAULT 0");
-            // Solo migrar role si sigue siendo ENUM (no pisar VARCHAR existente)
-            $rc = @$conn->query("SHOW COLUMNS FROM `{$usersTable}` LIKE 'role'");
-            if ($rc && $rr = $rc->fetch_assoc()) {
-                if (str_starts_with(strtolower((string)$rr['Type']), 'enum')) {
-                    @$conn->query("ALTER TABLE `{$usersTable}` MODIFY COLUMN `role` VARCHAR(40) NOT NULL DEFAULT 'user'");
-                }
+        if ($_versionOk === 0) {
+            // Tenant sin estructura (o sin migrar nunca) → mandar a instalar.
+            $usersTable = tn('users');
+            $safeTable  = $conn->real_escape_string($usersTable);
+            $check      = $conn->query("SHOW TABLES LIKE '{$safeTable}'");
+            if (!$check || $check->num_rows === 0) {
+                log_event("db.php", "ERROR", "Tabla `{$usersTable}` no encontrada en tenant", "bootstrap");
+                header('Location: /install.php');
+                exit();
             }
-        } catch (Throwable $eAlter) {
-            // Silencioso
+        }
+
+        // Marca para que los helpers no repitan CREATE TABLE IF NOT EXISTS.
+        if ($_versionOk >= schema_version_objetivo()) {
+            defined('APP_SCHEMA_OK') || define('APP_SCHEMA_OK', true);
+        } else {
+            log_event('db.php', 'WARN',
+                "Esquema del tenant en v{$_versionOk}, el código espera v" . schema_version_objetivo()
+                . ' — correr: php bin/migrar.php', 'bootstrap');
         }
 
     } catch (Throwable $e) {

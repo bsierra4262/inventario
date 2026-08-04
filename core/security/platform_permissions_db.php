@@ -33,6 +33,7 @@ if (!function_exists('platform_perms_ensure_table')) {
 function platform_perms_ensure_table(mysqli $masterConn): void {
     static $checked = false;
     if ($checked) return;
+    $checked = true;   // una sola vez por request, pase lo que pase
     try {
         $masterConn->query("CREATE TABLE IF NOT EXISTS `platform_role_permissions` (
             role   VARCHAR(40) NOT NULL,

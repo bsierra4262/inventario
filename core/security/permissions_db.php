@@ -17,6 +17,9 @@ require_once __DIR__ . '/permissions.php';
 
 if (!function_exists('role_perms_ensure_table')) {
 function role_perms_ensure_table(mysqli $conn): void {
+    // Si el esquema ya está migrado (bin/migrar.php), no hace falta el DDL:
+    // esto corría un CREATE TABLE IF NOT EXISTS en cada request que tocara permisos.
+    if (defined('APP_SCHEMA_OK')) return;
     static $checked = [];
     $key = spl_object_id($conn);
     if (isset($checked[$key])) return;
@@ -148,6 +151,7 @@ function role_perms_has_overrides(mysqli $conn, string $role): bool {
 
 if (!function_exists('custom_roles_ensure_table')) {
 function custom_roles_ensure_table(mysqli $conn): void {
+    if (defined('APP_SCHEMA_OK')) return;   // ver nota en role_perms_ensure_table()
     static $checked = [];
     $key = spl_object_id($conn);
     if (isset($checked[$key])) return;
@@ -270,6 +274,8 @@ function permissions_grouped(): array {
             'asset.create'      => 'Crear activos',
             'asset.edit'        => 'Editar activos',
             'asset.archive'     => 'Archivar / Dar de baja',
+            'asset.trash.view'  => 'Ver la papelera (archivados)',
+            'asset.restore'     => 'Restaurar activos archivados',
             'asset.delete'      => 'Eliminar definitivamente',
             'asset.export'      => 'Exportar CSV',
             'asset.import_csv'  => 'Importar CSV',
@@ -283,6 +289,9 @@ function permissions_grouped(): array {
             'user.create'       => 'Crear usuarios',
             'user.edit'         => 'Editar usuarios',
             'user.delete'       => 'Eliminar usuarios',
+        ],
+        'Catálogos' => [
+            'catalog.manage'    => 'Gestionar listas de "Asignado a" y "Ubicación"',
         ],
         'Integraciones' => [
             'integration.view'  => 'Ver configuración Drive/Cloud',

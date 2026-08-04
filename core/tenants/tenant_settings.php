@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 if (!function_exists('tenant_settings_ensure_table')) {
 function tenant_settings_ensure_table(mysqli $conn): void {
+    if (defined('APP_SCHEMA_OK')) return;   // el esquema ya está migrado
     static $checked = [];
     $key = spl_object_id($conn);
     if (isset($checked[$key])) return;
