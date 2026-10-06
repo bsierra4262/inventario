@@ -570,8 +570,23 @@ dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
 /* Ningun contenido ancho puede empujar la pagina en horizontal: lo que no
    entra, se desplaza dentro de su propia caja. */
 .ih-table-wrap,.ih-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
-html,body{overflow-x:hidden}
 img,svg,video{max-width:100%;height:auto}
+
+/* LA causa del desborde en telefono.
+   `.ih-app` es un flex en columna, y por defecto un item de flex tiene
+   min-width:auto: no puede encogerse por debajo del ancho minimo de su
+   contenido. Una tabla de nueve columnas adentro estiraba el shell entero mas
+   alla de la pantalla, y se llevaba puestos el topbar, las pestanas y las
+   tarjetas — que aparecian cortadas a la derecha.
+   Con min-width:0 los hijos pueden encogerse y cada caja ancha se desplaza
+   adentro suyo, que es lo que .ih-table-wrap ya hacia. */
+.ih-app>*{min-width:0}
+.ih-app__main,.ih-topbar,.ih-sidebar,.ih-app__topbar,.ih-app__sidebar{min-width:0}
+.ih-card,.ih-card__body,.ih-stats,.ih-form-grid{min-width:0}
+
+/* Red de seguridad: si algo se escapa igual, se clipea en vez de desplazar la
+   pagina entera. Va DESPUES de arreglar la causa, no en lugar de arreglarla. */
+html,body{overflow-x:hidden}
 
 /* El area tactil minima recomendada es 44px. Los iconos de accion de las
    tablas eran de 28. */

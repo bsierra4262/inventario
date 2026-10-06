@@ -792,6 +792,16 @@ img { max-width: 100%; height: auto; display: block; }
    daba verde igual, porque comparaba contra la UNION de las dos hojas en vez de
    contra la que cada portal carga.
    =========================================================================== */
+/* El topbar es flex pero no tenía `gap`: la marca y el título quedaban pegados
+   uno contra otro, visualmente superpuestos. */
+.ih-topbar { gap: var(--ih-space-4); }
+
+/* En el panel la marca del topbar sobra: el sidebar ya la lleva, y su enlace
+   apunta a /inventario/, que es el portal del tenant y no donde está parado el
+   superadmin. El markup del topbar es compartido, así que se oculta acá. */
+.ih-portal-superadmin .ih-topbar__brand,
+.ih-portal-superadmin .ih-topbar__sep { display: none; }
+
 .ih-topbar__brand {
   display: flex; align-items: center; gap: var(--ih-space-3);
   flex-shrink: 0; text-decoration: none; color: inherit; min-width: 0;

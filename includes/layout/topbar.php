@@ -28,6 +28,18 @@ if ($topbar_user) {
          (y en intellihelp.css para el panel superadmin), no acá: un <style>
          inline por include se repite en cada página y no se puede cachear. */ ?>
 <header class="ih-topbar ih-app__topbar">
+  <?php /* Boton de menu.
+           El panel superadmin esconde su sidebar por debajo de 991px y lo
+           muestra con `.ih-app.is-open`, pero este topbar —que es compartido—
+           nunca dibujaba el boton para abrirlo: el panel quedaba SIN NAVEGACION
+           en tablet y en telefono. En el portal tenant la navegacion es la fila
+           de pestanas, asi que app.css lo deja oculto. */ ?>
+  <button type="button" class="ih-topbar__burger" aria-label="Abrir menú"
+          aria-expanded="false" aria-controls="ih-sidebar-nav"
+          onclick="ihAlternarMenu(this)">
+    <i class="bi bi-list"></i>
+  </button>
+
   <a class="ih-topbar__brand" href="/inventario/index.php" title="Ir al inventario">
     <span class="ih-topbar__brand-logo"><?= platform_logo_html() ?></span>
     <span class="ih-topbar__brand-text">

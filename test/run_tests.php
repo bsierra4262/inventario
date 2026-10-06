@@ -1073,6 +1073,27 @@ chequear('Cada tarjeta del alta tiene cabecera y cuerpo propios',
 chequear('Ninguna tarjeta quedó anidada dentro de la cabecera de otra',
     preg_match('/<div class="ih-card__header">\s*<div class="ih-card/', $ag) !== 1);
 
+// ───────────────────────────────────────────────────────────────────────────
+// Navegación en pantallas chicas
+//
+// El panel superadmin esconde su sidebar por debajo de 991px y lo muestra con
+// `.ih-app.is-open`, pero el topbar —que es compartido— nunca dibujaba el botón
+// para abrirlo, y el único JS que había servía para CERRARLO. El panel quedaba
+// sin ninguna forma de navegar en tablet y en teléfono.
+$tb = leer('includes/layout/topbar.php');
+$ft = leer('includes/layout/foot.php');
+chequear('El topbar dibuja el botón de menú', str_contains($tb, 'ih-topbar__burger'));
+chequear('El botón declara qué controla y si está abierto',
+    str_contains($tb, 'aria-expanded') && str_contains($tb, 'aria-controls'));
+chequear('Hay código para ABRIR el menú, no sólo para cerrarlo',
+    str_contains($ft, 'classList.toggle(\'is-open\')'));
+chequear('El menú se cierra con Escape y tocando el fondo',
+    str_contains($ft, "'Escape'") && str_contains($ft, 'ih-backdrop'));
+chequear('El panel declara el estado abierto del menú',
+    str_contains($ihcss, '.ih-app.is-open'));
+chequear('El portal tenant no muestra ese botón (navega por pestañas)',
+    str_contains(str_replace(' ', '', $css), '.ih-topbar__burger{display:none}'));
+
 // El detalle del activo mostraba una tarjeta de garantía vacía y no mostraba
 // nada de los datos de compra, que sí se podían cargar.
 $vd = leer('backend/view_details.php');
