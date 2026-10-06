@@ -503,6 +503,10 @@ foreach (['core', 'includes'] as $d) {
     chequear(".htaccess bloquea /{$d} (es librería, no entry point)",
         preg_match('/RewriteRule\s+\^' . $d . '\(\/\|\$\)/', $ht) === 1);
 }
+// backend/ no se puede bloquear entero —ahí viven los endpoints— pero db.php y
+// csrf.php son librería y respondían 200 pedidos por URL.
+chequear('.htaccess bloquea backend/db.php y backend/csrf.php',
+    preg_match('/RewriteRule\s+\^backend\/\(db\|csrf\)/', $ht) === 1);
 
 // auth/credentials.json se servía en texto plano si llegaba a estar en el
 // servidor: el patrón de archivos sensibles sólo cubría `composer.json`.

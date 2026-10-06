@@ -87,6 +87,13 @@
     # algo, sí. Se bloquea la superficie entera en vez de confiar en eso.
     RewriteRule ^core(/|$)          - [F,L]
     RewriteRule ^includes(/|$)      - [F,L]
+
+    # backend/ no se puede bloquear entero: ahí viven los endpoints reales
+    # (edit, delete, export…). Pero db.php y csrf.php son librería, se incluyen
+    # por __DIR__ y nunca se piden por URL. Pedidos directos devolvían 200, y
+    # db.php además arrancaba sesión y abría una conexión a la base del tenant en
+    # cada pedido: superficie y trabajo sin ninguna razón.
+    RewriteRule ^backend/(db|csrf)\.php$ - [F,L]
 </IfModule>
 
 # ── Archivos sensibles: nunca por HTTP ────────────────────────────

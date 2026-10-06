@@ -63,7 +63,14 @@ if ($host === '' || $user === '' || $name === '') {
     exit(0);
 }
 
-mysqli_report(MYSQLI_REPORT_OFF);
+// MISMO modo de reporte que en producción. Desde PHP 8.1 mysqli LANZA
+// excepciones por defecto, y la aplicación no lo cambia (salvo login.php y
+// change_password.php, que piden explícitamente ERROR|STRICT, o sea lo mismo).
+//
+// La primera versión de esta batería lo ponía en OFF, y eso la volvía mentirosa:
+// una consulta que acá fallaba en silencio, en el servidor aborta la migración.
+// El operador `@` no suprime excepciones.
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conn = @new mysqli($host, $user, $pass, $name, $port);
 if ($conn->connect_error) {
     echo "\n  \033[31m✗\033[0m No se pudo conectar a {$host}:{$port}/{$name}: {$conn->connect_error}\n\n";
@@ -71,6 +78,30 @@ if ($conn->connect_error) {
 }
 $conn->set_charset('utf8mb4');
 echo "  base: {$host}:{$port}/{$name}\n";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Salvaguarda
+//
+// Lo que viene borra TODAS las tablas de la base indicada. Este archivo se
+// despliega al servidor junto con el resto del proyecto, así que un
+// `AV_TEST_DB_NAME` mal puesto ahí dentro vacía el inventario de un cliente.
+//
+// Si la base tiene activos cargados, no es descartable: es producción o una
+// copia. Se aborta. El `--si-estoy-seguro` existe para el caso legítimo de
+// probar sobre una copia con datos, y hay que escribirlo a mano.
+// ─────────────────────────────────────────────────────────────────────────────
+$conActivos = 0;
+try {
+    $rsG = $conn->query('SELECT COUNT(*) FROM `productos`');
+    if ($rsG) { $conActivos = (int)$rsG->fetch_array()[0]; }
+} catch (Throwable) { /* la tabla no existe: base vacía, adelante */ }
+
+if ($conActivos > 0 && !in_array('--si-estoy-seguro', $argv, true)) {
+    echo "\n  \033[31m✗\033[0m ABORTADO: `{$name}` tiene {$conActivos} activos cargados.\n";
+    echo "    Esta batería BORRA todas las tablas. No se apunta a una base con datos.\n";
+    echo "    Si de verdad querés hacerlo sobre una copia, agregá --si-estoy-seguro\n\n";
+    exit(1);
+}
 
 // Base limpia: esto es destructivo a propósito, por eso sólo se apunta a una
 // base descartable.
@@ -102,21 +133,27 @@ require_once RAIZ . '/core/tenants/campos.php';
 /** Columnas de una tabla. */
 function columnas(mysqli $c, string $t): array {
     $out = [];
-    $rs = @$c->query("SHOW COLUMNS FROM `{$t}`");
-    if ($rs) { while ($r = $rs->fetch_assoc()) { $out[] = $r['Field']; } }
+    try {
+        $rs = $c->query("SHOW COLUMNS FROM `{$t}`");
+        if ($rs) { while ($r = $rs->fetch_assoc()) { $out[] = $r['Field']; } }
+    } catch (Throwable) {}
     return $out;
 }
 
 function existe_tabla(mysqli $c, string $t): bool {
-    $rs = @$c->query("SHOW TABLES LIKE '" . $c->real_escape_string($t) . "'");
-    return $rs && $rs->num_rows > 0;
+    try {
+        $rs = $c->query("SHOW TABLES LIKE '" . $c->real_escape_string($t) . "'");
+        return $rs && $rs->num_rows > 0;
+    } catch (Throwable) { return false; }
 }
 
 function una(mysqli $c, string $sql) {
-    $rs = @$c->query($sql);
-    if (!$rs) { return null; }
-    $r = $rs->fetch_array();
-    return $r ? $r[0] : null;
+    try {
+        $rs = $c->query($sql);
+        if (!$rs) { return null; }
+        $r = $rs->fetch_array();
+        return $r ? $r[0] : null;
+    } catch (Throwable) { return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
