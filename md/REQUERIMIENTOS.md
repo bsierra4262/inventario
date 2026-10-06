@@ -133,6 +133,11 @@ Tomado de lo que GLPI llama *Infocom*.
 | V5 | El panel superadmin conserva su diseño actual | ✅ |
 | V6 | Ninguna clase del markup queda sin estilo definido | ✅ |
 | V8 | Ninguna clase del sistema de diseño se define sólo dentro de una página | ✅ |
+| V9 | Cada clase está en **la hoja que su portal carga**, no en la otra | ✅ |
+| V10 | Los controles nativos (casillas, radios, desplegables, calendario) usan la identidad de marca en los dos portales | ✅ |
+| V11 | Escala responsive con cortes en 1200, 1024, 860, 640 y 400, y área táctil de 44px sin mouse | ✅ |
+| V12 | El panel se puede navegar en tablet y teléfono | ✅ |
+| V13 | Convergencia total con la convención de nombres de APP Tickets (`.btn`/`.card` sin prefijo) | ⏳ |
 | V7 | Iconos SVG inline en vez de una fuente de iconos por CDN | ⏳ |
 
 ---

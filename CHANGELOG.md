@@ -4,6 +4,64 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.5.0] — 2026-10-06
+
+Revisión de diseño contra las pantallas reales, renderizadas a 1920, 1440, 1280, 1024, 768 y
+500 px, y alineación con el sistema de diseño del CRM y APP Tickets.
+
+### Corregido
+
+- **El logo del topbar tapaba la primera tarjeta del panel.** `ih-topbar__brand-logo` y toda su
+  familia estaban definidas **sólo en `app.css`**, que carga el portal tenant; el panel carga
+  `intellihelp.css`, donde no existían. Sin la regla de 32×32 con `overflow:hidden`, el SVG se
+  dibujaba a tamaño natural. Eran **nueve clases** en esa situación en el panel y tres en el
+  tenant.
+
+  La batería daba verde porque comparaba el markup contra la **unión** de las dos hojas y no
+  contra la que cada portal carga. El chequeo pasó a ser **por portal**.
+
+- **Dos tarjetas del alta quedaron dentro de la cabecera de otra.** Se insertaron usando como
+  ancla el `<h3>` de la tarjeta siguiente, que vive dentro de `ih-card__header`: en pantalla
+  salían como una columna angosta con media tarjeta vacía.
+
+- **El panel se quedaba sin navegación por debajo de 991px.** La hoja esconde el sidebar y lo
+  muestra con `.ih-app.is-open`, pero el topbar —compartido— nunca dibujaba el botón para
+  abrirlo, y el único JS que había servía para cerrarlo.
+
+- **Desborde horizontal en pantallas chicas**, por el `min-width:auto` que flexbox le da a los
+  items: una tabla ancha estiraba el shell entero. Con `min-width:0` cada caja ancha se
+  desplaza adentro suyo.
+
+- **El detalle del activo** mostraba una tarjeta de garantía vacía y no mostraba nada de los
+  datos de compra y amortización, que sí se podían cargar.
+
+### Cambiado
+
+- **Controles de formulario alineados con el CRM y APP Tickets.** El panel no estilaba ningún
+  control nativo —sólo los checkbox dentro de `.ih-check`—, así que pantallas como Roles y
+  permisos salían con el azul del sistema operativo. Ahora casillas y radios usan el color de
+  marca, los desplegables llevan flecha propia y el icono del calendario se atenúa hasta el
+  hover.
+
+- **Las tablas de reportes** dibujaban el encabezado en violeta sólido con `!important` mientras
+  todas las demás lo hacen en gris claro: puestas una al lado de la otra no parecían la misma
+  aplicación. Unificadas.
+
+- **El alta rápida de catálogos** abría un cuadro nativo del navegador. Pasó a un diálogo propio
+  que cierra con Escape, confirma con Enter, devuelve el foco y declara `aria-modal`.
+
+- **Escala responsive completa.** Había dos cortes (860 y 640) y entre ellos nada: una grilla de
+  tres columnas seguía en tres hasta los 640px. Se agregaron 1200, 1024 y 400, con área táctil
+  de 44px donde no hay mouse.
+
+### Pendiente
+
+- La hoja canónica de APP Tickets usa otra convención de nombres (`.btn`, `.card`, sin prefijo
+  `ih-`). Converger del todo implicaría reescribir el markup de más de veinte pantallas; por
+  ahora lo que se igualó son los **tokens y los componentes**, que es lo que se ve.
+
+---
+
 ## [1.4.0] — 2026-10-06
 
 Fase 3 del modelo de inventario y una batería de integración que corre contra una base real.
