@@ -69,13 +69,15 @@ $csrf_token = $_SESSION['csrf_token'];
 // POST: Cambiar contraseña
 // -----------------------------
 $isForced = !empty($_SESSION['force_password_change']);
-$msg_html = '';
+// El mensaje se guarda como dato y se pinta una sola vez, abajo.
+$msg_tipo = '';   // 'danger' | 'success'
+$msg_texto = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $posted_token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($csrf_token, $posted_token)) {
         log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "CSRF token inválido", "auth");
-        $msg_html = '<div class="alert alert-danger">Operación no autorizada.</div>';
+        $msg_tipo = 'danger'; $msg_texto = 'Operación no autorizada.';
     } else {
         $new_password     = (string)($_POST['new_password'] ?? '');
         $confirm_password = (string)($_POST['confirm_password'] ?? '');
@@ -86,10 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$policy_ok) {
             log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "No cumple política", "auth");
-            $msg_html = '<div class="alert alert-danger">La contraseña debe tener al menos 8 caracteres, e incluir letras y números.</div>';
+            $msg_tipo = 'danger'; $msg_texto = 'La contraseña debe tener al menos 8 caracteres e incluir letras y números.';
         } elseif ($new_password !== $confirm_password) {
             log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "No coincide confirmación", "auth");
-            $msg_html = '<div class="alert alert-danger">Las contraseñas no coinciden.</div>';
+            $msg_tipo = 'danger'; $msg_texto = 'Las contraseñas no coinciden.';
         } else {
             try {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
@@ -104,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (!$okExec || $affected < 1) {
                     log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "UPDATE no afecto filas (affected={$affected}, ok={$okExec})", "auth");
-                    $msg_html = '<div class="alert alert-danger">No se pudo actualizar la contraseña. Probá de nuevo o contactá al administrador.</div>';
+                    $msg_tipo = 'danger'; $msg_texto = 'No se pudo actualizar la contraseña. Probá de nuevo o contactá al administrador.';
                     goto end_post;
                 }
 
@@ -136,35 +138,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $_SESSION = [];
                 if ($cid_keep > 0) $_SESSION['company_id'] = $cid_keep;
-                echo '<script>
-                    alert("Contraseña cambiada exitosamente. Por favor, iniciá sesión nuevamente.");
-                    window.location.href = ' . json_encode($loginUrl) . ';
-                </script>';
+                // Antes esto era un alert() del navegador: sale con el nombre
+                // del dominio arriba y sin un color de la marca. El aviso lo da
+                // la pantalla de acceso, que ya sabe pintarlo (?pass=1).
+                $sep = str_contains($loginUrl, '?') ? '&' : '?';
+                header('Location: ' . $loginUrl . $sep . 'pass=1');
                 exit;
 
             } catch (Throwable $e) {
                 log_event("UsuarioID:$user_id", "CAMBIO CONTRASEÑA FALLIDO", "DB error al actualizar: ".$e->getMessage(), "auth");
-                $msg_html = '<div class="alert alert-danger">Error al actualizar la contraseña: ' . htmlspecialchars($e->getMessage()) . '</div>';
+                $msg_tipo = 'danger'; $msg_texto = 'Error al actualizar la contraseña: ' . $e->getMessage();
             }
             end_post:
         }
     }
 }
+
+// La cabecera compartida en vez de un <head> propio: asi esta pantalla recibe
+// componentes.css y componentes.js como el resto, y la version de cache de los
+// assets, que escrita a mano aca no estaba.
+$page_title  = 'Cambiar contraseña';
+$page_portal = 'tenant';
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#663399">
-  <title>Cambiar contraseña · Asset Vault · INTELLIHELP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="/assets/css/app.css" rel="stylesheet">
-</head>
-<body>
 <div class="ih-auth">
   <div class="ih-auth__card ih-anim-fade">
     <div class="ih-auth__header">
@@ -181,24 +177,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="ih-auth__body">
 
-      <?php if ($isForced && empty($msg_html)): ?>
+      <?php if ($isForced && $msg_texto === ''): ?>
         <div class="ih-alert ih-alert--warning" style="margin-bottom:1rem">
           <i class="bi bi-key-fill"></i>
           <div>Tu cuenta requiere una contraseña nueva. Completá el formulario para acceder al inventario.</div>
         </div>
       <?php endif; ?>
 
-      <?php
-        if (!empty($msg_html)) {
-          $clean = str_replace(
-            ['<div class="alert alert-danger">', '<div class="alert alert-success">'],
-            ['<div class="ih-alert ih-alert--danger"><i class="bi bi-exclamation-triangle-fill"></i><div>', '<div class="ih-alert ih-alert--success"><i class="bi bi-check-circle-fill"></i><div>'],
-            $msg_html
-          );
-          $clean = str_replace('</div>', '</div></div>', $clean);
-          echo $clean;
-        }
-      ?>
+      <?php if ($msg_texto !== ''): ?>
+        <div class="ih-alert ih-alert--<?= htmlspecialchars($msg_tipo) ?>">
+          <i class="bi <?= $msg_tipo === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill' ?>"></i>
+          <div><?= htmlspecialchars($msg_texto) ?></div>
+        </div>
+      <?php endif; ?>
 
       <form method="POST" action="/auth/change_password.php" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
@@ -234,5 +225,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 </div>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>

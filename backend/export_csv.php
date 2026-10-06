@@ -90,11 +90,11 @@ fwrite($output, "\xEF\xBB\xBF");
 fputcsv($output, array_filter([
     'ID', 'Asignado a', 'Nombre/Modelo', 'Marca', 'Descripcion',
     'S/N Service Tag', 'Cantidad', 'Valor USD', 'Estado',
-    'Categoria', 'Subcategoria', 'Garantia (meses)', 'Inicio Garantia',
+    'Categoria', 'Subcategoria', 'Garantía (meses)', 'Inicio Garantía',
     'Fecha Recepcion', 'Fecha Compra', 'Ubicacion', 'Fecha Carga',
     $incluirArchivados ? 'Archivado' : null,
-    'Patchcord tipo', 'Patchcord longitud', 'Switch gestion', 'Antenas tipo',
-    'Bobina categoria', 'Bobina ubicacion', 'Bobina longitud',
+    'Patchcord tipo', 'Patchcord longitud', 'Switch gestión', 'Antenas tipo',
+    'Bobina categoría', 'Bobina ubicación', 'Bobina longitud',
     'Conectores tipo', 'Detalle conectores', 'Cintas generacion',
     'Detalle repuesto', 'Detalle otros', 'Software', 'Software detalle',
 ]));

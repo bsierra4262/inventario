@@ -286,7 +286,7 @@ require __DIR__ . '/../includes/layout/head.php';
                       <div>
                         <div class="ih-fw-600"><?= htmlspecialchars((string)$u['username']) ?></div>
                         <?php if ((int)($u['must_change_password'] ?? 0)): ?>
-                          <span class="ih-badge" style="font-size:9px;color:#D97706"><i class="bi bi-key"></i> debe cambiar pass</span>
+                          <span class="ih-badge ih-badge--warning"><i class="bi bi-key"></i> Debe cambiar la contraseña</span>
                         <?php endif; ?>
                       </div>
                     </div>
@@ -340,85 +340,89 @@ require __DIR__ . '/../includes/layout/head.php';
   </main>
 </div>
 
-<!-- Modal Editar -->
-<div class="modal fade" id="modalEditar" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content" style="border-radius:16px;border:0;box-shadow:0 20px 60px rgba(102,51,153,.18)">
-      <div class="modal-header" style="background:#663399;color:#fff;border-radius:16px 16px 0 0;padding:16px 22px;border-bottom:0">
-        <h5 class="modal-title" style="font-weight:700;font-size:16px"><i class="bi bi-pencil-square"></i> Editar usuario</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="post">
-        <?php csrf_input(); ?>
-        <input type="hidden" name="action" value="edit">
-        <input type="hidden" name="id" id="editId">
-        <div class="modal-body" style="padding:22px">
-          <div class="ih-field">
-            <label class="ih-field__label">Email</label>
-            <input type="email" name="email" id="editEmail" class="ih-input" placeholder="(opcional)">
-          </div>
-          <div class="ih-field">
-            <label class="ih-field__label">Rol</label>
-            <select name="role" id="editRole" class="ih-select">
-              <?php
-              global $conn; $prevConnE = $conn ?? null; $conn = $tconn;
-              foreach (all_assignable_roles($tconn) as $rk => $rlbl):
-              ?>
-                <option value="<?= htmlspecialchars($rk) ?>"><?= htmlspecialchars($rlbl) ?></option>
-              <?php endforeach; $conn = $prevConnE; ?>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer" style="border-top:1px solid #E4E4E7;padding:14px 22px">
-          <button type="button" class="ih-btn ih-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="ih-btn ih-btn--primary">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<?php /* Modales nativos <dialog> con las clases compartidas .ih-modal.
+         Antes eran de Bootstrap, que se cargaba al FINAL del body —después del
+         sistema de diseño—, así que su reset le ganaba a todo y esta pantalla
+         no se parecía al resto del panel. Ver assets/css/componentes.css. */ ?>
 
-<!-- Modal Reset -->
-<div class="modal fade" id="modalReset" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content" style="border-radius:16px;border:0;box-shadow:0 20px 60px rgba(102,51,153,.18)">
-      <div class="modal-header" style="background:#663399;color:#fff;border-radius:16px 16px 0 0;padding:16px 22px;border-bottom:0">
-        <h5 class="modal-title" style="font-weight:700;font-size:16px"><i class="bi bi-key"></i> Resetear contraseña</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="post">
-        <?php csrf_input(); ?>
-        <input type="hidden" name="action" value="reset_pass">
-        <input type="hidden" name="id" id="resetId">
-        <div class="modal-body" style="padding:22px">
-          <div class="ih-text-sm ih-text-muted ih-mb-2">Usuario: <strong id="resetUsername"></strong></div>
-          <div class="ih-field">
-            <label class="ih-field__label">Nueva contraseña</label>
-            <input class="ih-input" type="password" name="new_password" minlength="8" required>
-          </div>
-        </div>
-        <div class="modal-footer" style="border-top:1px solid #E4E4E7;padding:14px 22px">
-          <button type="button" class="ih-btn ih-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="ih-btn ih-btn--primary">Guardar</button>
-        </div>
-      </form>
-    </div>
+<dialog class="ih-modal" id="modalEditar">
+  <div class="ih-modal__header">
+    <h2 class="ih-modal__title"><i class="bi bi-pencil-square" aria-hidden="true"></i> Editar usuario</h2>
+    <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
   </div>
-</div>
+  <form method="post">
+    <?php csrf_input(); ?>
+    <input type="hidden" name="action" value="edit">
+    <input type="hidden" name="id" id="editId">
+    <div class="ih-modal__body">
+      <div class="ih-field">
+        <label class="ih-field__label" for="editEmail">Email</label>
+        <input type="email" name="email" id="editEmail" class="ih-input" placeholder="Opcional">
+      </div>
+      <div class="ih-field">
+        <label class="ih-field__label" for="editRole">Rol</label>
+        <select name="role" id="editRole" class="ih-select">
+          <?php
+          global $conn; $prevConnE = $conn ?? null; $conn = $tconn;
+          foreach (all_assignable_roles($tconn) as $rk => $rlbl):
+          ?>
+            <option value="<?= htmlspecialchars($rk) ?>"><?= htmlspecialchars($rlbl) ?></option>
+          <?php endforeach; $conn = $prevConnE; ?>
+        </select>
+      </div>
+    </div>
+    <div class="ih-modal__footer">
+      <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
+      <button type="submit" class="ih-btn ih-btn--primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<dialog class="ih-modal" id="modalReset" style="width:min(420px,calc(100vw - 2rem))">
+  <div class="ih-modal__header">
+    <h2 class="ih-modal__title"><i class="bi bi-key" aria-hidden="true"></i> Restablecer contraseña</h2>
+    <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
+  </div>
+  <form method="post">
+    <?php csrf_input(); ?>
+    <input type="hidden" name="action" value="reset_pass">
+    <input type="hidden" name="id" id="resetId">
+    <div class="ih-modal__body">
+      <p class="ih-text-sm ih-text-muted" style="margin:0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
+      <div class="ih-field">
+        <label class="ih-field__label" for="resetPass">Nueva contraseña</label>
+        <input class="ih-input" type="password" name="new_password" id="resetPass" minlength="8" required
+               autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+      </div>
+    </div>
+    <div class="ih-modal__footer">
+      <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
+      <button type="submit" class="ih-btn ih-btn--primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
 function abrirEditar(id, email, role) {
   document.getElementById('editId').value = id;
   document.getElementById('editEmail').value = email;
-  document.getElementById('editRole').value = role;
-  new bootstrap.Modal(document.getElementById('modalEditar')).show();
+  var sel = document.getElementById('editRole');
+  sel.value = role;
+  // `change` para que la cara visible del desplegable propio tome el valor que
+  // acabamos de poner por código (ver assets/js/componentes.js).
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  document.getElementById('modalEditar').showModal();
 }
 function abrirReset(id, username) {
   document.getElementById('resetId').value = id;
   document.getElementById('resetUsername').textContent = username;
-  new bootstrap.Modal(document.getElementById('modalReset')).show();
+  document.getElementById('modalReset').showModal();
 }
+// Cierre: los botones marcados con data-cerrar y el clic en el fondo oscuro.
+document.addEventListener('click', function (e) {
+  var cerrar = e.target.closest('[data-cerrar]');
+  if (cerrar) { var d = cerrar.closest('dialog'); if (d) { d.close(); } return; }
+  if (e.target.tagName === 'DIALOG') { e.target.close(); }
+});
 </script>
 <?php require __DIR__ . '/../includes/layout/foot.php'; ?>

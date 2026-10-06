@@ -90,7 +90,7 @@ function cloud_upload_disabled_notice(string $rol = ''): string {
     $isAdmin = ($rol === 'admin');
     $cta = $isAdmin
         ? '<a href="/inventario/configurar_integracion.php" class="ih-btn ih-btn--primary ih-btn--sm" style="margin-top:10px;"><i class="bi bi-gear"></i> Configurar Drive / OneDrive</a>'
-        : '<div style="margin-top:8px;font-size:var(--ih-text-xs);color:var(--ih-gray-500);">Pedile al administrador que configure la integracion con Google Drive o Microsoft OneDrive.</div>';
+        : '<div style="margin-top:8px;font-size:var(--ih-text-xs);color:var(--ih-gray-500);">Pedile al administrador que configure la integración con Google Drive o Microsoft OneDrive.</div>';
     return <<<HTML
 <div class="ih-alert ih-alert--info" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
   <div style="display:flex;align-items:center;gap:10px;">
@@ -98,7 +98,7 @@ function cloud_upload_disabled_notice(string $rol = ''): string {
     <div>
       <strong>Subida de archivos no disponible</strong><br>
       <span style="font-size:var(--ih-text-sm);color:var(--ih-gray-600);">
-        Para adjuntar archivos al activo necesitas iniciar sesion con Google o Microsoft.
+        Para adjuntar archivos al activo necesitás iniciar sesión con Google o Microsoft.
         Los archivos se guardan en tu nube (Drive / OneDrive), no en nuestro servidor.
       </span>
     </div>

@@ -430,7 +430,7 @@ require __DIR__ . '/../includes/layout/head.php';
                         <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars($row['marca']) ?></div>
                       <?php endif; ?>
                       <?php if (!empty($row['subcategoria'])): ?>
-                        <div><span class="ih-badge ih-badge--purple" style="font-size:10px;"><?= htmlspecialchars($row['subcategoria']) ?></span></div>
+                        <div><span class="ih-badge ih-badge--purple"><?= htmlspecialchars($row['subcategoria']) ?></span></div>
                       <?php endif; ?>
                     </div>
                   </div>

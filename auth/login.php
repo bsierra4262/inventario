@@ -367,6 +367,15 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       <?php endif; ?>
 
+      <?php /* Viene de auth/change_password.php, que antes avisaba con un
+               alert() del navegador. */ ?>
+      <?php if (!empty($_GET['pass'])): ?>
+        <div class="ih-alert ih-alert--success">
+          <i class="bi bi-check-circle-fill"></i>
+          <div>Tu contraseña se cambió correctamente. Ingresá de nuevo para continuar.</div>
+        </div>
+      <?php endif; ?>
+
       <?php if ($error_msg): ?>
         <div class="ih-alert ih-alert--danger">
           <i class="bi bi-exclamation-triangle-fill"></i>

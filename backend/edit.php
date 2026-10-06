@@ -770,7 +770,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <div class="edit-section-title"><i class="bi bi-folder2-open"></i> Categorización</div>
         <div class="ih-edit-grid">
           <div class="ih-field">
-            <label class="ih-field__label">Categoría <span class="req">*</span> <i id="icon-categoria" class="bi bi-folder ms-1"></i></label>
+            <label class="ih-field__label">Categoría <span class="req">*</span> <i id="icon-categoria" class="bi bi-folder"></i></label>
             <select class="ih-select" name="categoria" id="categoria-select" required>
               <option value="">Seleccione...</option>
               <?php foreach($opcionesPorCategoria as $cat => $subs): ?>
@@ -782,7 +782,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             </select>
           </div>
           <div class="ih-field" id="subcategoria-container" style="display:none;">
-            <label class="ih-field__label">Subcategoría <i id="icon-subcategoria" class="bi bi-folder ms-1"></i></label>
+            <label class="ih-field__label">Subcategoría <i id="icon-subcategoria" class="bi bi-folder"></i></label>
             <select id="subcategoria-select" name="subcategoria" class="ih-select">
               <option value="">Seleccione...</option>
             </select>

@@ -12,6 +12,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/hub.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
@@ -82,7 +83,7 @@ $topbar_subtitle = 'Descargá el inventario en formato CSV';
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+$topbar_actions  = hub_volver('datos');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>

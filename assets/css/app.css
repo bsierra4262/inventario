@@ -59,6 +59,31 @@
   --ih-font:var(--font);
   --ih-topbar-h:58px; --ih-content-max:1500px;
   --ih-trans-fast:.15s; --ih-trans-base:.2s;
+
+  /* Geometria de los controles de formulario. Los lee assets/css/componentes.css
+     para que el desplegable y el calendario propios queden EXACTAMENTE igual que
+     un <input> de al lado: antes el boton del select media 1px menos de radio y
+     .05rem menos de padding, y en una fila de filtros se notaba el escalon. */
+  --ih-ctl-pad:       .6rem .75rem;
+  --ih-ctl-min-h:     40px;
+  --ih-ctl-line:      normal;   /* los <input> del navegador usan normal */
+  --ih-ctl-radius:    var(--radius-xs);
+  --ih-ctl-border:    var(--line);
+  --ih-ctl-hover:     #cfcbd8;
+  --ih-ctl-ring:      var(--primary-050);
+  --ih-ctl-font:      14px;
+  --ih-ctl-bg:        var(--surface);
+  --ih-ctl-placeholder: #a7a3b4;
+
+
+  /* Escala tipografica. Los valores NO son inventados: son los que realmente
+     usa APP Tickets (11 / 12.5 / 13 / 14 / 15.5 / 18 / 20 / 22 / 26), contados
+     sobre su hoja. Hasta ahora el panel las tenia como tokens y el portal del
+     cliente las escribia a mano, asi que los componentes compartidos no podian
+     apoyarse en ninguna. */
+  --ih-text-xs:11px;   --ih-text-sm:12.5px; --ih-text-base:14px;
+  --ih-text-md:15.5px; --ih-text-lg:18px;   --ih-text-xl:20px;
+  --ih-text-2xl:22px;  --ih-text-3xl:26px;
 }
 
 /* ------------------------------------------------------------------
@@ -309,7 +334,8 @@ select::-ms-expand{display:none}
 .ih-badge--warn    {background:var(--warn-bg);color:var(--warn)}
 .ih-badge--danger  {background:var(--danger-bg);color:var(--danger)}
 .ih-badge--info    {background:var(--info-bg);color:var(--info)}
-.ih-badge--neutral {background:var(--bg);color:var(--muted)}
+/* .ih-badge--neutral esta en componentes.css: la usa backend/view_details.php,
+   que es compartido. */
 .ih-badge--dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 
 /* ------------------------------------------------------------------
@@ -396,21 +422,9 @@ select::-ms-expand{display:none}
   .ih-col-1,.ih-col-2,.ih-col-3,.ih-col-4,.ih-col-5,.ih-col-6,.ih-col-8,.ih-col-9,.ih-col-12{grid-column:span 2}
 }
 
-/* Modales nativos <dialog>: reemplazan a los de Bootstrap, que traían una hoja
-   de estilos entera sólo para dos ventanitas y peleaban con este sistema. */
-dialog.ih-modal{
-  border:0;padding:0;border-radius:var(--radius);box-shadow:var(--shadow-lg);
-  width:min(520px,calc(100vw - 2rem));background:var(--surface);color:var(--ink);
-}
-dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
-.ih-modal__header{background:var(--primary);color:#fff;padding:.9rem 1.15rem;
-  display:flex;align-items:center;justify-content:space-between;gap:.75rem}
-.ih-modal__title{font-size:15px;font-weight:700;margin:0;color:#fff}
-.ih-modal__close{background:none;border:0;color:#fff;opacity:.8;cursor:pointer;font-size:20px;line-height:1}
-.ih-modal__close:hover{opacity:1}
-.ih-modal__body{padding:1.15rem}
-.ih-modal__footer{padding:.9rem 1.15rem;border-top:1px solid var(--line-soft);background:var(--soft);
-  display:flex;gap:.5rem;justify-content:flex-end;flex-wrap:wrap}
+/* Los modales <dialog> (.ih-modal) se fueron a componentes.css: los usan los
+   dos portales y mientras vivieran sólo acá, el panel los quedaba sin estilo.
+   Ver assets/css/componentes.css, seccion 4. */
 .ih-items-center{align-items:center}
 .ih-items-start{align-items:flex-start}
 .ih-items-end{align-items:flex-end}
@@ -521,25 +535,22 @@ dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
    como esta: repartir con minmax es mejor que cortar por ancho.
    =========================================================================== */
 
-/* Grillas del formulario de alta y edicion.
-   Vivian en un <style> dentro de backend/edit.php: una clase del sistema de
-   diseno definida en una sola pantalla no la ve ninguna otra. */
-.ih-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-.ih-edit-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 20px}
+/* Las grillas .ih-edit-grid se fueron a componentes.css: backend/edit.php la
+   abren los DOS portales, asi que mientras vivieran solo aca el panel la veia
+   sin estilo. Los cortes responsive de mas abajo siguen siendo de este portal. */
 
 @media (max-width:1200px){
   .ih-app__main{padding:1.4rem 1.2rem}
 }
 
 @media (max-width:1024px){
-  /* El escalon que faltaba: tres columnas pasan a dos antes de llegar a una. */
-  .ih-edit-grid-3{grid-template-columns:1fr 1fr}
+  /* El escalon que faltaba: tres columnas pasan a dos antes de llegar a una.
+     (.ih-edit-grid-3 y su corte estan en componentes.css: es compartida.) */
   .ih-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
   .ih-stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 }
 
 @media (max-width:860px){
-  .ih-edit-grid,.ih-edit-grid-3{grid-template-columns:1fr}
   /* Un formulario de 260px minimo mas el padding no entra en un telefono
      angosto: por debajo de este ancho se reparte libre. */
   .ih-form-grid{grid-template-columns:1fr}

@@ -295,7 +295,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Locación</label>
+      <label class="rp-label">Ubicación</label>
       <input type="text" name="ubicacion" class="ih-input" value="<?=htmlspecialchars($_GET['ubicacion']??'')?>">
     </div>
     <div>
@@ -329,7 +329,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <tr>
         <th>ID</th><th>Modelo</th><th>Marca</th><th>Descripción</th>
         <th>Categoría</th><th>Subcategoría</th><th>Cantidad</th>
-        <th>Asignado a</th><th>Locación</th><th>Estado</th><th>Valor USD</th>
+        <th>Asignado a</th><th>Ubicación</th><th>Estado</th><th>Valor USD</th>
       </tr>
     </thead>
     <tbody>

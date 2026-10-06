@@ -30,3 +30,8 @@ Thumbs.db
 .idea/
 *.swp
 *~
+
+# Dependencias de Node — solo para la prueba funcional de componentes.
+# Se reinstalan con "npm install" (ver package.json).
+node_modules/
+package-lock.json

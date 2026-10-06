@@ -12,6 +12,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/hub.php';
 require_once __DIR__ . '/../core/security/permissions_db.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
@@ -36,7 +37,7 @@ $feedback = ''; $feedbackOk = true;
 // ── Procesar POST ───────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '', 'roles_edit')) {
-        $feedback = 'CSRF invalido. Recargá la página.';
+        $feedback = 'La validación de seguridad falló. Recargá la página.';
         $feedbackOk = false;
     } else {
         $action = (string)($_POST['action'] ?? '');
@@ -69,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $feedbackOk = false;
                 }
             } else {
-                $feedback = 'Rol invalido.';
+                $feedback = 'El rol indicado no existe.';
                 $feedbackOk = false;
             }
         } elseif ($action === 'reset') {
@@ -95,11 +96,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($newLabel === '') {
                 $feedback = 'El nombre visible es obligatorio.'; $feedbackOk = false;
             } elseif ($newKey === '') {
-                $feedback = 'No se pudo generar una clave tecnica valida desde el nombre. Probá agregando letras o numeros.'; $feedbackOk = false;
+                $feedback = 'No se pudo generar una clave técnica válida a partir del nombre. Probá agregando letras o números.'; $feedbackOk = false;
             } elseif (strlen($newKey) > 40) {
-                $feedback = 'La clave tecnica es muy larga (max 40 caracteres). Acortala manualmente.'; $feedbackOk = false;
+                $feedback = 'La clave técnica es demasiado larga (máximo 40 caracteres). Acortala a mano.'; $feedbackOk = false;
             } elseif (in_array($newKey, TENANT_ROLES, true)) {
-                $feedback = 'Esa clave coincide con un rol del sistema. Cambia el nombre o ingresá una clave tecnica diferente.'; $feedbackOk = false;
+                $feedback = 'Esa clave coincide con un rol del sistema. Cambiá el nombre o ingresá una clave técnica distinta.'; $feedbackOk = false;
             } else {
                 if (custom_role_create($conn, $newKey, $newLabel)) {
                     log_event((string)$user_id, 'ROLE_CREATE', "Rol custom creado: {$newKey} ({$newLabel})", 'auth');
@@ -200,7 +201,7 @@ $topbar_subtitle = 'Personalizá qué puede hacer cada rol en tu empresa';
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> Volver</a>';
+$topbar_actions  = hub_volver('configuracion');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
@@ -335,7 +336,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <div class="ih-field" style="margin-bottom:18px;">
           <label class="ih-field__label">Clave técnica (opcional)</label>
           <input class="ih-input" name="new_role_key" maxlength="40" placeholder="auditor_externo (auto-generada del nombre)"
-                 pattern="[a-z0-9_]+" title="Solo minusculas, numeros y guion bajo">
+                 pattern="[a-z0-9_]+" title="Sólo minúsculas, números y guion bajo">
           <div class="ih-field__hint">Si la dejas vacía, se genera automáticamente desde el nombre.</div>
         </div>
         <button type="submit" class="ih-btn ih-btn--primary">
@@ -388,7 +389,7 @@ foreach ($allRoles as $r):
         <?php endif; ?>
         <?php if (!$isBuiltin): ?>
           <button type="submit" class="ih-btn ih-btn--danger"
-                  onclick="if(!confirm('Eliminar el rol <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Esta accion no se puede deshacer.')){return false;} this.form.elements['action'].value='delete_custom';">
+                  onclick="if(!confirm('Eliminar el rol <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Esta acción no se puede deshacer.')){return false;} this.form.elements['action'].value='delete_custom';">
             <i class="bi bi-trash"></i> Eliminar rol
           </button>
         <?php endif; ?>
@@ -413,7 +414,7 @@ foreach ($allRoles as $r):
               <span>
                 <?= htmlspecialchars($label) ?>
                 <?php if ($isAdminProtected): ?>
-                  <span style="font-size:10px;color:var(--ih-gray-400);margin-left:6px;">(siempre activo para admin)</span>
+                  <span class="ih-text-xs ih-text-muted" style="margin-left:6px">(siempre activo para admin)</span>
                 <?php endif; ?>
               </span>
             </label>

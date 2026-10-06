@@ -2,74 +2,110 @@
 /**
  * Navegación del portal tenant — INTELLIHELP
  *
- * El markup conserva las clases `ih-sidebar*` porque así lo llaman las 12
- * pantallas que arman la página, pero assets/css/app.css lo dibuja como una
- * fila de pestañas debajo del topbar: la misma silueta que el CRM y APP Tickets.
+ * El markup conserva las clases `ih-sidebar*` porque así lo llaman las pantallas
+ * que arman la página, pero assets/css/app.css lo dibuja como una fila de
+ * pestañas debajo del topbar: la misma silueta que el CRM y APP Tickets.
+ *
+ * ## Por qué cinco y no once
+ *
+ * Esta fila llegó a tener once entradas: Activos, Nuevo, Papelera, Reportes,
+ * Exportar, Importar, Listas, Campos, Drive, Usuarios y Roles. Tres problemas:
+ *
+ *   1. «Nuevo» repetía el botón «+ Nuevo activo» que ya está en el topbar.
+ *   2. «Listas» y «Campos» no significan nada fuera de contexto.
+ *   3. «Importar» abría una pantalla titulada «Backup & Migración»: el rótulo
+ *      no coincidía con lo que había adentro.
+ *
+ * Quedan las cuatro cosas que se hacen seguido —ver activos, mirar reportes,
+ * recuperar algo de la papelera— más dos índices, Datos y Configuración, donde
+ * cada opción se presenta con una frase que explica para qué sirve. Lo que se
+ * usa todos los días no quedó a más clics: «Nuevo activo» y «Exportar» siguen
+ * siendo botones del topbar en la pantalla de activos.
  *
  * Variables esperadas:
  *   $page_section string
- *   $tenant_name  string (nombre empresa actual)
+ *   $tenant_name  string (nombre de la empresa actual)
  */
 $page_section = $page_section ?? '';
 $tenant_name  = $tenant_name  ?? 'Mi empresa';
-if (!function_exists('ih_tn_active')) {
-function ih_tn_active(string $key, string $current): string {
-    return $key === $current ? ' is-active' : '';
-}
-}
-require_once __DIR__ . '/../cloud_icons.php';
-require_once __DIR__ . '/../../core/security/permissions.php';
-$sidebar_cloud_provider = isset($conn) && $conn instanceof mysqli ? cloud_provider_actual($conn) : 'google';
-$sidebar_cloud_label    = strtolower($sidebar_cloud_provider) === 'microsoft' ? 'OneDrive' : 'Drive';
 
-// Permisos del usuario actual (rol en sesion)
+if (!function_exists('ih_tn_active')) {
+/**
+ * Marca la pestaña activa. Una pestaña índice también se queda marcada mientras
+ * se está en alguna de las pantallas que agrupa: si no, al entrar a «Usuarios»
+ * no quedaba ninguna resaltada y la fila parecía de otra sección.
+ */
+function ih_tn_active(string $key, string $current, array $hijas = []): string {
+    return ($key === $current || in_array($current, $hijas, true)) ? ' is-active' : '';
+}
+}
+
+require_once __DIR__ . '/../../core/security/permissions.php';
+
 $sb_role = (string)($_SESSION['role'] ?? 'viewer');
-$sb_can_create   = role_can('asset.create', $sb_role);
-$sb_can_report   = role_can('report.view', $sb_role);
-$sb_can_export   = role_can('asset.export', $sb_role);
-$sb_can_import   = role_can('asset.import_csv', $sb_role) || role_can('asset.backup_full', $sb_role);
-$sb_can_userman  = role_can('user.view', $sb_role) || role_can('user.edit', $sb_role);
-$sb_can_intedit  = role_can('integration.edit', $sb_role);
-$sb_can_catalog  = role_can('catalog.manage', $sb_role);
-$sb_can_trash    = role_can('asset.trash.view', $sb_role);
+
+$sb_can_report  = role_can('report.view', $sb_role);
+$sb_can_trash   = role_can('asset.trash.view', $sb_role);
+$sb_can_catalog = role_can('catalog.manage', $sb_role);
+$sb_can_intedit = role_can('integration.edit', $sb_role);
+$sb_can_userman = role_can('user.view', $sb_role) || role_can('user.edit', $sb_role);
+$sb_can_export  = role_can('asset.export', $sb_role);
+$sb_can_import  = role_can('asset.import_csv', $sb_role) || role_can('asset.backup_full', $sb_role);
+
+// Los índices aparecen si hay algo adentro que este rol pueda abrir.
+$sb_can_datos  = $sb_can_export || $sb_can_import;
+$sb_can_config = $sb_can_catalog || $sb_can_intedit || $sb_can_userman;
+
+// Las pantallas que cuelgan de cada índice, para que la pestaña siga marcada.
+$sb_hijas_datos  = ['exportar', 'importar'];
+$sb_hijas_config = ['catalogos', 'campos', 'integracion', 'usuarios', 'roles'];
 ?>
 <nav class="ih-sidebar ih-app__sidebar" aria-label="Secciones">
   <div class="ih-sidebar__nav">
     <div class="ih-sidebar__group">
-      <a href="/inventario/index.php" class="ih-sidebar__link<?= ih_tn_active('inventario',$page_section) ?>"><i class="bi bi-box-seam"></i> Activos</a>
-      <?php if ($sb_can_create): ?>
-        <a href="/inventario/agregar.php" class="ih-sidebar__link<?= ih_tn_active('agregar',$page_section) ?>"><i class="bi bi-plus-square"></i> Nuevo</a>
-      <?php endif; ?>
-      <?php if ($sb_can_trash): ?>
-        <a href="/inventario/archivados.php" class="ih-sidebar__link<?= ih_tn_active('archivados',$page_section) ?>"><i class="bi bi-archive"></i> Papelera</a>
-      <?php endif; ?>
+
+      <a href="/inventario/index.php"
+         class="ih-sidebar__link<?= ih_tn_active('inventario', $page_section, ['agregar']) ?>">
+        <i class="bi bi-box-seam"></i> Activos
+      </a>
+
       <?php if ($sb_can_report): ?>
-        <a href="/inventario/reportes.php" class="ih-sidebar__link<?= ih_tn_active('reportes',$page_section) ?>"><i class="bi bi-graph-up"></i> Reportes</a>
-      <?php endif; ?>
-      <?php if ($sb_can_export): ?>
-        <a href="/inventario/exportar.php" class="ih-sidebar__link<?= ih_tn_active('exportar',$page_section) ?>"><i class="bi bi-download"></i> Exportar</a>
-      <?php endif; ?>
-      <?php if ($sb_can_import): ?>
-        <a href="/inventario/importar.php" class="ih-sidebar__link<?= ih_tn_active('importar',$page_section) ?>"><i class="bi bi-upload"></i> Importar</a>
-      <?php endif; ?>
-      <?php if ($sb_can_catalog): ?>
-        <a href="/inventario/catalogos.php" class="ih-sidebar__link<?= ih_tn_active('catalogos',$page_section) ?>"><i class="bi bi-list-ul"></i> Listas</a>
-        <a href="/inventario/campos.php" class="ih-sidebar__link<?= ih_tn_active('campos',$page_section) ?>"><i class="bi bi-sliders"></i> Campos</a>
-      <?php endif; ?>
-      <?php if ($sb_can_intedit): ?>
-        <a href="/inventario/configurar_integracion.php" class="ih-sidebar__link<?= ih_tn_active('integracion',$page_section) ?>">
-          <?= cloud_icon_svg($sidebar_cloud_provider, 16) ?> <?= htmlspecialchars($sidebar_cloud_label) ?>
+        <a href="/inventario/reportes.php"
+           class="ih-sidebar__link<?= ih_tn_active('reportes', $page_section) ?>">
+          <i class="bi bi-graph-up"></i> Reportes
         </a>
       <?php endif; ?>
-      <?php if ($sb_can_userman): ?>
-        <a href="/inventario/usuarios.php" class="ih-sidebar__link<?= ih_tn_active('usuarios',$page_section) ?>"><i class="bi bi-people"></i> Usuarios</a>
-        <a href="/inventario/roles.php" class="ih-sidebar__link<?= ih_tn_active('roles',$page_section) ?>"><i class="bi bi-shield-lock"></i> Roles</a>
+
+      <?php if ($sb_can_trash): ?>
+        <a href="/inventario/archivados.php"
+           class="ih-sidebar__link<?= ih_tn_active('archivados', $page_section) ?>">
+          <i class="bi bi-archive"></i> Papelera
+        </a>
       <?php endif; ?>
+
+      <?php if ($sb_can_datos): ?>
+        <a href="/inventario/datos.php"
+           class="ih-sidebar__link<?= ih_tn_active('datos', $page_section, $sb_hijas_datos) ?>">
+          <i class="bi bi-arrow-down-up"></i> Datos
+        </a>
+      <?php endif; ?>
+
+      <?php if ($sb_can_config): ?>
+        <a href="/inventario/configuracion.php"
+           class="ih-sidebar__link<?= ih_tn_active('configuracion', $page_section, $sb_hijas_config) ?>">
+          <i class="bi bi-gear"></i> Configuración
+        </a>
+      <?php endif; ?>
+
     </div>
   </div>
 
   <div class="ih-sidebar__group" style="margin-left:auto">
-    <a href="/auth/change_password.php" class="ih-sidebar__link" title="Cambiar contraseña"><i class="bi bi-key"></i><span class="ih-hidden-mobile"> Contraseña</span></a>
-    <a href="/auth/logout.php" class="ih-sidebar__link" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i><span class="ih-hidden-mobile"> Salir</span></a>
+    <a href="/auth/change_password.php" class="ih-sidebar__link" title="Cambiar contraseña">
+      <i class="bi bi-key"></i><span class="ih-hidden-mobile"> Contraseña</span>
+    </a>
+    <a href="/auth/logout.php" class="ih-sidebar__link" title="Cerrar sesión">
+      <i class="bi bi-box-arrow-right"></i><span class="ih-hidden-mobile"> Salir</span>
+    </a>
   </div>
 </nav>

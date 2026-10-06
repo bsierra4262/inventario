@@ -201,7 +201,7 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?= htmlspecialchars($r['mensaje']) ?>
                   </td>
                   <td>
-                    <span class="ih-badge <?= logTagBadge($r['tag']) ?>" style="font-size:10px">
+                    <span class="ih-badge <?= logTagBadge($r['tag']) ?>">
                       <?= htmlspecialchars($r['tag']) ?>
                     </span>
                   </td>

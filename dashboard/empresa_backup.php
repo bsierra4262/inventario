@@ -38,7 +38,7 @@ if (!platform_can('company.backup')) {
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
     http_response_code(400);
-    echo 'ID de empresa invalido.';
+    echo 'ID de empresa inválido.';
     exit;
 }
 

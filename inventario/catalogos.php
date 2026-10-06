@@ -24,6 +24,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/hub.php';
 require_once __DIR__ . '/../core/tenants/catalogos.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
@@ -74,6 +75,7 @@ $topbar_title    = 'Listas';
 $topbar_subtitle = $meta['label'];
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
+$topbar_actions  = hub_volver('configuracion');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>

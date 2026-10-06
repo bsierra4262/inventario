@@ -1,8 +1,19 @@
 <?php
 /**
  * Pie de página HTML reutilizable — INTELLIHELP
+ *
+ * Los scripts van acá y no en la cabecera: el navegador no tiene que esperarlos
+ * para pintar la página, y cuando corren el DOM ya existe.
  */
+if (!defined('ASSETS_COMPONENTES_JS')) {
+    // Por si alguna pantalla imprimiera el pie sin haber pasado por head.php.
+    define('ASSETS_COMPONENTES_JS', '/assets/js/componentes.js');
+}
 ?>
+<?php /* Reemplaza los controles que el navegador dibuja por su cuenta
+         (lista de <select>, calendario de fecha, confirm()) por los de la
+         marca. Ver el encabezado de assets/js/componentes.js. */ ?>
+<script src="<?= ASSETS_COMPONENTES_JS ?>?v=<?= defined('ASSETS_V') ? ASSETS_V : '1' ?>" defer></script>
 <script>
 (function () {
   var app = document.querySelector('.ih-app');

@@ -14,6 +14,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/hub.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -102,7 +103,7 @@ $topbar_subtitle = 'Google Drive · Microsoft OneDrive';
 $topbar_user     = $_SESSION['user_name']    ?? ($_SESSION['user_email'] ?? '');
 $topbar_email    = $_SESSION['user_email']   ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+$topbar_actions  = hub_volver('configuracion');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>

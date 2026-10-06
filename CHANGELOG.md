@@ -4,6 +4,127 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.6.0] — 2026-10-06
+
+Rediseño de los dos portales: capa propia para los controles que dibuja el navegador,
+reorganización de la navegación del inventario, y una auditoría que mide el diseño en un
+navegador de verdad en lugar de mirarlo.
+
+### Agregado
+
+- **Capa de componentes compartida** (`assets/css/componentes.css` + `assets/js/componentes.js`),
+  que cargan los dos portales. El navegador dibuja por su cuenta la lista de un `<select>`, el
+  calendario de `input[type=date]` y el cuadro de `confirm()`: ninguna regla CSS los alcanza, y
+  salen con los colores del sistema operativo. La única salida es reemplazarlos.
+
+  Es mejora progresiva: el control nativo **no se elimina**, queda oculto y sigue siendo el que
+  guarda el valor y viaja en el formulario. Si el script no carga, los formularios funcionan con
+  los controles del navegador. Por eso tampoco hubo que tocar los 45 desplegables, las 16 fechas
+  ni las 5 confirmaciones una por una.
+
+- **Dos pantallas índice en el portal del cliente**, `Datos` y `Configuración`, con una frase por
+  opción que explica para qué sirve. La fila de pestañas pasó de **once entradas a cinco**.
+
+- **`ihPedirTexto()`**, el diálogo para pedir un valor. Reemplaza al segundo diálogo hecho a mano
+  que vivía dentro de `includes/campo_catalogo.php` —sesenta líneas de JavaScript y una hoja de
+  estilos en un `<style>` que se reimprimía en cada página y que el navegador no podía cachear.
+
+- **`test/diseno/`**, auditoría que mide las pantallas en Chrome: alturas de control, tamaños de
+  letra fuera de la escala, desborde horizontal, botones más chicos que un dedo, etiquetas que
+  apuntan a un `id` que no existe. Corre a 1440, 1024, 768 y 500 px.
+
+- **`test/ortografia.php`**, revisión del texto visible contra una lista cerrada de faltas y de
+  decisiones de vocabulario. Separa el texto del código con `token_get_all()`, el lexer de PHP:
+  la primera versión usaba expresiones regulares y marcaba nombres de columna y comentarios.
+
+- **`test/componentes.js`**, prueba funcional de la capa de componentes en un DOM real (jsdom):
+  abre los desplegables, escribe en el buscador, navega el calendario con el teclado, confirma y
+  cancela. 137 chequeos.
+
+### Corregido
+
+- **`CSS.escape` no existe en todos los entornos**, y al faltar cortaba el recorrido completo:
+  media pantalla quedaba con los controles del navegador y la otra media con los propios. La
+  etiqueta ahora se busca con la propiedad `labels` del control, y cada control se mejora
+  protegido para que uno que falle no se lleve puestos a los demás.
+
+- **El selector `[onsubmit*="confirm("]` devuelve cero coincidencias** en algún motor de
+  selectores, por el paréntesis dentro de la cadena. Y no falla: simplemente no encuentra nada,
+  así que los `confirm()` seguían siendo los del navegador sin ningún aviso. Se filtra en
+  JavaScript.
+
+- **Desplazar la lista de opciones la cerraba.** `scroll` no burbujea, hay que escucharlo en fase
+  de captura, y en captura también llegan los de adentro.
+
+- **Cambiar el tamaño de la ventana cerraba el desplegable.** En un teléfono, abrir el teclado
+  dispara `resize`: se cerraba el buscador justo cuando la persona iba a escribir en él. Ahora
+  recoloca en vez de cerrar.
+
+- **La lista del desplegable quedaba cacheada de la primera vez.** Varias pantallas rellenan un
+  `<select>` por código —en el alta, elegir una categoría reescribe las opciones de
+  subcategoría— y la segunda vez mostraba las opciones viejas.
+
+- **El buscador no encontraba «Córdoba» si se escribía sin tilde**, y los catálogos están
+  cargados con acentos.
+
+- **Bootstrap 5.3.3 se cargaba al final del `<body>` en dos pantallas del panel**, después del
+  sistema de diseño: su reset le ganaba a todo y esas dos páginas no se parecían al resto.
+
+- **Exportar e importar perdía 15 de 32 columnas, en silencio.** La normalización de cabeceras
+  borra los guiones bajos, así que un alias `patchcord_tipo` nunca podía coincidir con la
+  cabecera `Patchcord tipo`. Además `fecha_compra` estaba en el esquema y en el export, pero el
+  `INSERT` de importación no la escribía. Quedan dos columnas sin volver, a propósito: la fecha
+  de carga la pone el sistema, y dejar que un CSV escriba el estado de archivado permitiría que
+  una importación mande activos a la papelera sin avisar.
+
+- **En el panel, un campo sin la clase `ih-input` quedaba sin ningún estilo**: 21px de alto, sin
+  radio y con el borde gris del navegador, al lado de campos de 40px redondeados. Esa hoja
+  estilaba sólo las clases; `app.css` ya cubría también los elementos.
+
+- **Un `<button>` no hereda la tipografía**: el icono del `+` de los catálogos y el del
+  calendario salían en Arial 13,33px en vez de Saira.
+
+- **El mismo `.ih-btn--sm` medía 27px en el panel y 34px en el portal del cliente**, porque la
+  hoja del panel no declaraba alto mínimo.
+
+- **Cuatro pantallas forzaban letras de 9 y 10px** con `style` a mano, una de ellas con un color
+  que no es de la marca.
+
+- **El icono de la cabecera de las tarjetas** salía del color del texto y pegado al título en el
+  portal del cliente: la regla estaba sólo en la hoja del panel.
+
+- **Ortografía y vocabulario**: 21 correcciones en el texto visible. «Locación» y «Ubicación»
+  eran el mismo campo con dos nombres; «Resetear» pasó a «Restablecer»; «CSRF invalido» a «La
+  validación de seguridad falló»; voseo donde estaba mezclado.
+
+### Cambiado
+
+- **La navegación del portal del cliente.** Once pestañas en una fila: `Nuevo` repetía el botón
+  del topbar, `Listas` y `Campos` no significan nada fuera de contexto, e `Importar` abría una
+  pantalla titulada «Backup & Migración». Quedaron `Activos`, `Reportes`, `Papelera`, `Datos` y
+  `Configuración`. Lo que se usa todos los días no quedó a más clics: «Nuevo activo» y
+  «Exportar» siguen siendo botones del topbar.
+
+- **La geometría de los controles propios sale de tokens `--ih-ctl-*`** que cada hoja define con
+  los valores que ya usa en sus propios campos. Escrita a mano, el botón del desplegable quedaba
+  1px menos redondeado y un poco más alto que el campo de al lado.
+
+- **El campo Subcategoría del alta ya no aparece y desaparece.** Queda siempre a la vista y
+  cuando no aplica se deshabilita diciendo por qué. Escondido, la tarjeta «Categorización»
+  quedaba con un solo campo y media fila en blanco, y al elegir categoría el formulario pegaba
+  un salto.
+
+- **`auth/change_password.php` pasó a usar el layout compartido** y a avisar del cambio en la
+  pantalla de acceso, en vez de con un `alert()` del navegador.
+
+### Seguridad
+
+- **`require_tenant_permission_any()`**: las pantallas índice exigen al menos uno de los permisos
+  de lo que muestran. Pedirles uno fijo hubiera sido arbitrario, y no pedir ninguno le mostraría
+  el mapa del sistema a un rol de sólo lectura. Cada opción de adentro vuelve a chequear el suyo.
+
+---
+
 ## [1.5.0] — 2026-10-06
 
 Revisión de diseño contra las pantallas reales, renderizadas a 1920, 1440, 1280, 1024, 768 y

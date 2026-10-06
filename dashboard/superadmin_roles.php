@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrfOk = isset($_POST[CSRF_TOKEN_NAME])
               && hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', (string)$_POST[CSRF_TOKEN_NAME]);
     if (!$csrfOk) {
-        $feedback = 'CSRF invalido. Recargá la página.'; $feedbackOk = false;
+        $feedback = 'La validación de seguridad falló. Recargá la página.'; $feedbackOk = false;
     } else {
         $action = (string)($_POST['action'] ?? '');
         if ($action === 'save') {

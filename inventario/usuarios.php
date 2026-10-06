@@ -9,6 +9,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/hub.php';
 require_once __DIR__ . '/../core/security/permissions_db.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -68,6 +69,7 @@ $topbar_title    = 'Usuarios';
 $topbar_subtitle = count($allUsers) . ' en la empresa';
 $topbar_user     = $currentUser['username'] ?? '';
 $topbar_email    = $currentUser['email']    ?? '';
+$topbar_actions  = hub_volver('configuracion');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>

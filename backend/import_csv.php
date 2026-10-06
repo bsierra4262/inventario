@@ -85,24 +85,25 @@ $columnMap = [
     'categoria'          => ['categoria','categoría'],
     'subcategoria'       => ['subcategoria','sub-categoria','sub categoría'],
     'periodo_garantia'   => ['garantia','garantía','periodo garantia','garantia (meses)','periodo de garantia'],
-    'fecha_garantia'     => ['fecha garantia','inicio garantia','fecha de garantia','fecha_garantia'],
-    'fecha_ingreso'      => ['ingreso','fecha ingreso','fecha_ingreso'],
+    'fecha_garantia'     => ['fecha garantia','inicio garantia','inicio garantía','fecha de garantia','fecha_garantia'],
+    'fecha_ingreso'      => ['ingreso','fecha ingreso','fecha_ingreso','fecha recepcion','fecha recepción'],
+    'fecha_compra'       => ['fecha compra','fecha de compra','fecha_compra'],
     'fecha_egreso'       => ['egreso','fecha egreso','fecha_egreso'],
     'ubicacion'          => ['ubicacion','ubicación','location'],
-    'patchcord_tipo'     => ['patchcord_tipo'],
-    'patchcord_longitud' => ['patchcord_longitud'],
-    'switch_gestion'     => ['switch_gestion','gestion','gestión switch'],
-    'antenas_tipo'       => ['antenas_tipo','tipo antena'],
-    'bobina_categoria'   => ['bobina_categoria','categoria bobina','cat cable'],
-    'bobina_ubicacion'   => ['bobina_ubicacion','ubicacion bobina','interior/exterior'],
-    'bobina_longitud'    => ['bobina_longitud','longitud bobina','mts bobina'],
-    'conectores_tipo'    => ['conectores_tipo','tipo conector'],
+    'patchcord_tipo'     => ['patchcord_tipo','patchcord tipo','tipo patchcord'],
+    'patchcord_longitud' => ['patchcord_longitud','patchcord longitud','longitud patchcord'],
+    'switch_gestion'     => ['switch_gestion','switch gestion','switch gestión','gestion','gestión switch'],
+    'antenas_tipo'       => ['antenas_tipo','antenas tipo','tipo antena'],
+    'bobina_categoria'   => ['bobina_categoria','bobina categoria','bobina categoría','categoria bobina','cat cable'],
+    'bobina_ubicacion'   => ['bobina_ubicacion','bobina ubicacion','bobina ubicación','ubicacion bobina','interior/exterior'],
+    'bobina_longitud'    => ['bobina_longitud','bobina longitud','longitud bobina','mts bobina'],
+    'conectores_tipo'    => ['conectores_tipo','conectores tipo','tipo conector'],
     'detalle_conectores' => ['detalle_conectores','detalle conectores'],
-    'cintas_generacion'  => ['cintas_generacion','generacion cinta','lto'],
+    'cintas_generacion'  => ['cintas_generacion','cintas generacion','cintas generación','generacion cinta','lto'],
     'detalle_repuesto'   => ['detalle_repuesto','detalle repuesto'],
     'detalle_otros'      => ['detalle_otros','detalle otros','otros detalle'],
-    'subsoftware'        => ['subsoftware','licencia','plataforma'],
-    'subsoftware_otros'  => ['subsoftware_otros','subsoftware otros','detalle licencia otros']
+    'subsoftware'        => ['subsoftware','software','licencia','plataforma'],
+    'subsoftware_otros'  => ['subsoftware_otros','subsoftware otros','software detalle','detalle licencia otros']
 ];
 
 // Función para normalizar nombres de columnas CSV
@@ -202,6 +203,7 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
             fecha_garantia,
             fecha_ingreso,
             fecha_egreso,
+            fecha_compra,
             ubicacion,
             patchcord_tipo,
             patchcord_longitud,
@@ -218,8 +220,8 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
             subsoftware,
             subsoftware_otros
             /* , tenant_id */
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    "; // 29 placeholders (matches 29 columns above)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    "; // 30 marcadores, uno por cada columna de arriba
 
     $stmtProd = $conn->prepare($sqlProd);
     if (!$stmtProd) {
@@ -227,16 +229,18 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         continue;
     }
 
-    // Types (29 params, matching 29 columns):
-    //  asignado_a, modelo, marca, descripcion, servis_tag (5s)
-    //  + cantidad(i), valor_usd(d) + estado, categoria, subcategoria (3s)
-    //  + periodo_garantia(i) + fecha_garantia, fecha_ingreso, fecha_egreso, ubicacion (4s)
-    //  + 14 strings de detalles (patchcord_tipo, _longitud, switch_gestion, antenas_tipo,
-    //    bobina_categoria/_ubicacion/_longitud, conectores_tipo, detalle_conectores,
-    //    cintas_generacion, detalle_repuesto, _otros, subsoftware, _otros)
-    //  = 5s + i + d + 3s + i + 4s + 14s = 29 chars
+    // 30 tipos, uno por columna:
+    //  asignado_a, modelo, marca, descripcion, servis_tag        5s
+    //  cantidad                                                  i
+    //  valor_usd                                                 d
+    //  estado, categoria, subcategoria                           3s
+    //  periodo_garantia                                          i
+    //  fecha_garantia, fecha_ingreso, fecha_egreso,
+    //  fecha_compra, ubicacion                                   5s
+    //  14 campos de detalle tecnico                             14s
+    //  = 5 + 1 + 1 + 3 + 1 + 5 + 14 = 30
     $stmtProd->bind_param(
-        'sssssidsssissssssssssssssssss',
+        'sssssidsssisssssssssssssssssss',
         $registro['asignado_a'],
         $registro['modelo'],
         $registro['marca'],
@@ -251,6 +255,7 @@ while (($row = fgetcsv($handle, 2000, ",")) !== false) {
         $registro['fecha_garantia'],
         $registro['fecha_ingreso'],
         $registro['fecha_egreso'],
+        $registro['fecha_compra'],
         $registro['ubicacion'],
         $registro['patchcord_tipo'],
         $registro['patchcord_longitud'],

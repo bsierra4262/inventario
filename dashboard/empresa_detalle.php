@@ -65,7 +65,7 @@ try {
                   && hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', (string)$_POST[CSRF_TOKEN_NAME]);
 
         if (!$csrfOk) {
-            $adminFeedback = 'CSRF invalido. Recargá la página.';
+            $adminFeedback = 'La validación de seguridad falló. Recargá la página.';
             $adminFeedbackOk = false;
         } elseif (!$puedeGestionar) {
             $adminFeedback = 'Tu rol no tiene permiso para administrar usuarios de empresas.';
@@ -109,7 +109,7 @@ try {
                         $stmtClr->close();
                         $adminFeedback = "Config {$provider} eliminada ({$aff} entradas).";
                     } else {
-                        $adminFeedback = 'Provider invalido.';
+                        $adminFeedback = 'El proveedor de identidad no es válido.';
                         $adminFeedbackOk = false;
                     }
                     break;
@@ -603,12 +603,12 @@ require __DIR__ . '/../includes/layout/head.php';
                   </td>
                   <td style="text-align:right;white-space:nowrap;">
                     <!-- Reset password -->
-                    <form method="POST" style="display:inline-block;" onsubmit="var p=prompt('Nueva contraseña para <?= htmlspecialchars($u['username']) ?> (min 8 caracteres):'); if(!p||p.length<8){alert('Cancelado o muy corta');return false;} this.new_password.value=p; return confirm('¿Resetear contraseña de '+<?= json_encode($u['username']) ?>+'? Se forzará cambio al próximo login.');">
+                    <form method="POST" style="display:inline-block;" onsubmit="var p=prompt('Nueva contraseña para <?= htmlspecialchars($u['username']) ?> (min 8 caracteres):'); if(!p||p.length<8){alert('Cancelado o muy corta');return false;} this.new_password.value=p; return confirm('¿Restablecer contraseña de '+<?= json_encode($u['username']) ?>+'? Se forzará cambio al próximo login.');">
                       <?php csrf_input(); ?>
                       <input type="hidden" name="admin_action" value="reset_user_password">
                       <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                       <input type="hidden" name="new_password" value="">
-                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Resetear contraseña">
+                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Restablecer contraseña">
                         <i class="bi bi-key"></i>
                       </button>
                     </form>

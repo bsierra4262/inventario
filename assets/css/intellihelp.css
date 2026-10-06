@@ -60,6 +60,21 @@
   --ih-radius-sm:     8px;
   --ih-radius-md:     12px;
   --ih-radius-lg:     16px;
+
+  /* Geometria de los controles de formulario — ver el bloque equivalente en
+     app.css. Los valores son los que esta hoja ya usa en .ih-input, para que el
+     desplegable propio no se vea mas alto ni mas redondeado que un campo. */
+  --ih-ctl-pad:       10px 14px;
+  --ih-ctl-min-h:     0;        /* .ih-input no fija alto: lo da el line-height */
+  --ih-ctl-line:      1.4;      /* el que ya declara .ih-input */
+  --ih-ctl-radius:    var(--ih-radius-md);
+  --ih-ctl-border:    var(--ih-gray-300);
+  --ih-ctl-hover:     var(--ih-purple-200);
+  --ih-ctl-ring:      rgba(102, 51, 153, .12);
+  --ih-ctl-font:      var(--ih-text-sm);
+  --ih-ctl-bg:        var(--ih-white);
+  --ih-ctl-placeholder: var(--ih-gray-400);
+
   --ih-radius-xl:     20px;
   --ih-radius-full:   9999px;
 
@@ -330,7 +345,6 @@ img { max-width: 100%; height: auto; display: block; }
   background: var(--ih-white);
 }
 .ih-card__title { margin: 0; font-size: var(--ih-text-md); font-weight: 700; color: var(--ih-gray-900); }
-.ih-card__title i { color: var(--ih-purple); margin-right: var(--ih-space-2); }
 .ih-card__subtitle { font-size: var(--ih-text-xs); color: var(--ih-gray-500); margin-top: 2px; }
 .ih-card__body { padding: var(--ih-space-5); }
 .ih-card__footer {
@@ -407,6 +421,9 @@ img { max-width: 100%; height: auto; display: block; }
   border-radius: var(--ih-radius-md);
   cursor: pointer;
   text-decoration: none;
+  /* El mismo alto que en el portal del cliente y que en APP Tickets. Sin esto
+     el botón quedaba en 27px: chico para el dedo y distinto en cada portal. */
+  min-height: 36px; line-height: 1;
   transition: all var(--ih-trans-fast);
   line-height: 1.2;
   white-space: nowrap;
@@ -440,7 +457,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .ih-btn--danger:hover { background: #B91C1C; border-color: #B91C1C; color: var(--ih-white); }
 
-.ih-btn--sm { padding: 6px 12px; font-size: var(--ih-text-xs); border-radius: var(--ih-radius-sm); }
+.ih-btn--sm { padding: 6px 12px; font-size: var(--ih-text-sm); min-height: 34px; border-radius: var(--ih-radius-sm); }
 .ih-btn--lg { padding: 13px 24px; font-size: var(--ih-text-md); }
 .ih-btn--block { width: 100%; }
 
@@ -472,7 +489,16 @@ img { max-width: 100%; height: auto; display: block; }
 .ih-field__hint { font-size: var(--ih-text-xs); color: var(--ih-gray-500); margin-top: 4px; }
 .ih-field__error { font-size: var(--ih-text-xs); color: var(--ih-danger); margin-top: 4px; }
 
-.ih-input, .ih-select, .ih-textarea {
+/* Los ELEMENTOS tambien, no solo las clases.
+   Esta hoja estilaba unicamente .ih-input / .ih-select / .ih-textarea, asi que
+   cualquier campo al que se le olvidara la clase salia tal cual lo dibuja el
+   navegador: 21px de alto, sin radio y con el borde gris del sistema, al lado
+   de campos de 40px redondeados. app.css ya cubria los dos casos; ahora las dos
+   hojas se comportan igual.
+   Las casillas y los radios quedan afuera: tienen su propia regla mas abajo. */
+.ih-input, .ih-select, .ih-textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]):not([type="range"]):not([type="color"]),
+select, textarea {
   display: block; width: 100%;
   padding: 10px 14px;
   font-family: var(--ih-font); font-size: var(--ih-text-sm);
@@ -483,13 +509,22 @@ img { max-width: 100%; height: auto; display: block; }
   transition: border-color var(--ih-trans-fast), box-shadow var(--ih-trans-fast);
   line-height: 1.4;
 }
-.ih-input:focus, .ih-select:focus, .ih-textarea:focus {
+.ih-input:focus, .ih-select:focus, .ih-textarea:focus,
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--ih-purple);
   box-shadow: 0 0 0 3px rgba(102,51,153,.12);
 }
-.ih-textarea { resize: vertical; min-height: 90px; }
-.ih-input[type="file"] { padding: 8px; }
+.ih-input:hover:not(:focus), .ih-select:hover:not(:focus), .ih-textarea:hover:not(:focus),
+input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
+  border-color: var(--ih-purple-200);
+}
+input::placeholder, textarea::placeholder { color: var(--ih-gray-400); }
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--ih-gray-50); color: var(--ih-gray-500); cursor: not-allowed;
+}
+.ih-textarea, textarea { resize: vertical; min-height: 90px; }
+.ih-input[type="file"], input[type="file"] { padding: 8px; }
 .ih-input--lg { padding: 14px 18px; font-size: var(--ih-text-md); border-radius: var(--ih-radius-lg); }
 
 .ih-input-group {

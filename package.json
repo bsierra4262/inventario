@@ -1,0 +1,11 @@
+{
+  "name": "asset-vault",
+  "private": true,
+  "description": "Herramientas de desarrollo de Asset Vault. La aplicación es PHP y no necesita Node: esto existe sólo para correr la prueba funcional de la capa de componentes del navegador.",
+  "scripts": {
+    "test": "node test/componentes.js"
+  },
+  "devDependencies": {
+    "jsdom": "^27.0.0"
+  }
+}

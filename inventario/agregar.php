@@ -286,12 +286,16 @@ require __DIR__ . '/../includes/layout/head.php';
               </select>
             </div>
 
-            <div class="ih-field" id="campo-subcategoria" style="display:none;">
+            <?php /* Siempre visible, aunque todavía no aplique: escondido, esta
+                     tarjeta quedaba con un solo campo y media fila en blanco, y al
+                     elegir categoría el formulario pegaba un salto. Deshabilitado
+                     dice por qué no se puede usar todavía. */ ?>
+            <div class="ih-field" id="campo-subcategoria">
               <label class="ih-label" for="f-subcategoria">
                 Subcategoría <i id="iconSub" class="bi bi-folder" style="margin-left:6px;color:var(--ih-primary);"></i>
               </label>
-              <select id="f-subcategoria" name="subcategoria" class="ih-select">
-                <option value="">Seleccioná…</option>
+              <select id="f-subcategoria" name="subcategoria" class="ih-select" disabled>
+                <option value="">Elegí primero una categoría</option>
               </select>
             </div>
 
@@ -634,7 +638,6 @@ const fdSubsoftware  = <?= json_encode((string)$fv('subsoftware')) ?>;
 
 const catSel   = document.getElementById('f-categoria');
 const subSel   = document.getElementById('f-subcategoria');
-const subCont  = document.getElementById('campo-subcategoria');
 const subSwCont = document.getElementById('campo-subsoftware');
 const subSwSel  = document.getElementById('f-subsoftware');
 const subSwOtros = document.getElementById('campo-subsoftware-otros');
@@ -707,8 +710,16 @@ function actualizarSubcategorias(catValue, subcatValue, preserveSubcat) {
     subSel.innerHTML += `<option value="${opt}"${opt === subcatValue ? ' selected' : ''}>${opt}</option>`;
   });
 
+  // El campo queda siempre a la vista. Cuando no aplica se deshabilita y el
+  // texto dice por qué, en vez de desaparecer y dejar la fila a medias.
   const esOtros = catValue === 'Otros' || catValue === 'Stock de Repuestos';
-  subCont.style.display = (lista.length && !esOtros) ? '' : 'none';
+  const aplica  = lista.length && !esOtros;
+  subSel.disabled = !aplica;
+  if (!aplica) {
+    subSel.innerHTML = '<option value="">'
+      + (catValue === '' ? 'Elegí primero una categoría' : 'Esta categoría no usa subcategoría')
+      + '</option>';
+  }
 
   if (esOtros) {
     mostrarExtras('');

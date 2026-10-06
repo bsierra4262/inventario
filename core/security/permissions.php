@@ -251,6 +251,47 @@ if (!function_exists('require_tenant_permission')) {
 }
 
 /**
+ * Guardia para una pantalla que AGRUPA a otras: alcanza con poder entrar a una.
+ *
+ * Las pantallas Datos y Configuración no hacen nada por sí mismas: muestran las
+ * opciones que hay debajo. Pedirles un permiso fijo sería arbitrario —quien
+ * puede administrar usuarios pero no catálogos tendría que poder entrar igual—,
+ * y no pedir ninguno dejaría ver el mapa completo del sistema a un rol de sólo
+ * lectura.
+ *
+ * Cada opción de adentro vuelve a chequear su propio permiso: esto decide quién
+ * ve el índice, no quién entra a cada cosa.
+ */
+if (!function_exists('require_tenant_permission_any')) {
+    function require_tenant_permission_any(array $acciones): array {
+        $me = current_tenant_user();
+
+        if ($me === null) {
+            $helper = __DIR__ . '/../tenants/tenant_url_helper.php';
+            if (is_file($helper)) {
+                require_once $helper;
+                if (function_exists('tenant_login_url')) {
+                    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
+                    exit;
+                }
+            }
+            http_response_code(403);
+            echo 'Sesión no válida.';
+            exit;
+        }
+
+        foreach ($acciones as $a) {
+            if (user_can((string)$a, $me)) { return $me; }
+        }
+
+        // Ninguno: se reusa la pantalla de acceso denegado pidiendo el primero,
+        // que es el que mejor describe la sección.
+        require_permission((string)($acciones[0] ?? 'asset.view'), $me);
+        return $me;   // inalcanzable: require_permission corta con exit
+    }
+}
+
+/**
  * Devuelve la etiqueta legible del rol. Soporta builtin + custom (DB).
  * NUNCA retorna string vacio — si el role esta vacio o no se encuentra,
  * devuelve algo legible para evitar badges en blanco.

@@ -809,8 +809,75 @@ chequear('El ABM de campos exige permiso, no sólo sesión',
     str_contains(leer('backend/campos_crud.php'), "require_tenant_permission('catalog.manage')"));
 chequear('El ABM de campos valida CSRF',
     str_contains(leer('backend/campos_crud.php'), 'verifyCsrfToken'));
-chequear('La pantalla de campos está en el menú',
-    str_contains(leer('includes/layout/sidebar_tenant.php'), '/inventario/campos.php'));
+// Antes esto pedía que `campos.php` estuviera enlazado en el menú. Desde que la
+// fila de pestañas pasó de once entradas a cinco, esa pantalla cuelga de
+// Configuración y el chequeo literal dejó de valer — pero lo que importaba
+// nunca fue el menú: era que se pueda llegar.
+//
+// Así que ahora se sigue la navegación de verdad, saltando de pantalla en
+// pantalla desde la fila de pestañas. Una pantalla a la que no se llega por
+// ningún camino sólo existe para quien se sepa la URL.
+$navPendientes = ['includes/layout/sidebar_tenant.php'];
+$navVistas     = [];
+$navAlcanzadas = [];
+while ($navPendientes !== []) {
+    $f = array_shift($navPendientes);
+    if (isset($navVistas[$f])) { continue; }
+    $navVistas[$f] = true;
+    $src = leer($f);
+    if ($src === '') { continue; }
+    if (preg_match_all('#[\'"](/inventario/([a-z_]+)\.php)#', $src, $mm)) {
+        foreach ($mm[2] as $i => $nombre) {
+            $rel = 'inventario/' . $nombre . '.php';
+            $navAlcanzadas[$rel] = true;
+            $navPendientes[] = $rel;
+        }
+    }
+}
+
+$navTodas = [];
+foreach (glob(RAIZ . '/inventario/*.php') ?: [] as $f) {
+    $navTodas[] = 'inventario/' . basename($f);
+}
+$navHuerfanas = array_values(array_diff($navTodas, array_keys($navAlcanzadas)));
+chequear(count($navTodas) . ' pantallas del portal: a todas se llega navegando',
+    $navHuerfanas === [], 'sin camino desde el menú: ' . implode(', ', $navHuerfanas));
+
+// La fila de pestañas tiene que seguir siendo corta. Once entradas eran un
+// muro; el número no es sagrado, pero si vuelve a crecer conviene que alguien
+// lo decida a propósito y no que pase sin que nadie lo note.
+$sbTenant = leer('includes/layout/sidebar_tenant.php');
+preg_match_all('#class="ih-sidebar__link<\?=\s*ih_tn_active#', $sbTenant, $mPest);
+$cuantasPestanas = count($mPest[0]);
+chequear("La fila de pestañas tiene {$cuantasPestanas} entradas (seis o menos)",
+    $cuantasPestanas > 0 && $cuantasPestanas <= 6, "son {$cuantasPestanas}");
+
+// Las pantallas que cuelgan de un índice tienen que poder volver a él. Antes
+// todas tenían un «Volver» que iba a la lista de activos, que no es de donde se
+// venía, y tres no tenían ninguno.
+foreach ([
+    'inventario/catalogos.php'              => 'configuracion',
+    'inventario/campos.php'                 => 'configuracion',
+    'inventario/usuarios.php'               => 'configuracion',
+    'inventario/roles.php'                  => 'configuracion',
+    'inventario/configurar_integracion.php' => 'configuracion',
+    'inventario/exportar.php'               => 'datos',
+    'inventario/importar.php'               => 'datos',
+] as $pantalla => $indice) {
+    chequear(basename($pantalla) . " vuelve a {$indice}",
+        str_contains(leer($pantalla), "hub_volver('{$indice}')"));
+}
+
+// Un índice sin permiso no puede ser una puerta abierta, pero tampoco puede
+// pedir un permiso que no tenga nada que ver con lo que muestra.
+foreach (['inventario/configuracion.php', 'inventario/datos.php'] as $indice) {
+    chequear(basename($indice) . ' exige al menos uno de los permisos de adentro',
+        str_contains(leer($indice), 'require_tenant_permission_any(['));
+}
+chequear('require_tenant_permission_any existe y verifica sesión',
+    str_contains(leer('core/security/permissions.php'), 'function require_tenant_permission_any(')
+    && preg_match('/function require_tenant_permission_any.*?current_tenant_user\(\)/s',
+                  leer('core/security/permissions.php')) === 1);
 
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('TESTS · batería de integración');
@@ -946,7 +1013,10 @@ foreach (archivos_php() as $f) {
     }
 }
 
-$enCss = $css . leer('assets/css/intellihelp.css');
+// componentes.css entra en la cuenta: la cargan los dos portales, asi que una
+// clase definida ahi SI tiene estilo en pantalla (ver includes/layout/head.php).
+$comp  = leer('assets/css/componentes.css');
+$enCss = $css . leer('assets/css/intellihelp.css') . $comp;
 $sinEstilo = []; $soloInline = [];
 foreach (array_keys($enMarkup) as $c) {
     if (str_contains($enCss, '.' . $c)) { continue; }
@@ -987,23 +1057,249 @@ $clasesDe = static function (string $dir) use (&$clasesDe): array {
     return $out;
 };
 
-$compartidas = $clasesDe('includes') + $clasesDe('auth');
+// backend/ es COMPARTIDO, no del portal tenant: la cabecera elige la hoja
+// segun la sesion, asi que backend/edit.php y backend/view_details.php salen
+// con app.css para un usuario de empresa y con intellihelp.css para un
+// superadmin. Contarlo como tenant dejaba un punto ciego: `.ih-edit-grid` y
+// `.ih-badge--neutral` estaban solo en app.css y en el panel no tenian regla.
+$compartidas = $clasesDe('includes') + $clasesDe('auth') + $clasesDe('backend');
+
 foreach ([
-    'portal tenant (app.css)'            => [['inventario', 'backend'], $css],
-    'panel superadmin (intellihelp.css)' => [['dashboard'], leer('assets/css/intellihelp.css')],
+    'portal tenant (app.css)'            => [['inventario'], $css],
+    'panel superadmin (intellihelp.css)' => [['dashboard'],   leer('assets/css/intellihelp.css')],
 ] as $portal => [$dirs, $hoja]) {
     $usa = $compartidas;
     foreach ($dirs as $d) { $usa += $clasesDe($d); }
     $faltan = [];
     foreach (array_keys($usa) as $c) {
-        if (!str_contains($hoja, '.' . $c) && !str_contains($inline, '.' . $c)) { $faltan[] = $c; }
+        if (str_contains($hoja, '.' . $c)) { continue; }
+        if (str_contains($comp, '.' . $c)) { continue; }
+        if (str_contains($inline, '.' . $c)) { continue; }
+        $faltan[] = $c;
     }
-    chequear(count($usa) . " clases del {$portal} están en LA HOJA QUE ESE PORTAL CARGA",
+    chequear(count($usa) . " clases del {$portal} están en una hoja QUE ESE PORTAL CARGA",
         $faltan === [], 'faltan: ' . implode(', ', array_slice($faltan, 0, 12)));
 }
 
-chequear('Bootstrap CSS ya no se carga en el portal tenant',
-    !str_contains(leer('inventario/usuarios.php'), 'bootstrap@5.3.3/dist/css'));
+// ───────────────────────────────────────────────────────────────────────────
+// Clases sin prefijo `ih-`
+//
+// El chequeo de arriba sólo mira las `ih-*`. Debajo de ese filtro se escondían
+// restos de Bootstrap (`modal`, `modal-dialog`, `btn-close`, `ms-1`) que no
+// tenían ninguna regla porque Bootstrap ya no se carga.
+//
+// Una clase sin regla CSS no siempre es un error: algunas son GANCHOS de
+// JavaScript (`col-toggle`, `export-csv-btn`, `role-panel`) y el estilo lo
+// traen las `ih-btn` que llevan al lado. Así que se acepta la que aparezca en
+// un selector de JS; lo que no se acepta es la que no esté en ninguna parte.
+// Un gancho se reconoce porque el nombre aparece entre comillas en el propio
+// archivo: querySelectorAll('.col-toggle'), classList.add('is-open'). Se mira
+// con str_contains y no con una expresión: una clase de comillas dentro de una
+// cadena de PHP se cierra sola y ya me rompió este archivo una vez.
+$esGanchoJs = static fn(string $c, string $src): bool =>
+    str_contains($src, "'." . $c . "'") || str_contains($src, "'" . $c . "'")
+    || str_contains($src, '".' . $c . '"') || str_contains($src, '"' . $c . '"');
+$todasHojas = $css . leer('assets/css/intellihelp.css') . $comp;
+$huerfanas = [];
+foreach (archivos_php() as $f) {
+    $rel = substr($f, strlen(RAIZ) + 1);
+    if (str_starts_with($rel, 'test')) { continue; }
+    $src = (string)file_get_contents($f);
+    if (!preg_match_all('/class\s*=\s*"([^"<>{}$]*)"/', $src, $mm)) { continue; }
+    foreach ($mm[1] as $attr) {
+        foreach (preg_split('/\s+/', trim($attr)) ?: [] as $c) {
+            if ($c === '' || str_starts_with($c, 'bi')) { continue; }
+            if (str_contains($todasHojas, '.' . $c) || str_contains($inline, '.' . $c)) { continue; }
+            if ($esGanchoJs($c, $src)) { continue; }
+            $huerfanas[$c] = $rel;
+        }
+    }
+}
+chequear('Ninguna clase del markup se quedó sin regla y sin uso en JavaScript',
+    $huerfanas === [],
+    implode(', ', array_map(fn($c, $f) => "{$c} ({$f})", array_keys($huerfanas), $huerfanas)));
+
+chequear('Bootstrap ya no se carga en NINGUNA pantalla',
+    !array_filter(archivos_php(), fn($f) =>
+        !str_contains($f, 'test') && str_contains((string)file_get_contents($f), 'bootstrap@')),
+    'sigue cargándose en alguna página: su reset llega después del sistema de diseño y le gana');
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('COMPONENTES');
+//
+// El navegador dibuja por su cuenta la lista desplegada de un <select>, el
+// calendario de un input[type=date] y el cuadro de confirm(): ninguna regla CSS
+// los alcanza y salen con los colores del sistema operativo. assets/js/
+// componentes.js los reemplaza y assets/css/componentes.css les da el estilo.
+
+$compJs = leer('assets/js/componentes.js');
+$head   = leer('includes/layout/head.php');
+$foot   = leer('includes/layout/foot.php');
+
+chequear('La hoja y el script de componentes existen', $comp !== '' && $compJs !== '');
+chequear('La cabecera enlaza componentes.css', str_contains($head, 'ASSETS_COMPONENTES_CSS ?>'));
+chequear('El pie carga componentes.js', str_contains($foot, 'ASSETS_COMPONENTES_JS ?>'));
+
+// Si la version de cache mirara una sola hoja, tocar componentes.css o .js no
+// la movería y el cambio quedaría tapado por la cache del navegador y del CDN.
+chequear('La versión de assets mira los TRES archivos, no sólo la hoja del portal',
+    str_contains($head, 'ASSETS_COMPONENTES_CSS, ASSETS_COMPONENTES_JS'));
+
+// Mejora progresiva: el control nativo tiene que SEGUIR en el formulario. Si se
+// reemplazara de verdad, un fallo del script dejaría el campo sin valor.
+chequear('El script conserva el control nativo y no lo elimina',
+    str_contains($compJs, 'envoltorio.appendChild(nativo)')
+    && !preg_match('/nativo\.(remove|replaceWith)\s*\(/', $compJs)
+    && !preg_match('/removeChild\s*\(\s*nativo/', $compJs));
+
+// El <select> real es el que guarda el valor; elegir en la cara visible tiene
+// que dispararle `change`, porque hay pantallas escuchando ese evento.
+chequear('Elegir una opción dispara `change` en el <select> real',
+    str_contains($compJs, "nativo.dispatchEvent(new Event('change'"));
+
+// Cada clase que el script escribe necesita una regla, y cada regla necesita a
+// alguien que la escriba: lo contrario es una clase invisible o CSS muerto. Se
+// buscan los identificadores `ihc-` sin mirar comillas, porque el script los
+// escribe de tres formas (el(), className e innerHTML) y una expresión que
+// intente cubrir las tres se vuelve ilegible y se rompe sola.
+//
+// Estos tres no son clases sino `id`, y por eso no llevan regla:
+$IDS = ['ihc-file', 'ihc-op', 'ihc-modal-tit', 'ihc-modal-det',
+        'ihc-texto-tit', 'ihc-texto-input'];
+
+// `(?<!data-)` deja afuera los atributos data-ihc-si / data-ihc-no, que no
+// son clases: el \b los dejaba pasar porque el guion de `data-` corta la palabra.
+preg_match_all('/(?<!data-)\bihc-[a-zA-Z0-9_-]+/', $compJs, $mj);
+$enJs = array_values(array_diff(array_unique($mj[1] ?? $mj[0]), $IDS));
+preg_match_all('/\.(ihc-[a-zA-Z0-9_-]+)/', preg_replace('#/\*.*?\*/#s', '', $comp) ?? '', $mc);
+$enCssComp = array_unique($mc[1]);
+
+$sinRegla = array_values(array_diff($enJs, $enCssComp));
+chequear(count($enJs) . ' clases `ihc-` que escribe el script tienen regla en la hoja',
+    $sinRegla === [], 'sin regla (no se verían): ' . implode(', ', $sinRegla));
+
+$muertas = array_values(array_diff($enCssComp, $enJs));
+chequear(count($enCssComp) . ' reglas `ihc-` de la hoja las escribe alguien',
+    $muertas === [], 'CSS muerto: ' . implode(', ', $muertas));
+
+// Los estados (is-open, es-hoy, …) viven en selectores compuestos y se ponen
+// con classList: se chequean aparte.
+preg_match_all('/classList\.(?:add|toggle|contains)\(\s*\W((?:is|es)-[a-z-]+)/', $compJs, $me);
+$estadosSin = [];
+foreach (array_unique($me[1]) as $e) {
+    if (!str_contains($comp, '.' . $e)) { $estadosSin[] = $e; }
+}
+chequear(count(array_unique($me[1])) . ' estados del script (is-*/es-*) tienen regla',
+    $estadosSin === [], 'sin regla: ' . implode(', ', $estadosSin));
+
+// Los desplegables se cuelgan del <body>, salvo dentro de un <dialog> abierto:
+// ese vive en la capa superior del navegador y todo lo demás se dibuja debajo,
+// así que la lista de un <select> dentro de un modal saldría tapada.
+chequear('Los desplegables respetan la capa superior de los <dialog>',
+    str_contains($compJs, "closest('dialog')") && str_contains($compJs, 'anfitrion(ancla).appendChild'));
+
+// El diálogo propio también es <dialog>: si fuera un div con z-index quedaría
+// por debajo de los modales de las pantallas, que sí usan showModal().
+chequear('El diálogo de confirmación es un <dialog> y no un div con z-index',
+    str_contains($compJs, "el('dialog', 'ihc-modal')") && str_contains($compJs, 'm.showModal()'));
+
+// El foco arranca en Cancelar: si alguien venía tecleando Enter, no tiene que
+// confirmar un borrado sin haberlo leído.
+chequear('La confirmación abre con el foco en Cancelar, no en el botón que borra',
+    str_contains($compJs, 'setTimeout(function () { no.focus(); }, 0)'));
+
+// ── Defectos que SÓLO aparecieron corriendo el script en un DOM de verdad
+//    (node test/componentes.js). El análisis estático no podía verlos.
+
+// 1) CSS.escape no existe en todos los entornos. Se usaba para encontrar la
+//    etiqueta del campo y, al faltar, tiraba una excepción que cortaba el
+//    recorrido: media pantalla quedaba con los controles del navegador y la
+//    otra media con los propios.
+chequear('La etiqueta se reapunta sin CSS.escape, que no existe en todos lados',
+    !str_contains($compJs, 'CSS.escape(') && str_contains($compJs, 'nativo.labels'));
+
+// 2) El selector [onsubmit*="confirm("] devuelve CERO coincidencias en nwsapi
+//    por el paréntesis dentro de la cadena. Y no falla: simplemente no
+//    encuentra nada, así que los confirm() seguían siendo los del navegador
+//    sin ningún aviso.
+chequear('Los confirm() se buscan filtrando en JS, no con un selector por subcadena',
+    !preg_match('/\[on(submit|click)\*=/', $compJs)
+    && str_contains($compJs, 'function conAtributo('));
+
+// Un control que falle no puede llevarse puestos los demás.
+chequear('Cada control se mejora protegido: una excepción no corta el resto',
+    str_contains($compJs, 'function aCadaUno(')
+    && str_contains($compJs, 'try { fn(n); } catch'));
+
+// Los catálogos están cargados con tildes y nadie las escribe al buscar.
+chequear('El buscador de los desplegables ignora tildes y mayúsculas',
+    str_contains($compJs, 'function plano(')
+    && str_contains($compJs, "normalize('NFD')"));
+
+// El lector de pantalla necesita el id de la opción resaltada; estaba puesto en
+// cadena vacía, que no nombra nada.
+chequear('La lista nombra la opción resaltada (aria-activedescendant con un id)',
+    str_contains($compJs, "'aria-activedescendant', opciones[i].id"));
+
+// La prueba funcional tiene que existir: es la única que ejecuta el script.
+chequear('Existe la prueba funcional de la capa de componentes',
+    is_file(RAIZ . '/test/componentes.js') && is_file(RAIZ . '/package.json'));
+chequear('node_modules no se versiona',
+    str_contains(leer('.gitignore'), 'node_modules/'));
+
+// componentes.css la cargan las dos hojas, que definen los tokens por separado:
+// un token que exista en una sola haría que el componente se vea distinto.
+preg_match_all('/var\(\s*(--ih-[a-zA-Z0-9-]+)/', $comp, $mt);
+$ihcss2 = leer('assets/css/intellihelp.css');
+$faltaTok = [];
+foreach (array_unique($mt[1]) as $t) {
+    if (!str_contains($css, $t . ':') || !str_contains($ihcss2, $t . ':')) { $faltaTok[] = $t; }
+}
+chequear(count(array_unique($mt[1])) . ' tokens que usa componentes.css están en LAS DOS hojas',
+    $faltaTok === [], 'faltan en alguna: ' . implode(', ', $faltaTok));
+
+// Los controles propios tienen que medir EXACTAMENTE lo mismo que un <input>
+// nativo del mismo portal. Escritos a mano, el botón del desplegable quedaba
+// 1px menos redondeado y un poco más bajo que el campo de al lado, y en una
+// fila de filtros el escalón se veía. La geometría sale de los tokens --ih-ctl-*
+// que cada hoja define con los valores que ya usa en sus propios campos.
+foreach (['--ih-ctl-pad', '--ih-ctl-min-h', '--ih-ctl-radius', '--ih-ctl-border',
+          '--ih-ctl-hover', '--ih-ctl-ring', '--ih-ctl-font', '--ih-ctl-bg',
+          '--ih-ctl-placeholder'] as $tok) {
+    chequear("Las dos hojas definen {$tok}",
+        str_contains($css, $tok . ':') && str_contains($ihcss2, $tok . ':'));
+}
+chequear('El botón del desplegable toma su geometría de los tokens, no a mano',
+    str_contains($comp, 'padding: var(--ih-ctl-pad')
+    && str_contains($comp, 'border-radius: var(--ih-ctl-radius')
+    && str_contains($comp, 'min-height: var(--ih-ctl-min-h'));
+chequear('El campo de fecha también',
+    preg_match('/\.ihc-fecha__texto\s*\{[^}]*var\(--ih-ctl-pad/s', $comp) === 1);
+
+// El anillo de foco de la fecha va en el grupo: puesto en cada mitad se dibujaba
+// también entre las dos, partiendo el control al medio.
+chequear('El anillo de foco de la fecha envuelve el control entero',
+    preg_match('/\.ihc-fecha:focus-within\s+\.ihc-fecha__campo[^{]*\{[^}]*box-shadow/s', $comp) === 1);
+
+// El reposo de los desplegables se declara. Si la visibilidad dependiera sólo
+// del final de un keyframe, una animación que no corra deja el desplegable
+// abierto pero invisible — que es peor que no animar.
+chequear('Los desplegables declaran su opacidad en reposo',
+    preg_match('/\.ihc-pop\s*\{[^}]*opacity:\s*1/s', $comp) === 1);
+
+// Cambiar de tamaño RECOLOCA el desplegable; cerrarlo ahí significaba cerrarlo
+// en cuanto se abre el teclado de un teléfono.
+chequear('Cambiar el tamaño de la ventana recoloca el desplegable, no lo cierra',
+    str_contains($compJs, 'alCambiarTamano')
+    && !preg_match("/addEventListener\('resize', cerrar\)/", $compJs));
+
+// Desplazar la lista de opciones no puede cerrarla: `scroll` no burbujea, se
+// escucha en captura, y en captura también llegan los de adentro.
+chequear('Desplazar la lista de opciones no la cierra',
+    str_contains($compJs, 'function alDesplazar(')
+    && !preg_match("/addEventListener\('scroll', cerrar, true\)/", $compJs));
+
+
 
 // ───────────────────────────────────────────────────────────────────────────
 // Escala responsive
@@ -1024,9 +1320,15 @@ foreach ([
     chequear(basename($hoja) . ' cubre los cortes ' . implode('/', $cortes),
         $faltan === [], 'faltan: ' . implode(', ', $faltan));
 }
+// La regla y su corte viven en componentes.css desde que backend/edit.php se
+// reconocio como pantalla compartida por los dos portales.
+// Se aplana la hoja (saltos, espacios y punto y coma) antes de comparar: el
+// chequeo tiene que hablar de la regla, no del formato con que esta escrita.
+$plano = str_replace(["\n", ' ', ';'], '', $comp);
 chequear('Las grillas de 3 columnas pasan por 2 antes de llegar a 1',
-    preg_match('/@media \(max-width:1024px\)\{[^}]*\.ih-edit-grid-3\{grid-template-columns:1fr 1fr\}/s', str_replace("\n", '', $css)) === 1
- || str_contains(str_replace(["\n", ' '], '', $css), '.ih-edit-grid-3{grid-template-columns:1fr1fr}'));
+    str_contains($plano, '@media(max-width:1024px){.ih-edit-grid-3{grid-template-columns:1fr1fr}}'));
+chequear('Y a 860px las grillas del formulario pasan a una sola columna',
+    str_contains($plano, '@media(max-width:860px){.ih-edit-grid,.ih-edit-grid-3{grid-template-columns:1fr}}'));
 
 // Nada puede empujar la página en horizontal: lo ancho se desplaza en su caja.
 foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
@@ -1054,10 +1356,45 @@ chequear('Las grillas de edición viven en la hoja, no en la página',
 $cc = sin_comentarios(leer('includes/campo_catalogo.php'));
 chequear('El alta rápida no usa el cuadro nativo del navegador',
     !preg_match('/window\.prompt\s*\(/', $cc) && !preg_match('/(?<![.\w])alert\s*\(/', $cc));
-chequear('Hay un diálogo propio para el alta rápida', str_contains($cc, 'cat-modal__caja'));
-chequear('El diálogo se cierra con Escape', str_contains($cc, "'Escape'"));
-chequear('El diálogo devuelve el foco a donde estaba', str_contains($cc, 'previo.focus'));
-chequear('El diálogo declara su rol de accesibilidad', str_contains($cc, 'aria-modal="true"'));
+
+// El diálogo vivía dentro de este include: sesenta líneas de JavaScript y una
+// hoja de estilos en un <style> que se reimprimía en cada página que usaba el
+// campo y que el navegador no podía cachear. Era un segundo diálogo haciendo
+// casi lo mismo que el de confirmación. Ahora los dos salen de la capa
+// compartida, así que lo que hay que chequear es que lo use y que no se haya
+// quedado con una copia propia.
+chequear('El alta rápida usa el diálogo compartido',
+    str_contains($cc, 'window.ihPedirTexto('));
+chequear('El include ya no trae su propio diálogo ni su propia hoja de estilos',
+    !str_contains($cc, 'cat-modal') && !str_contains($cc, '<style>'));
+chequear('Los estilos del campo de catálogo están en la hoja compartida',
+    str_contains($comp, '.cat-campo') && str_contains($comp, '.cat-add'));
+
+// El botón del «+» tiene que medir lo mismo que el desplegable de al lado.
+// Estaba con un gris y un radio escritos a mano, distintos de los del campo.
+chequear('El botón de agregar toma la geometría de los tokens del portal',
+    preg_match('/\.cat-add\s*\{[^}]*var\(--ih-ctl-radius/s', $comp) === 1
+    && preg_match('/\.cat-add\s*\{[^}]*var\(--ih-ctl-border/s', $comp) === 1);
+
+// Un «+» a secas no le dice nada a un lector de pantalla, y el `title` tarda en
+// aparecer al pasar el mouse.
+chequear('El botón de agregar dice qué agrega', str_contains($cc, 'aria-label="Agregar un valor a'));
+
+// `ihPedirTexto` es un <dialog>: Escape, el foco de vuelta y el fondo oscuro los
+// pone el navegador, no hay que programarlos.
+// Se mira DENTRO de la función, no en todo el archivo: el de confirmación
+// también llama a showModal() y encontrarlo ahí no probaría nada de éste.
+preg_match('/window.ihPedirTexto = function.*?
+  };/s', $compJs, $mPT);
+chequear('El diálogo de texto es un <dialog>, con lo que Escape y el foco salen gratis',
+    str_contains($compJs, "el('dialog', 'ihc-modal ihc-modal--texto')")
+    && str_contains($mPT[0] ?? '', 'showModal()'));
+chequear('El diálogo de texto cancela con Escape sin confirmar',
+    preg_match('/function onCancel\(e\) \{ e\.preventDefault\(\); cerrar\(null\); \}/', $compJs) === 1);
+chequear('Enviar el campo vacío no cierra el diálogo',
+    str_contains($compJs, "err.textContent = 'Escribí un valor.'"));
+chequear('La etiqueta del campo apunta al campo',
+    str_contains($compJs, 'for="ihc-texto-input"') && str_contains($compJs, 'id="ihc-texto-input"'));
 
 // ───────────────────────────────────────────────────────────────────────────
 // Estructura de las tarjetas del alta
@@ -1132,6 +1469,145 @@ chequear('El detalle no dibuja tarjetas vacías',
     str_contains($vd, '$htmlGarantia') && str_contains($vd, '$htmlInfocom'));
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────────────────
+grupo('CSV · exportar e importar');
+//
+// Exportar el inventario, abrirlo en Excel y volver a importarlo es un camino
+// que la gente usa. Estaba roto y en silencio: de 32 columnas exportadas, 15 se
+// perdían al reimportar.
+//
+// La causa era norm_col(), que borra los guiones bajos: un alias escrito
+// 'patchcord_tipo' se normaliza a "patchcordtipo" y nunca coincide con la
+// cabecera "Patchcord tipo" -> "patchcord tipo". Y `fecha_compra` directamente
+// no estaba en el INSERT.
+
+$expCsv = leer('backend/export_csv.php');
+$impCsv = leer('backend/import_csv.php');
+
+/** La misma normalización que hace el import. */
+$normCol = static function (string $s): string {
+    $s = trim(mb_strtolower($s, 'UTF-8'));
+    $s = (string)iconv('UTF-8', 'ASCII//TRANSLIT', $s);
+    $s = (string)preg_replace('/[^a-z0-9\/ ]/', '', $s);
+    return (string)preg_replace('/\s+/', ' ', $s);
+};
+
+// Cabeceras que escribe el export.
+preg_match('/fputcsv\(\$output, array_filter\(\[(.*?)\]\)\);/s', $expCsv, $mExp);
+preg_match_all("/'([^']+)'/", $mExp[1] ?? '', $mmExp);
+$cabeceras = $mmExp[1];
+
+// Alias que acepta el import.
+preg_match('/\$columnMap\s*=\s*\[(.*?)\n\];/s', $impCsv, $mImp);
+preg_match_all("/'([a-z0-9_]+)'\s*=>\s*\[([^\]]*)\]/s", $mImp[1] ?? '', $mmImp, PREG_SET_ORDER);
+$alias = [];
+foreach ($mmImp as $g) {
+    preg_match_all("/'([^']*)'/", $g[2], $v);
+    foreach ($v[1] as $a) { $alias[$normCol($a)] = $g[1]; }
+}
+
+chequear('Se pudieron leer las cabeceras del export y el mapa del import',
+    count($cabeceras) > 20 && count($alias) > 50,
+    count($cabeceras) . ' cabeceras, ' . count($alias) . ' alias');
+
+// `ID` lo asigna la base. `Fecha Carga` es cuándo se cargó la fila y lo pone el
+// sistema. `Archivado` es el estado de la papelera: dejar que un CSV lo escriba
+// sería permitir que una importación mande cosas a la papelera sin avisar.
+$SOLO_EXPORT = ['ID', 'Fecha Carga', 'Archivado'];
+$perdidas = [];
+foreach ($cabeceras as $h) {
+    if (in_array($h, $SOLO_EXPORT, true)) { continue; }
+    if (!isset($alias[$normCol($h)])) { $perdidas[] = $h; }
+}
+chequear(count($cabeceras) . ' columnas exportadas: todas se vuelven a importar',
+    $perdidas === [], 'se pierden: ' . implode(', ', $perdidas));
+
+// Las tres columnas de sólo exportación tienen que seguir sin alias: si alguien
+// agrega uno, una importación podría archivar activos en silencio.
+$coladas = [];
+foreach (['Fecha Carga', 'Archivado'] as $h) {
+    if (isset($alias[$normCol($h)])) { $coladas[] = $h; }
+}
+chequear('Ni la fecha de carga ni el estado de archivado se pueden importar',
+    $coladas === [], 'ahora se importan: ' . implode(', ', $coladas));
+
+// mysqli no avisa cuando la cadena de tipos, los marcadores y los argumentos no
+// coinciden: falla en ejecución, con una fila a medio escribir.
+preg_match('/\$stmtProd->bind_param\((.*?)\n\s*\);/s', $impCsv, $mB);
+$bloqueBind = $mB[1] ?? '';
+preg_match("/'([sidb]+)'/", $bloqueBind, $mT);
+$tipos = strlen($mT[1] ?? '');
+preg_match('/\) VALUES \(([?,]+)\)/', $impCsv, $mV);
+$marcadores = substr_count($mV[1] ?? '', '?');
+$argumentos = substr_count($bloqueBind, '$registro[');
+chequear("El INSERT de importación tiene {$tipos} tipos, {$marcadores} marcadores y {$argumentos} argumentos: coinciden",
+    $tipos > 0 && $tipos === $marcadores && $tipos === $argumentos,
+    "tipos={$tipos} marcadores={$marcadores} argumentos={$argumentos}");
+
+// El comentario que explica la cuenta tiene que decir la verdad.
+chequear('El comentario de los tipos dice el número correcto',
+    str_contains($impCsv, "// {$tipos} tipos, uno por columna"));
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('DISENO · medido en el navegador');
+//
+// test/diseno/ mide las pantallas en Chrome: cuánto mide cada control, qué
+// tamaños de letra se usan, si algo desborda. Eso no se puede hacer acá (esto
+// es análisis estático) ni en test/componentes.js (jsdom no calcula layout).
+// Lo que sí se puede es dejar clavados los defectos que esa medición encontró,
+// para que no vuelvan en silencio.
+
+chequear('La auditoría de diseño está en el repositorio',
+    is_file(RAIZ . '/test/diseno/auditor.js') && is_file(RAIZ . '/test/diseno/README.md'));
+
+// Un <button> no hereda la tipografía: el icono del «+» de los catálogos y el
+// del calendario salían en la fuente por omisión del navegador, Arial 13,33px,
+// en vez de Saira.
+chequear('Los botones con icono declaran su tipografía',
+    preg_match('/\.cat-add\s*\{[^}]*font-family:\s*inherit/s', $comp) === 1
+    && preg_match('/\.ihc-fecha__abrir\s*\{[^}]*font-family:\s*inherit/s', $comp) === 1);
+
+// El mismo `.ih-btn--sm` medía 27px en el panel y 34px en el portal del cliente,
+// porque la hoja del panel no declaraba alto mínimo. 34 es el de APP Tickets.
+foreach ([
+    'assets/css/app.css'         => $css,
+    'assets/css/intellihelp.css' => $ihcss2,
+] as $hoja => $txt) {
+    $plano2 = str_replace([" ", "\n"], '', $txt);
+    chequear(basename($hoja) . ' declara el alto mínimo de los botones',
+        str_contains($plano2, 'min-height:36px') && str_contains($plano2, 'min-height:34px'));
+}
+
+// Una insignia de 9px no se lee. El tamaño lo da la hoja, no un style suelto.
+$conStyleChico = [];
+foreach (archivos_php() as $f) {
+    $rel = substr($f, strlen(RAIZ) + 1);
+    if (str_starts_with($rel, 'test')) { continue; }
+    // Todas las del archivo, no sólo la primera: la primera vez que corrió esto
+    // quedaron tres sin arreglar porque sólo informaba una por archivo.
+    if (preg_match_all('/style="[^"]*font-size:\s*([0-9.]+)px/', (string)file_get_contents($f), $mm)) {
+        foreach ($mm[1] as $px) {
+            if ((float)$px < 11) { $conStyleChico[] = $rel . ' (' . $px . 'px)'; }
+        }
+    }
+}
+chequear('Ninguna pantalla fuerza una letra de menos de 11px',
+    $conStyleChico === [], implode(', ', $conStyleChico));
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('ORTOGRAFIA');
+//
+// La revisión vive en test/ortografia.php, que también se puede correr sola
+// (`php test/ortografia.php`) para ver el detalle de cada hallazgo. Acá se
+// incluye y se pregunta lo mismo, para que no haya que acordarse de correrla
+// aparte y para no repetir las listas de palabras en dos lugares.
+require_once RAIZ . '/test/ortografia.php';
+$orto = ortografia_hallazgos();
+$cuantas = array_sum(array_map('count', $orto));
+chequear('El texto visible no tiene faltas de ortografía ni términos fuera de lugar',
+    $orto === [],
+    $cuantas . ' en ' . count($orto) . ' archivos: ' . implode(', ', array_keys($orto))
+    . ' — correr `php test/ortografia.php` para ver el detalle');
 grupo('DOCUMENTACION');
 // ═══════════════════════════════════════════════════════════════════════════
 // Regla del proyecto: la documentación se actualiza en tiempo real y el README
