@@ -824,6 +824,14 @@ chequear('Verifica el recálculo de rutas del árbol',
     str_contains($itg, 'La ruta del nieto se recalculó'));
 chequear('Verifica que los cuatro roles de plataforma se puedan guardar',
     str_contains($itg, 'Los cuatro roles de plataforma se pueden guardar'));
+// Una instalación limpia no es el caso riesgoso. El riesgoso es la que ya existe
+// y tiene datos: ésa es la que puede perderlos.
+chequear('Verifica la actualización de una instalación CON datos',
+    str_contains($itg, 'actualizar una instalación CON DATOS'));
+chequear('Verifica que la actualización no pierda activos',
+    str_contains($itg, 'No se perdió ningún activo'));
+chequear('Verifica que los campos específicos no se muevan de su columna',
+    str_contains($itg, 'Los campos específicos siguen en su columna'));
 chequear('El esquema base es armable sin conexión (para poder testearlo)',
     str_contains(leer('core/tenants/install_tenant.php'), 'function tenant_schema_sql'));
 

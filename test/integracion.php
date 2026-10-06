@@ -422,6 +422,113 @@ chequear('No se puede crear un campo que pise una columna de productos',
     campo_definicion_agregar($conn, ['clave' => 'marca', 'etiqueta' => 'Marca', 'tipo' => 'texto']) === 0);
 
 // ═══════════════════════════════════════════════════════════════════════════
+grupo('MIGRACIONES · actualizar una instalación CON DATOS');
+// ═══════════════════════════════════════════════════════════════════════════
+// Lo de arriba prueba una instalación limpia. Lo que va a pasar en producción es
+// otra cosa: una base que ya existe, con activos cargados, que salta de la v5 a
+// la v7. Ese es el camino riesgoso —el que puede perder datos— y es el que se
+// prueba acá.
+//
+// Se usa un prefijo de tablas, así que de paso se ejercita el modo `prefix`
+// (varias empresas dentro de la master), que el resto de la batería no toca.
+// Las aserciones van por SQL directo y no por los helpers, para no depender de
+// las cachés por request.
+$P2 = 'up_';
+
+foreach (tenant_schema_sql($P2) as $q) { $conn->query($q); }
+
+// Estado de partida: una instalación vieja, en la v5.
+$migs = migraciones_tenant();
+$errUp = '';
+try {
+    foreach ([1, 2, 3, 4, 5] as $v) { $migs[$v]($conn, $P2); }
+    // Dejar registrada la versión, como la habría dejado `bin/migrar.php`. Sin
+    // esto el motor la ve en 0 y vuelve a aplicar todo desde la 1 — que, dicho
+    // sea de paso, resultó inofensivo, pero no es el caso que se quiere probar.
+    $stV = $conn->prepare("INSERT INTO `{$P2}tenant_settings` (setting_key, setting_value) VALUES (?, ?)
+                           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+    $kV = SCHEMA_VERSION_KEY; $vV = '5';
+    $stV->bind_param('ss', $kV, $vV);
+    $stV->execute();
+    $stV->close();
+} catch (Throwable $e) { $errUp = $e->getMessage(); }
+chequear('Se puede reconstruir una instalación vieja (v1..v5)', $errUp === '', $errUp);
+chequear('La instalación vieja queda registrada en la v5',
+    schema_version_actual($conn, $P2) === 5);
+
+// Datos como los que ya hay cargados: ubicaciones y marcas escritas a mano, y
+// los campos específicos en sus columnas.
+$conn->query("INSERT INTO `{$P2}productos`
+    (modelo, marca, categoria, subcategoria, estado, ubicacion, asignado_a,
+     valor_usd, cantidad, archivado, patchcord_tipo, patchcord_longitud)
+  VALUES
+    ('ThinkPad E15', 'Lenovo', 'Informática', 'Notebook', 'Usado', 'Depósito Central', 'Soporte', 900.00, 1, 0, NULL, NULL),
+    ('Cable 3m',     'Furukawa', 'Redes',     'Patchcord', 'Nuevo', 'Depósito Central', 'Soporte',   4.50, 50, 0, 'UTP', '3'),
+    ('Switch 24p',   'TP-Link',  'Redes',     'Switch',    'Nuevo', 'Sala de servidores', 'Redes', 180.00, 2, 0, NULL, NULL),
+    ('Monitor 24',   'Samsung',  'Informática','Monitor',  'Usado', 'Oficina 204', '', 120.00, 3, 1, NULL, NULL)");
+$antesProd = (int)una($conn, "SELECT COUNT(*) FROM `{$P2}productos`");
+// Una ubicación que ya estaba en el catálogo plano y otra que sólo está en los activos.
+$conn->query("INSERT IGNORE INTO `{$P2}catalogos` (tipo, valor) VALUES ('ubicacion','Depósito Central'),('asignado_a','Soporte')");
+chequear('Instalación vieja con datos cargados', $antesProd === 4);
+
+// El salto.
+$aplUp = [];
+$errUp2 = '';
+try { $aplUp = migrar_tenant($conn, $P2, function (string $m) {}); }
+catch (Throwable $e) { $errUp2 = $e->getMessage(); }
+chequear('Las migraciones 6 y 7 aplican sobre la base con datos', $errUp2 === '', $errUp2);
+chequear('Sólo se aplicaron las pendientes', $aplUp === [6, 7], 'aplicadas: ' . implode(',', $aplUp));
+
+// Lo que más importa: no se perdió nada.
+chequear('No se perdió ningún activo',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}productos`") === $antesProd);
+chequear('Los campos específicos siguen en su columna',
+    una($conn, "SELECT patchcord_tipo FROM `{$P2}productos` WHERE modelo='Cable 3m'") === 'UTP');
+chequear('El valor y la cantidad siguen intactos',
+    (float)una($conn, "SELECT valor_usd FROM `{$P2}productos` WHERE modelo='ThinkPad E15'") === 900.00);
+
+// Catálogos sembrados con lo que ya estaba escrito a mano.
+foreach ([['marca', 'Lenovo'], ['marca', 'Furukawa'], ['categoria', 'Redes'],
+          ['subcategoria', 'Patchcord'], ['estado', 'Usado']] as [$t, $v]) {
+    chequear("El catálogo «{$t}» recogió «{$v}» de los activos",
+        (int)una($conn, "SELECT COUNT(*) FROM `{$P2}catalogos` WHERE tipo='{$t}' AND valor='{$v}'") === 1);
+}
+
+// Ubicaciones: las tres que había en los activos pasan al árbol, incluida la que
+// nunca llegó al catálogo plano.
+chequear('Las ubicaciones de los activos quedaron en el árbol',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}ubicaciones`") === 3,
+    'hay: ' . (string)una($conn, "SELECT GROUP_CONCAT(nombre) FROM `{$P2}ubicaciones`"));
+chequear('Una ubicación que sólo estaba en los activos también entró',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}ubicaciones` WHERE nombre='Sala de servidores'") === 1);
+chequear('Ya no quedan ubicaciones en el catálogo plano',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}catalogos` WHERE tipo='ubicacion'") === 0);
+chequear('Los activos quedaron enlazados a su ubicación',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}productos` WHERE ubicacion_id IS NOT NULL") === 4,
+    'enlazados: ' . (string)una($conn, "SELECT COUNT(*) FROM `{$P2}productos` WHERE ubicacion_id IS NOT NULL"));
+chequear('El texto de la ubicación no cambió',
+    una($conn, "SELECT ubicacion FROM `{$P2}productos` WHERE modelo='Switch 24p'") === 'Sala de servidores');
+
+// Infocom y campos: una fila por activo, definiciones sembradas.
+chequear('Cada activo existente tiene su fila de Infocom',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}activo_infocom`") === $antesProd);
+chequear('Las definiciones de campos se sembraron',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}campos_definicion` WHERE columna_legacy IS NOT NULL") === 14);
+chequear('No se movió ningún valor a campos_valor',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}campos_valor`") === 0);
+
+// Y que el archivado siga archivado: la papelera no se toca.
+chequear('Los activos archivados siguen archivados',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}productos` WHERE archivado = 1") === 1);
+
+// Idempotencia sobre la base con datos: correrlo dos veces no duplica nada.
+migrar_tenant($conn, $P2, function (string $m) {});
+chequear('Repetir la migración no duplica ubicaciones',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}ubicaciones`") === 3);
+chequear('Repetir la migración no duplica filas de Infocom',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$P2}activo_infocom`") === $antesProd);
+
+// ═══════════════════════════════════════════════════════════════════════════
 grupo('MIGRACIONES · master');
 // ═══════════════════════════════════════════════════════════════════════════
 // La master no tenía migraciones: la creaba install.php y después cada página la
