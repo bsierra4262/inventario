@@ -487,3 +487,95 @@ dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
    Misma historia: vivia dentro de inventario/index.php. */
 .ih-sort-link{display:inline-flex;align-items:center;gap:4px;color:inherit;text-decoration:none;white-space:nowrap}
 .ih-sort-link:hover,.ih-sort-link.is-active,.ih-sort-link.is-active i{color:var(--ih-green)}
+
+/* Marca del sidebar: en el tenant vive dentro de .ih-sidebar__brand, que esta
+   oculto porque la marca ya esta en el topbar. Se define igual para que la
+   cobertura por portal sea real y no dependa de que el padre siga oculto. */
+.ih-sidebar__logo{width:40px;height:40px;border-radius:var(--radius);overflow:hidden;flex:none;
+  background:var(--surface);color:var(--primary);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:18px}
+.ih-sidebar__logo img{width:100%;height:100%;object-fit:contain;display:block}
+.ih-sidebar__brand-text{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+
+/* Utilidad de layout usada por el markup del tenant. */
+.ih-flex-col{display:flex;flex-direction:column}
+
+/* ===========================================================================
+   ESCALA RESPONSIVE
+   ---------------------------------------------------------------------------
+   Habia dos cortes (860 y 640) y entre ellos nada: una grilla de tres columnas
+   seguia en tres hasta los 640px, que en una notebook de 13" o una tablet en
+   vertical deja los campos de ~200px. Y por debajo de 640 todo saltaba de
+   golpe a una sola columna.
+
+   Los cortes salen de los anchos reales de uso, no de nombres de dispositivo:
+
+     1400  monitores grandes y ultrawide
+     1200  notebooks de 14-15"
+     1024  tablets en horizontal / notebooks de 13"
+      860  tablets en vertical            (ya existia)
+      640  telefonos                      (ya existia)
+      400  telefonos chicos
+
+   Todo lo que ya era fluido —.ih-stats, .ih-form-grid con auto-fit— se deja
+   como esta: repartir con minmax es mejor que cortar por ancho.
+   =========================================================================== */
+
+/* Grillas del formulario de alta y edicion.
+   Vivian en un <style> dentro de backend/edit.php: una clase del sistema de
+   diseno definida en una sola pantalla no la ve ninguna otra. */
+.ih-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+.ih-edit-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 20px}
+
+@media (max-width:1200px){
+  .ih-app__main{padding:1.4rem 1.2rem}
+}
+
+@media (max-width:1024px){
+  /* El escalon que faltaba: tres columnas pasan a dos antes de llegar a una. */
+  .ih-edit-grid-3{grid-template-columns:1fr 1fr}
+  .ih-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .ih-stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+}
+
+@media (max-width:860px){
+  .ih-edit-grid,.ih-edit-grid-3{grid-template-columns:1fr}
+  /* Un formulario de 260px minimo mas el padding no entra en un telefono
+     angosto: por debajo de este ancho se reparte libre. */
+  .ih-form-grid{grid-template-columns:1fr}
+  /* Las pestanas se desplazan en horizontal en vez de apilarse y comerse la
+     pantalla. El scrollbar se oculta pero el gesto sigue funcionando. */
+  .ih-sidebar,.ih-app__sidebar{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .ih-topbar__actions .ih-btn span{display:none}
+}
+
+@media (max-width:640px){
+  .ih-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  /* Los botones de accion de las tarjetas pasan a ancho completo: a dedo, un
+     boton de 90px al lado de otro es un error de tipeo esperando. */
+  .ih-card__header{flex-direction:column;align-items:flex-start;gap:.6rem}
+  .ih-card__header .ih-btn{width:100%;justify-content:center}
+  .ih-table{font-size:12.5px}
+  .ih-table th,.ih-table td{padding:.55rem .6rem}
+}
+
+@media (max-width:400px){
+  .ih-app__main{padding:.9rem .7rem}
+  .ih-stats{grid-template-columns:1fr}
+  .ih-stat__value{font-size:20px}
+  .ih-card__body,.ih-card__header{padding:.75rem}
+  .ih-btn{padding:.5rem .7rem;font-size:12.5px}
+}
+
+/* Ningun contenido ancho puede empujar la pagina en horizontal: lo que no
+   entra, se desplaza dentro de su propia caja. */
+.ih-table-wrap,.ih-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+html,body{overflow-x:hidden}
+img,svg,video{max-width:100%;height:auto}
+
+/* El area tactil minima recomendada es 44px. Los iconos de accion de las
+   tablas eran de 28. */
+@media (pointer:coarse){
+  .ih-btn,.ih-sidebar__link{min-height:44px}
+  .ih-btn--sm{min-height:38px}
+}

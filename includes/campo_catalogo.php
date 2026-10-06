@@ -32,14 +32,97 @@ function campo_catalogo_assets(): void {
     (function () {
       const TOKEN = <?= json_encode($token) ?>;
 
+      // Dialogo de alta rapida.
+      //
+      // Antes esto lo pedia el cuadro nativo del navegador: funcionaba, pero es
+      // gris, sin los colores ni la tipografia del sistema, y con el nombre del
+      // dominio arriba. En una pantalla de gestion queda fuera de lugar.
+      let dlg = null;
+      function construirDialogo() {
+        if (dlg) return dlg;
+        const el = document.createElement('div');
+        el.className = 'cat-modal';
+        el.hidden = true;
+        el.innerHTML = `
+          <div class="cat-modal__fondo" data-cerrar></div>
+          <div class="cat-modal__caja" role="dialog" aria-modal="true" aria-labelledby="cat-modal-tit">
+            <h3 class="cat-modal__titulo" id="cat-modal-tit"></h3>
+            <label class="cat-modal__label" for="cat-modal-input"></label>
+            <input type="text" id="cat-modal-input" class="ih-input" maxlength="255" autocomplete="off">
+            <p class="cat-modal__error" role="alert" hidden></p>
+            <div class="cat-modal__acciones">
+              <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
+              <button type="button" class="ih-btn ih-btn--primary" data-aceptar>Agregar</button>
+            </div>
+          </div>`;
+        document.body.appendChild(el);
+        dlg = el;
+        return el;
+      }
+
+      function pedirValor(label) {
+        const el    = construirDialogo();
+        const input = el.querySelector('#cat-modal-input');
+        const err   = el.querySelector('.cat-modal__error');
+        el.querySelector('.cat-modal__titulo').textContent = 'Nuevo valor';
+        el.querySelector('.cat-modal__label').textContent  = label;
+        input.value = '';
+        err.hidden = true;
+        el.hidden = false;
+        // El foco entra al dialogo y vuelve a donde estaba al cerrarlo.
+        const previo = document.activeElement;
+        setTimeout(() => input.focus(), 0);
+
+        return new Promise(resolve => {
+          function cerrar(valor) {
+            el.hidden = true;
+            el.removeEventListener('click', onClick);
+            document.removeEventListener('keydown', onKey);
+            if (previo && previo.focus) previo.focus();
+            resolve(valor);
+          }
+          function onClick(e) {
+            if (e.target.closest('[data-aceptar]')) {
+              const v = input.value.trim();
+              if (!v) { err.textContent = 'Escribí un valor.'; err.hidden = false; input.focus(); return; }
+              cerrar(v);
+            } else if (e.target.closest('[data-cerrar]')) {
+              cerrar(null);
+            }
+          }
+          function onKey(e) {
+            if (e.key === 'Escape') { cerrar(null); }
+            if (e.key === 'Enter' && document.activeElement === input) {
+              e.preventDefault();
+              el.querySelector('[data-aceptar]').click();
+            }
+          }
+          el.addEventListener('click', onClick);
+          document.addEventListener('keydown', onKey);
+        });
+      }
+
+      // Aviso no bloqueante, en lugar del cuadro modal del navegador.
+      function avisar(msg, boton) {
+        const p = document.createElement('p');
+        p.className = 'cat-huerfano';
+        p.setAttribute('role', 'alert');
+        p.textContent = msg;
+        const cont = boton.closest('.cat-campo') || boton.parentElement;
+        const previo = cont.parentElement.querySelector('.cat-aviso');
+        if (previo) previo.remove();
+        p.classList.add('cat-aviso');
+        cont.parentElement.appendChild(p);
+        setTimeout(() => p.remove(), 6000);
+      }
+
       window.catalogoAgregar = async function (boton) {
         const tipo   = boton.dataset.tipo;
         const select = document.getElementById(boton.dataset.target);
         const label  = boton.dataset.label || 'valor';
 
-        const valor = window.prompt('Nuevo ' + label + ':');
+        const valor = await pedirValor(label);
         if (valor === null) return;
-        if (!valor.trim()) return;
 
         boton.disabled = true;
         const textoPrevio = boton.textContent;
@@ -60,7 +143,7 @@ function campo_catalogo_assets(): void {
           });
           const data = await r.json();
 
-          if (!data.ok) { alert(data.msg || 'No se pudo agregar.'); return; }
+          if (!data.ok) { avisar(data.msg || 'No se pudo agregar.', boton); return; }
 
           // Si ya existía (reactivado), no duplicar la opción.
           let opt = Array.from(select.options).find(o => o.value === data.valor);
@@ -79,7 +162,7 @@ function campo_catalogo_assets(): void {
           select.value = data.valor;
           select.dispatchEvent(new Event('change', { bubbles: true }));
         } catch (e) {
-          alert('No se pudo contactar al servidor.');
+          avisar('No se pudo contactar al servidor.', boton);
         } finally {
           boton.disabled = false;
           boton.textContent = textoPrevio;
@@ -98,6 +181,30 @@ function campo_catalogo_assets(): void {
       .cat-add:hover:not(:disabled) { background: var(--ih-purple-50, #f4f1f9); }
       .cat-add:disabled { opacity: .5; cursor: default; }
       .cat-huerfano { font-size: 11px; color: var(--ih-warning, #EA580C); margin-top: 4px; display: block; }
+
+      /* Dialogo de alta rapida — reemplaza al cuadro nativo del navegador. */
+      .cat-modal { position: fixed; inset: 0; z-index: 1000; display: flex;
+        align-items: center; justify-content: center; padding: 1rem; }
+      .cat-modal[hidden] { display: none; }
+      .cat-modal__fondo { position: absolute; inset: 0; background: rgba(17,20,24,.45); }
+      .cat-modal__caja {
+        position: relative; width: 100%; max-width: 420px;
+        background: var(--ih-white, #fff); border-radius: var(--ih-radius-lg, 15px);
+        padding: 1.5rem; box-shadow: 0 20px 50px rgba(17,20,24,.25);
+        animation: cat-modal-in .14s ease-out;
+      }
+      @keyframes cat-modal-in { from { opacity: 0; transform: translateY(8px); } }
+      @media (prefers-reduced-motion: reduce) { .cat-modal__caja { animation: none; } }
+      .cat-modal__titulo { margin: 0 0 .25rem; font-size: 1.05rem; font-weight: 700;
+        color: var(--ih-gray-900, #161922); }
+      .cat-modal__label { display: block; margin: .75rem 0 .35rem;
+        font-size: .8rem; font-weight: 600; color: var(--ih-gray-600, #52525b); }
+      .cat-modal__error { margin: .5rem 0 0; font-size: .78rem; color: var(--ih-danger, #DC2626); }
+      .cat-modal__acciones { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.25rem; }
+      @media (max-width: 420px) {
+        .cat-modal__acciones { flex-direction: column-reverse; }
+        .cat-modal__acciones .ih-btn { width: 100%; }
+      }
     </style>
     <?php
 }

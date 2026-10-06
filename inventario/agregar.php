@@ -440,22 +440,26 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       </div>
 
+      <?php /* Campos especificos de la categoria definidos en datos
+               (campos_definicion). Los catorce heredados los siguen dibujando los
+               bloques fijos de arriba; aca salen los que se agregan sin tocar el
+               esquema. Si no hay ninguno, la tarjeta entera no se dibuja. */ ?>
+      <?php ob_start(); campos_dinamicos_render($conn); $camposHtml = ob_get_clean(); ?>
+      <?php if (str_contains($camposHtml, 'campos-dinamicos__grupo')): ?>
+      <div class="ih-card" style="margin-bottom:16px;">
+        <div class="ih-card__header">
+          <h3 class="ih-card__title"><i class="bi bi-sliders"></i> Detalles de la categoría</h3>
+        </div>
+        <div class="ih-card__body">
+          <?= $camposHtml ?>
+        </div>
+      </div>
+      <?php endif; ?>
+
       <!-- ── Bloque 3: Garantía y fechas ───────────────────────────── -->
       <div class="ih-card" style="margin-bottom:16px;">
         <div class="ih-card__header">
-          <div class="ih-card ih-mb-5">
-          <?php /* Campos especificos de la categoria definidos en datos
-                   (campos_definicion). Los catorce heredados los siguen dibujando
-                   los bloques fijos de arriba; aca salen los que se agregan sin
-                   tocar el esquema. La tarjeta no se ve si no hay ninguno. */ ?>
-          <?php ob_start(); campos_dinamicos_render($conn); $camposHtml = ob_get_clean(); ?>
-          <?php if (trim(strip_tags($camposHtml)) !== '' || str_contains($camposHtml, 'campos-dinamicos__grupo')): ?>
-            <h3 class="ih-card__title"><i class="bi bi-sliders"></i> Detalles de la categoría</h3>
-            <?= $camposHtml ?>
-          <?php endif; ?>
-        </div>
-
-        <h3 class="ih-card__title"><i class="bi bi-shield-check"></i> Garantía y fechas</h3>
+          <h3 class="ih-card__title"><i class="bi bi-shield-check"></i> Garantía y fechas</h3>
         </div>
         <div class="ih-card__body">
           <div class="ih-form-grid">
@@ -490,61 +494,77 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Bloque 4: Adjuntos ──────────────────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:24px;">
+            <!-- ── Bloque 4: Compra y administración (Infocom) ─────────────── -->
+      <?php /* Datos financieros y administrativos. Todos opcionales: el alta no
+               se traba por no tener la factura a mano y se completan despues
+               desde la edicion del activo. */ ?>
+      <div class="ih-card" style="margin-bottom:16px;">
         <div class="ih-card__header">
-          <div class="ih-card ih-mb-5">
           <h3 class="ih-card__title"><i class="bi bi-receipt"></i> Compra y administración</h3>
-          <?php /* Los datos financieros y administrativos (lo que GLPI llama Infocom).
-                   Son todos opcionales: el alta no se traba por no tener la factura a mano,
-                   y se completan despues desde la edicion. */ ?>
+        </div>
+        <div class="ih-card__body">
           <div class="ih-form-grid">
+
             <div class="ih-field">
               <label class="ih-label" for="f-numero_pedido">N.º de pedido</label>
               <input type="text" id="f-numero_pedido" name="numero_pedido" class="ih-input" maxlength="120"
                      value="<?= htmlspecialchars((string)$fv('numero_pedido')) ?>">
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-numero_remito">N.º de remito</label>
               <input type="text" id="f-numero_remito" name="numero_remito" class="ih-input" maxlength="120"
                      value="<?= htmlspecialchars((string)$fv('numero_remito')) ?>">
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-numero_factura">N.º de factura</label>
               <input type="text" id="f-numero_factura" name="numero_factura" class="ih-input" maxlength="120"
                      value="<?= htmlspecialchars((string)$fv('numero_factura')) ?>">
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-proveedor">Proveedor</label>
               <?php campo_catalogo($conn, 'proveedor', (string)$fv('proveedor'), $puedeGestionarCatalogos); ?>
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-presupuesto">Presupuesto</label>
               <?php campo_catalogo($conn, 'presupuesto', (string)$fv('presupuesto'), $puedeGestionarCatalogos); ?>
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-criticidad">Criticidad de negocio</label>
               <?php campo_catalogo($conn, 'criticidad', (string)$fv('criticidad'), $puedeGestionarCatalogos); ?>
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-fecha_entrega">Fecha de entrega</label>
               <input type="date" id="f-fecha_entrega" name="fecha_entrega" class="ih-input"
                      value="<?= htmlspecialchars((string)$fv('fecha_entrega')) ?>">
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-fecha_puesta_servicio">Puesta en servicio</label>
               <input type="date" id="f-fecha_puesta_servicio" name="fecha_puesta_servicio" class="ih-input"
                      value="<?= htmlspecialchars((string)$fv('fecha_puesta_servicio')) ?>">
             </div>
+
             <div class="ih-field">
               <label class="ih-label" for="f-amortizacion_anios">Años de amortización</label>
               <input type="number" id="f-amortizacion_anios" name="amortizacion_anios" class="ih-input" min="0" step="1"
                      value="<?= htmlspecialchars((string)$fv('amortizacion_anios')) ?>">
               <span class="ih-field__hint">Si queda vacío, el reporte usa el plazo general</span>
             </div>
+
           </div>
         </div>
+      </div>
 
-        <h3 class="ih-card__title"><i class="bi bi-paperclip"></i> Archivos adjuntos</h3>
+      <!-- ── Bloque 5: Adjuntos ──────────────────────────────────────── -->
+      <div class="ih-card" style="margin-bottom:24px;">
+        <div class="ih-card__header">
+          <h3 class="ih-card__title"><i class="bi bi-paperclip"></i> Archivos adjuntos</h3>
         </div>
         <div class="ih-card__body">
         <?php if (!$cloudUploadOk): ?>

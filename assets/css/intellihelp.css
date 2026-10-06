@@ -779,3 +779,105 @@ img { max-width: 100%; height: auto; display: block; }
    `body` y no del portal, asi que las dos hojas decian lo mismo de dos formas
    distintas. No habia bug visual; si una asimetria que se nota al tocarlo. */
 .ih-portal-superadmin{background:var(--ih-gray-50)}
+
+/* ===========================================================================
+   Elementos compartidos con el portal tenant
+   ---------------------------------------------------------------------------
+   includes/layout/topbar.php y el chip de usuario los usan las DOS portales,
+   pero sus reglas vivian solo en app.css — que el panel no carga. Resultado:
+   en el panel no tenian ninguna regla.
+
+   El sintoma era el logo del topbar dibujado a tamano natural del SVG,
+   desbordando sobre las tarjetas de KPI. Se veia a simple vista y la bateria
+   daba verde igual, porque comparaba contra la UNION de las dos hojas en vez de
+   contra la que cada portal carga.
+   =========================================================================== */
+.ih-topbar__brand {
+  display: flex; align-items: center; gap: var(--ih-space-3);
+  flex-shrink: 0; text-decoration: none; color: inherit; min-width: 0;
+}
+.ih-topbar__brand:hover { text-decoration: none; color: inherit; }
+.ih-topbar__brand-logo {
+  width: 32px; height: 32px;
+  border-radius: var(--ih-radius-md);
+  overflow: hidden;            /* sin esto el SVG desborda la caja */
+  flex: none;                  /* y sin esto flexbox lo deja crecer */
+  background: var(--ih-purple); color: var(--ih-white);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px;
+}
+.ih-topbar__brand-logo img,
+.ih-sidebar__logo img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+}
+.ih-topbar__brand-text { line-height: 1.15; min-width: 0; }
+.ih-topbar__brand-text strong {
+  display: block; font-size: 13.5px; font-weight: 800; letter-spacing: -.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ih-topbar__brand-text span { display: block; font-size: 11px; color: var(--ih-gray-500); }
+.ih-topbar__sep { width: 1px; height: 26px; background: var(--ih-gray-200); flex: none; }
+.ih-user-chip__photo {
+  width: 28px; height: 28px; border-radius: var(--ih-radius-full);
+  object-fit: cover; display: block; flex-shrink: 0;
+}
+
+.ih-container {
+  width: 100%; max-width: 1280px; margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+}
+.ih-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ih-space-4);
+  margin-bottom: var(--ih-space-4);
+}
+.ih-label {
+  display: block; margin-bottom: var(--ih-space-2);
+  font-size: var(--ih-text-sm); font-weight: 600; color: var(--ih-gray-700);
+}
+.ih-btn--warning { background: var(--ih-white); color: var(--ih-warning); border-color: #eccfa4; }
+.ih-btn--warning:hover { background: #fdf6ec; color: var(--ih-warning); }
+
+/* En pantallas chicas la marca del topbar se reduce al logo. */
+@media (max-width: 640px) {
+  .ih-topbar__brand-text, .ih-topbar__sep { display: none; }
+}
+
+/* ===========================================================================
+   ESCALA RESPONSIVE
+   ---------------------------------------------------------------------------
+   El panel tenia cortes en 991, 767 y 640. Faltaba el tramo de notebooks
+   (1024-1400), donde la grilla de KPIs quedaba con tarjetas muy anchas y los
+   formularios de dos columnas muy largos; y faltaba el de telefonos chicos.
+   =========================================================================== */
+
+@media (max-width: 1200px) {
+  .ih-app__main { padding: var(--ih-space-5); }
+}
+
+@media (max-width: 1024px) {
+  .ih-form-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 767px) {
+  .ih-form-grid { grid-template-columns: 1fr; }
+  .ih-card__header { flex-direction: column; align-items: flex-start; gap: var(--ih-space-3); }
+  .ih-card__header .ih-btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .ih-app__main { padding: var(--ih-space-3); }
+  .ih-card__body, .ih-card__header { padding: var(--ih-space-4); }
+  .ih-stat__value { font-size: var(--ih-text-xl); }
+}
+
+/* Igual que en el portal: nada empuja la pagina en horizontal. */
+.ih-table-wrap, .ih-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+html, body { overflow-x: hidden; }
+img, svg, video { max-width: 100%; height: auto; }
+
+@media (pointer: coarse) {
+  .ih-btn, .ih-sidebar__link { min-height: 44px; }
+  .ih-btn--sm { min-height: 38px; }
+}

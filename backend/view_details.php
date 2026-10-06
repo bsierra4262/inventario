@@ -252,21 +252,65 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     </div>
 
     <!-- Garantía y fechas -->
+    <?php
+    // vd_row() ya se saltea los valores vacios, pero la TARJETA se dibujaba
+    // igual: un activo sin fechas mostraba un recuadro con el titulo y nada
+    // debajo. Se arma el contenido primero y la tarjeta sale solo si hay algo.
+    ob_start();
+    if (!empty($producto['periodo_garantia']) && (int)$producto['periodo_garantia'] > 0) {
+        vd_row('Garantía (meses)', $producto['periodo_garantia'], 'shield-check');
+    }
+    vd_row('Inicio garantía',  $producto['fecha_garantia'],  'calendar-check');
+    vd_row('Fecha ingreso',    $producto['fecha_ingreso'],    'calendar-plus');
+    vd_row('Fecha egreso',     $producto['fecha_egreso'],     'calendar-minus');
+    $htmlGarantia = trim(ob_get_clean());
+    if ($htmlGarantia !== ''): ?>
     <div class="ih-card vd-section">
       <div class="ih-card__body" style="padding:1rem;">
         <div class="vd-section-title"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
-        <div class="vd-grid">
-          <?php
-          if (!empty($producto['periodo_garantia']) && (int)$producto['periodo_garantia'] > 0) {
-              vd_row('Garantía (meses)', $producto['periodo_garantia'], 'shield-check');
-          }
-          vd_row('Inicio garantía',  $producto['fecha_garantia'],  'calendar-check');
-          vd_row('Fecha ingreso',    $producto['fecha_ingreso'],    'calendar-plus');
-          vd_row('Fecha egreso',     $producto['fecha_egreso'],     'calendar-minus');
-          ?>
-        </div>
+        <div class="vd-grid"><?= $htmlGarantia ?></div>
       </div>
     </div>
+    <?php endif; ?>
+
+    <!-- Compra y administración (Infocom) -->
+    <?php
+    // Estos datos se podian cargar desde el alta y la edicion, pero el detalle
+    // no los mostraba: quedaban invisibles salvo que se volviera a editar.
+    require_once __DIR__ . '/../core/tenants/infocom.php';
+    $ic = infocom_de($conn, $producto_id);
+
+    ob_start();
+    vd_row('N.º de pedido',       $ic['numero_pedido']   ?? null, 'receipt');
+    vd_row('N.º de remito',       $ic['numero_remito']   ?? null, 'truck');
+    vd_row('N.º de factura',      $ic['numero_factura']  ?? null, 'file-earmark-text');
+    vd_row('N.º contable',        $ic['numero_contable'] ?? null, 'hash');
+    vd_row('Proveedor',           $ic['proveedor']       ?? null, 'shop');
+    vd_row('Presupuesto',         $ic['presupuesto']     ?? null, 'wallet2');
+    vd_row('Criticidad',          $ic['criticidad']      ?? null, 'exclamation-diamond');
+    vd_row('Fecha de orden',      $ic['fecha_orden']             ?? null, 'calendar');
+    vd_row('Fecha de entrega',    $ic['fecha_entrega']           ?? null, 'calendar-check');
+    vd_row('Puesta en servicio',  $ic['fecha_puesta_servicio']   ?? null, 'play-circle');
+    vd_row('Último inventario',   $ic['fecha_ultimo_inventario'] ?? null, 'clipboard-check');
+    vd_row('Fecha de decomiso',   $ic['fecha_decomiso']          ?? null, 'calendar-x');
+    vd_row('Datos de garantía',   $ic['garantia_info']           ?? null, 'shield-check');
+    if (!empty($ic['valor_extension_garantia']) && (float)$ic['valor_extension_garantia'] > 0) {
+        vd_row('Extensión garantía', 'USD ' . number_format((float)$ic['valor_extension_garantia'], 2, ',', '.'), 'cash');
+    }
+    if (!empty($ic['amortizacion_anios']) && (int)$ic['amortizacion_anios'] > 0) {
+        $amTipo = INFOCOM_TIPOS_AMORTIZACION[(string)($ic['amortizacion_tipo'] ?? '')] ?? '';
+        vd_row('Amortización', (int)$ic['amortizacion_anios'] . ' años' . ($amTipo ? " · {$amTipo}" : ''), 'graph-down-arrow');
+    }
+    vd_row('Comentarios',         $ic['comentarios'] ?? null, 'chat-left-text');
+    $htmlInfocom = trim(ob_get_clean());
+    if ($htmlInfocom !== ''): ?>
+    <div class="ih-card vd-section">
+      <div class="ih-card__body" style="padding:1rem;">
+        <div class="vd-section-title"><i class="bi bi-receipt"></i> Compra y administración</div>
+        <div class="vd-grid"><?= $htmlInfocom ?></div>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 
   <!-- Columna derecha -->

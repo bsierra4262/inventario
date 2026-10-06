@@ -710,10 +710,9 @@ $topbar_actions  =
 require __DIR__ . '/../includes/layout/head.php';
 ?>
 <style>
-.edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
-@media(max-width:640px){ .edit-grid { grid-template-columns:1fr; } }
-.edit-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 20px; }
-@media(max-width:640px){ .edit-grid-3 { grid-template-columns:1fr; } }
+/* .ih-edit-grid y .ih-edit-grid-3 viven en assets/css/app.css, con la escala
+   responsive completa: 3 -> 2 columnas en notebooks y tablets, y 1 en telefono.
+   Antes estaban aca y saltaban de 3 a 1 de golpe recien en 640px. */
 .edit-full { grid-column: 1 / -1; }
 .edit-section-title {
     font-size: var(--ih-text-xs);
@@ -741,7 +740,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Datos principales ─────────────────────────────────────── -->
         <div class="edit-section-title"><i class="bi bi-person-badge"></i> Datos principales</div>
-        <div class="edit-grid">
+        <div class="ih-edit-grid">
           <div class="ih-field">
             <label class="ih-field__label" for="f-asignado_a">Asignado a</label>
             <?php campo_catalogo($conn, 'asignado_a', $producto['asignado_a'] ?? '', $puedeGestionarCatalogos); ?>
@@ -769,7 +768,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Categorización ────────────────────────────────────────── -->
         <div class="edit-section-title"><i class="bi bi-folder2-open"></i> Categorización</div>
-        <div class="edit-grid">
+        <div class="ih-edit-grid">
           <div class="ih-field">
             <label class="ih-field__label">Categoría <span class="req">*</span> <i id="icon-categoria" class="bi bi-folder ms-1"></i></label>
             <select class="ih-select" name="categoria" id="categoria-select" required>
@@ -811,7 +810,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Extras por subcategoría ─────────────────────────────── -->
         <div id="patchcord-extra" style="display:none;">
-          <div class="edit-grid">
+          <div class="ih-edit-grid">
             <div class="ih-field" id="patchcord-categoria">
               <label class="ih-field__label">Tipo de Patchcord</label>
               <select name="patchcord_tipo" id="patchcord-categoria-select" class="ih-select">
@@ -836,7 +835,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div id="switch-extra" style="display:none;">
-          <div class="edit-grid">
+          <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Gestión del Switch</label>
               <select name="switch_gestion" id="switch_gestion" class="ih-select">
@@ -849,7 +848,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div id="antenas-extra" style="display:none;">
-          <div class="edit-grid">
+          <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Tipo de Antena</label>
               <select name="antenas_tipo" id="antenas_tipo" class="ih-select">
@@ -862,7 +861,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div id="bobina-extra" style="display:none;">
-          <div class="edit-grid-3">
+          <div class="ih-edit-grid-3">
             <div class="ih-field" id="bobina-categoria">
               <label class="ih-field__label">Categoría cable</label>
               <select name="bobina_categoria" id="bobina-categoria-select" class="ih-select">
@@ -894,7 +893,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div id="conectores-extra" style="display:none;">
-          <div class="edit-grid">
+          <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Tipo de Conector</label>
               <select id="conectores-tipo-select" name="conectores_tipo" class="ih-select">
@@ -915,7 +914,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div id="cintas-extra" style="display:none;">
-          <div class="edit-grid">
+          <div class="ih-edit-grid">
             <div class="ih-field" id="cintas-generacion" style="display:none;">
               <label class="ih-field__label">Generación LTO</label>
               <select name="cintas_generacion" class="ih-select">
@@ -962,7 +961,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Estado y valores ──────────────────────────────────────── -->
         <div class="edit-section-title"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
-        <div class="edit-grid">
+        <div class="ih-edit-grid">
           <div class="ih-field">
             <?php /* Estaba fijo en Nuevo/Usado. Ahora es catálogo: cada empresa
                      define su escala (en uso, en depósito, en reparación, de baja...). */ ?>
@@ -982,7 +981,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
         <!-- ── Garantía y fechas ─────────────────────────────────────── -->
         <div class="edit-section-title"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
-        <div class="edit-grid-3">
+        <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">Período garantía (meses)</label>
             <input type="number" class="ih-input" name="periodo_garantia"
@@ -1018,7 +1017,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <?php endif; ?>
 
         <div class="edit-section-title"><i class="bi bi-receipt"></i> Compra y administración</div>
-        <div class="edit-grid-3">
+        <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">N.º de pedido</label>
             <input type="text" class="ih-input" name="numero_pedido" maxlength="120"
@@ -1049,7 +1048,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div class="edit-grid-3">
+        <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">Fecha de orden</label>
             <input type="date" class="ih-input" name="fecha_orden"
@@ -1082,7 +1081,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <div class="edit-section-title"><i class="bi bi-graph-down-arrow"></i> Garantía extendida y amortización</div>
-        <div class="edit-grid-3">
+        <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">Datos de la garantía</label>
             <input type="text" class="ih-input" name="garantia_info" maxlength="255"

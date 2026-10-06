@@ -958,8 +958,128 @@ chequear(count($enMarkup) . ' clases ih- del markup tienen estilo en una hoja', 
 chequear('Ninguna clase del sistema de diseño se define sólo dentro de una página',
     $soloInline === [], 'sólo inline: ' . implode(', ', array_slice($soloInline, 0, 12)));
 
+// ───────────────────────────────────────────────────────────────────────────
+// Cobertura POR PORTAL — lo anterior no alcanza.
+//
+// El portal tenant carga app.css y el panel superadmin carga intellihelp.css.
+// El chequeo de arriba compara contra la UNIÓN de las dos, así que una clase
+// definida en app.css y usada en el panel aparece cubierta y en pantalla no
+// tiene ninguna regla.
+//
+// Así se coló el logo del topbar del panel: `.ih-topbar__brand-logo` sólo
+// existía en app.css, el panel lo usaba igual, y el SVG se dibujaba a tamaño
+// natural tapando la primera tarjeta de KPI. A simple vista, y la batería en
+// verde. Nueve clases estaban en esa situación.
+//
+// includes/ y auth/ son compartidos: sus clases tienen que existir en las dos.
+$clasesDe = static function (string $dir) use (&$clasesDe): array {
+    $out = [];
+    foreach (glob(RAIZ . '/' . $dir . '/*') ?: [] as $f) {
+        if (is_dir($f)) { $out += $clasesDe(substr($f, strlen(RAIZ) + 1)); continue; }
+        if (!str_ends_with($f, '.php')) { continue; }
+        if (!preg_match_all('/class\s*=\s*"([^"]*)"/', (string)file_get_contents($f), $mm)) { continue; }
+        foreach ($mm[1] as $attr) {
+            foreach (preg_split('/\s+/', $attr) ?: [] as $c) {
+                if (preg_match('/^ih-[a-zA-Z0-9_-]+$/', $c)) { $out[$c] = true; }
+            }
+        }
+    }
+    return $out;
+};
+
+$compartidas = $clasesDe('includes') + $clasesDe('auth');
+foreach ([
+    'portal tenant (app.css)'            => [['inventario', 'backend'], $css],
+    'panel superadmin (intellihelp.css)' => [['dashboard'], leer('assets/css/intellihelp.css')],
+] as $portal => [$dirs, $hoja]) {
+    $usa = $compartidas;
+    foreach ($dirs as $d) { $usa += $clasesDe($d); }
+    $faltan = [];
+    foreach (array_keys($usa) as $c) {
+        if (!str_contains($hoja, '.' . $c) && !str_contains($inline, '.' . $c)) { $faltan[] = $c; }
+    }
+    chequear(count($usa) . " clases del {$portal} están en LA HOJA QUE ESE PORTAL CARGA",
+        $faltan === [], 'faltan: ' . implode(', ', array_slice($faltan, 0, 12)));
+}
+
 chequear('Bootstrap CSS ya no se carga en el portal tenant',
     !str_contains(leer('inventario/usuarios.php'), 'bootstrap@5.3.3/dist/css'));
+
+// ───────────────────────────────────────────────────────────────────────────
+// Escala responsive
+//
+// Había dos cortes (860 y 640) y entre ellos nada: una grilla de tres columnas
+// seguía en tres hasta los 640px, que en una notebook de 13" o una tablet en
+// vertical deja los campos de ~200px. Los cortes nuevos salen de anchos reales
+// de uso, no de nombres de dispositivo.
+$ihcss = leer('assets/css/intellihelp.css');
+foreach ([
+    'assets/css/app.css'         => [$css,   [1200, 1024, 860, 640, 400]],
+    'assets/css/intellihelp.css' => [$ihcss, [1200, 1024, 767, 480]],
+] as $hoja => [$txt, $cortes]) {
+    $faltan = [];
+    foreach ($cortes as $px) {
+        if (preg_match('/@media\s*\(\s*max-width:\s*' . $px . 'px\s*\)/', $txt) !== 1) { $faltan[] = $px; }
+    }
+    chequear(basename($hoja) . ' cubre los cortes ' . implode('/', $cortes),
+        $faltan === [], 'faltan: ' . implode(', ', $faltan));
+}
+chequear('Las grillas de 3 columnas pasan por 2 antes de llegar a 1',
+    preg_match('/@media \(max-width:1024px\)\{[^}]*\.ih-edit-grid-3\{grid-template-columns:1fr 1fr\}/s', str_replace("\n", '', $css)) === 1
+ || str_contains(str_replace(["\n", ' '], '', $css), '.ih-edit-grid-3{grid-template-columns:1fr1fr}'));
+
+// Nada puede empujar la página en horizontal: lo ancho se desplaza en su caja.
+foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
+    chequear("{$n} impide el desplazamiento horizontal de la página",
+        preg_match('/html\s*,\s*body\s*\{\s*overflow-x:\s*hidden/', $txt) === 1);
+    chequear("{$n} limita las imágenes al ancho disponible",
+        preg_match('/img\s*,\s*svg\s*,\s*video\s*\{\s*max-width:\s*100%/', $txt) === 1);
+}
+// 44px es el área táctil mínima recomendada; los iconos de acción eran de 28.
+foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
+    chequear("{$n} agranda el área táctil en pantallas sin mouse",
+        str_contains(str_replace(' ', '', $txt), '@media(pointer:coarse)'));
+}
+
+// Las grillas del formulario de edición vivían en un <style> dentro de edit.php.
+chequear('Las grillas de edición viven en la hoja, no en la página',
+    str_contains($css, '.ih-edit-grid') && !str_contains(leer('backend/edit.php'), '.edit-grid {'));
+
+// ───────────────────────────────────────────────────────────────────────────
+// Diálogos propios, no los del navegador
+//
+// El alta rápida de un valor de catálogo abría un window.prompt(): el cuadro
+// gris del navegador, con el nombre del dominio arriba, sin la tipografía ni
+// los colores del sistema. En una pantalla de gestión queda fuera de lugar.
+$cc = sin_comentarios(leer('includes/campo_catalogo.php'));
+chequear('El alta rápida no usa el cuadro nativo del navegador',
+    !preg_match('/window\.prompt\s*\(/', $cc) && !preg_match('/(?<![.\w])alert\s*\(/', $cc));
+chequear('Hay un diálogo propio para el alta rápida', str_contains($cc, 'cat-modal__caja'));
+chequear('El diálogo se cierra con Escape', str_contains($cc, "'Escape'"));
+chequear('El diálogo devuelve el foco a donde estaba', str_contains($cc, 'previo.focus'));
+chequear('El diálogo declara su rol de accesibilidad', str_contains($cc, 'aria-modal="true"'));
+
+// ───────────────────────────────────────────────────────────────────────────
+// Estructura de las tarjetas del alta
+//
+// Las dos secciones nuevas quedaron metidas DENTRO del `ih-card__header` de otra
+// tarjeta: en pantalla salían como una columna angosta con media tarjeta vacía.
+$ag = leer('inventario/agregar.php');
+preg_match_all('/<div class="ih-card"[^>]*>\s*<div class="ih-card__header">/', $ag, $mCards);
+preg_match_all('/<div class="ih-card__body">/', $ag, $mBodies);
+chequear('Cada tarjeta del alta tiene cabecera y cuerpo propios',
+    count($mCards[0]) === count($mBodies[0]) && count($mCards[0]) >= 6,
+    'cabeceras: ' . count($mCards[0]) . ', cuerpos: ' . count($mBodies[0]));
+chequear('Ninguna tarjeta quedó anidada dentro de la cabecera de otra',
+    preg_match('/<div class="ih-card__header">\s*<div class="ih-card/', $ag) !== 1);
+
+// El detalle del activo mostraba una tarjeta de garantía vacía y no mostraba
+// nada de los datos de compra, que sí se podían cargar.
+$vd = leer('backend/view_details.php');
+chequear('El detalle muestra los datos de compra y administración',
+    str_contains($vd, 'infocom_de(') && str_contains($vd, 'Compra y administración'));
+chequear('El detalle no dibuja tarjetas vacías',
+    str_contains($vd, '$htmlGarantia') && str_contains($vd, '$htmlInfocom'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('DOCUMENTACION');
