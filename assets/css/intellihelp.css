@@ -872,8 +872,12 @@ img { max-width: 100%; height: auto; display: block; }
 
 @media (max-width: 767px) {
   .ih-form-grid { grid-template-columns: 1fr; }
-  .ih-card__header { flex-direction: column; align-items: flex-start; gap: var(--ih-space-3); }
-  .ih-card__header .ih-btn { width: 100%; justify-content: center; }
+  /* La cabecera envuelve en vez de apilarse en columna: apilandola, el
+     `justify-content: space-between` de la regla base pasa a repartir en
+     vertical y el enlace de accion quedaba suelto en el medio. Envolviendo,
+     titulo y accion siguen alineados a la izquierda. */
+  .ih-card__header { flex-wrap: wrap; justify-content: flex-start; }
+  .ih-card__header .ih-btn { flex: 1 1 100%; justify-content: center; }
 }
 
 @media (max-width: 480px) {

@@ -551,10 +551,12 @@ dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
 
 @media (max-width:640px){
   .ih-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  /* Los botones de accion de las tarjetas pasan a ancho completo: a dedo, un
-     boton de 90px al lado de otro es un error de tipeo esperando. */
-  .ih-card__header{flex-direction:column;align-items:flex-start;gap:.6rem}
-  .ih-card__header .ih-btn{width:100%;justify-content:center}
+  /* La cabecera envuelve en vez de apilarse: apilandola, el space-between de la
+     regla base reparte en vertical y el enlace de accion queda suelto. Y los
+     botones pasan a ancho completo: a dedo, uno de 90px al lado de otro es un
+     error de tipeo esperando. */
+  .ih-card__header{flex-wrap:wrap;justify-content:flex-start;gap:.6rem}
+  .ih-card__header .ih-btn{flex:1 1 100%;justify-content:center}
   .ih-table{font-size:12.5px}
   .ih-table th,.ih-table td{padding:.55rem .6rem}
 }
