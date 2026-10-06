@@ -895,3 +895,43 @@ img, svg, video { max-width: 100%; height: auto; }
   .ih-btn, .ih-sidebar__link { min-height: 44px; }
   .ih-btn--sm { min-height: 38px; }
 }
+
+/* ===========================================================================
+   CONTROLES DE FORMULARIO
+   ---------------------------------------------------------------------------
+   El panel no estilaba ningun control nativo. Solo habia una regla para los
+   checkbox DENTRO de `.ih-check`, y pantallas como Roles y permisos usan
+   `<input type="checkbox">` pelado: salian con el azul del sistema operativo,
+   que no es ningun color de la marca y rompe con el resto de la aplicacion.
+
+   Se replica lo que ya hacen el CRM y APP Tickets: accent-color de marca en
+   casillas y radios, flecha propia en los desplegables (la nativa cambia de
+   forma en cada sistema) y el icono del calendario atenuado hasta el hover.
+   =========================================================================== */
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--ih-purple);
+  width: 16px; height: 16px; cursor: pointer; margin: 0;
+}
+/* El interruptor dibuja su propio riel, no usa la casilla nativa. */
+.ih-switch input[type="checkbox"] { width: 0; height: 0; }
+
+select, .ih-select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  cursor: pointer; padding-right: 2.3rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right .7rem center; background-size: 1.05rem;
+}
+select:focus, .ih-select:focus { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23663399' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+select::-ms-expand { display: none; }
+
+/* El calendario del navegador no se puede redibujar, pero su icono si se
+   puede atenuar para que no compita con el resto del formulario. */
+input[type="date"], input[type="month"], input[type="datetime-local"] {
+  cursor: pointer; font-variant-numeric: tabular-nums;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="month"]:hover::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }

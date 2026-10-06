@@ -1074,6 +1074,35 @@ chequear('Ninguna tarjeta quedó anidada dentro de la cabecera de otra',
     preg_match('/<div class="ih-card__header">\s*<div class="ih-card/', $ag) !== 1);
 
 // ───────────────────────────────────────────────────────────────────────────
+// Controles de formulario con la identidad de marca
+//
+// El panel no estilaba NINGÚN control nativo: sólo había una regla para los
+// checkbox dentro de `.ih-check`, y pantallas como Roles y permisos usan
+// `<input type="checkbox">` pelado. Salían con el azul del sistema operativo,
+// que no es ningún color de la marca. Es lo mismo que ya resuelven el CRM y
+// APP Tickets, de donde salen estos tokens.
+foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
+    $plano = str_replace(["\n", ' '], '', $txt);
+    chequear("{$n} pinta casillas y radios con el color de marca",
+        preg_match('/input\[type="?checkbox"?\],input\[type="?radio"?\]\{accent-color:var\(--/', $plano) === 1);
+    // El mismo chevron se puede escribir `m6 9 6 6 6-6` o `M6 9l6 6 6-6`: es la
+    // misma forma en notación relativa o absoluta, así que se aceptan las dos.
+    chequear("{$n} dibuja su propia flecha en los desplegables",
+        str_contains($plano, 'appearance:none')
+     && preg_match("/d='[Mm]6 9l?\s?6 6 6-6'/", $txt) === 1);
+    chequear("{$n} atenúa el icono del calendario nativo",
+        str_contains($txt, '::-webkit-calendar-picker-indicator'));
+}
+
+// Las tablas de reportes dibujaban el encabezado en violeta sólido con texto
+// blanco, mientras todas las demás lo hacen en gris claro con texto atenuado:
+// puestas una al lado de la otra parecían dos productos distintos.
+chequear('Las tablas de reportes usan el mismo encabezado que el resto',
+    str_contains($css, '.rp-table thead th') && !str_contains(leer('inventario/reportes.php'), '.rp-table thead th {'));
+chequear('Ninguna tabla fuerza un encabezado violeta sólido',
+    !preg_match('/\.rp-table thead th\{[^}]*background:var\(--ih-primary/', str_replace(["\n", ' '], '', $css)));
+
+// ───────────────────────────────────────────────────────────────────────────
 // Navegación en pantallas chicas
 //
 // El panel superadmin esconde su sidebar por debajo de 991px y lo muestra con
