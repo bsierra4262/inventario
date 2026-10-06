@@ -126,6 +126,17 @@ require __DIR__ . '/../includes/layout/head.php';
           <input type="text" name="valor" class="ih-input" required maxlength="255"
                  style="flex:1 1 260px"
                  placeholder="<?= $tipo === 'ubicacion' ? 'Ej: Depósito Central, Oficina 2, Rack A3…' : 'Ej: Soporte Técnico, Brian Sierra, Administración…' ?>">
+          <?php if (catalogo_es_arbol($tipo)): ?>
+            <?php /* Un árbol necesita saber de quién cuelga el nodo nuevo. */ ?>
+            <select name="padre_id" class="ih-input" style="flex:0 1 260px" title="Dentro de qué ubicación">
+              <option value="">— Como ubicación principal —</option>
+              <?php foreach ($filas as $op): ?>
+                <option value="<?= (int)$op['id'] ?>">
+                  <?= str_repeat('— ', (int)($op['nivel'] ?? 0)) . htmlspecialchars((string)$op['valor'], ENT_QUOTES, 'UTF-8') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          <?php endif; ?>
           <button type="submit" class="ih-btn ih-btn--accent">
             <i class="bi bi-plus-lg"></i> Agregar
           </button>
@@ -153,15 +164,23 @@ require __DIR__ . '/../includes/layout/head.php';
               </thead>
               <tbody>
               <?php foreach ($filas as $f):
-                    $usos = catalogo_uso($conn, $tipo, (string)$f['valor']);
-                    $activo = (int)$f['activo'] === 1; ?>
+                    // En un árbol los activos guardan la RUTA completa, así que
+                    // el conteo de uso se hace contra ella y no contra el nombre
+                    // del nodo.
+                    $usos = catalogo_uso($conn, $tipo, (string)($f['ruta'] ?? $f['valor']));
+                    $activo = (int)$f['activo'] === 1;
+                    $nivel  = (int)($f['nivel'] ?? 0); ?>
                 <tr>
                   <td>
-                    <form method="post" action="/backend/catalogos_crud.php" class="ih-flex ih-gap-2 ih-items-center">
+                    <form method="post" action="/backend/catalogos_crud.php" class="ih-flex ih-gap-2 ih-items-center"
+                          style="padding-left:<?= $nivel * 22 ?>px">
                       <?php csrfInput('catalogos_abm'); ?>
                       <input type="hidden" name="accion" value="renombrar">
                       <input type="hidden" name="tipo" value="<?= htmlspecialchars($tipo) ?>">
                       <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
+                      <?php if ($nivel > 0): ?>
+                        <i class="bi bi-arrow-return-right ih-text-muted" title="<?= htmlspecialchars((string)($f['ruta'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"></i>
+                      <?php endif; ?>
                       <input type="text" name="valor" class="ih-input" maxlength="255"
                              value="<?= htmlspecialchars((string)$f['valor'], ENT_QUOTES, 'UTF-8') ?>"
                              style="min-width:180px">

@@ -228,6 +228,10 @@ if ($isTenantFlow) {
         if ($found) {
             $_SESSION['user_id'] = (int)$userRow['id'];
             $_SESSION['role']    = $userRow['role'] ?? 'viewer';
+            // Igual que en el login local: queda grabada la empresa contra la
+            // que se autenticó, para que backend/db.php detecte una sesión
+            // cruzada entre tenants.
+            $_SESSION['auth_company_id'] = (int)($_SESSION['company_id'] ?? 0);
         } else {
             // Sin acceso: el usuario debe estar pre-registrado por el admin del tenant
             $tenantCbError(
@@ -258,11 +262,8 @@ if ($isTenantFlow) {
 try {
     $db = new MasterDB();
 
-    // Migraciones columnas SSO extendidas
-    foreach ([
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_sub` VARCHAR(64) DEFAULT NULL",
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_pic` VARCHAR(500) DEFAULT NULL",
-    ] as $ddl) { try { $db->conn->query($ddl); } catch (Throwable) {} }
+    // Las columnas ms_sub / ms_pic las crea migraciones_master(); ya no se
+    // parchan con un ALTER TABLE en cada callback de SSO.
 
     // Cargar config SSO
     $config = [];

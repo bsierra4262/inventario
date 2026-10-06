@@ -19,8 +19,14 @@ require_once __DIR__ . '/db.php';
 // Validar CSRF del formulario "confirmar_accion"
 csrf_or_fail('confirmar_accion', true); // true = un solo uso del token
 
+// Autorización: subir documentación a un activo es editarlo. El CSRF solo
+// probaba que el pedido salió de nuestro formulario, no que el usuario tuviera
+// derecho a la acción: un `viewer` llegaba hasta acá.
+require_once __DIR__ . '/../core/security/permissions.php';
+$_me = require_tenant_permission('asset.edit');
+
 // Usuario autenticado en la app
-$user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
+$user_id = (int)$_me['id'];
 
 // =========================
 // Autenticación Google Drive — plataforma primero, cloud_config como override

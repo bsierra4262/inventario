@@ -84,10 +84,14 @@ switch ($accion) {
 
     case 'agregar':
         $valor = (string)($_POST['valor'] ?? '');
+        // Sólo para los catálogos en árbol: de qué nodo cuelga el valor nuevo.
+        // Vacío = ubicación principal. El id se valida dentro de la capa de
+        // ubicaciones contra el árbol real; acá sólo se castea.
+        $padreId = ($_POST['padre_id'] ?? '') !== '' ? (int)$_POST['padre_id'] : null;
         if (trim($valor) === '') {
             cat_responder(false, 'Escribí un valor.');
         }
-        if (!catalogo_agregar($conn, $tipo, $valor)) {
+        if (!catalogo_agregar($conn, $tipo, $valor, $padreId)) {
             cat_responder(false, 'No se pudo agregar (¿vacío o más de 255 caracteres?).');
         }
         $valorLimpio = trim(preg_replace('/\s+/u', ' ', $valor));

@@ -9,6 +9,9 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 }
 require __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../logs/logger.php';
+// infocom_amortizacion_anios(): el plazo de amortización guardado por activo,
+// con el del reporte como respaldo.
+require_once __DIR__ . '/../core/tenants/infocom.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: /auth/login.php');
@@ -114,6 +117,33 @@ if (isset($_GET['trazabilidad']))      $tab = 'trazabilidad';
 if (isset($_GET['ap']))                $tab = 'ap';
 if (isset($_GET['filtro_valor']))      $tab = 'valor';
 if (isset($_GET['filtro_amorti']))     $tab = 'amortizacion';
+
+/**
+ * Ejecuta una consulta con parámetros y devuelve el mysqli_result.
+ *
+ * Tres de las cinco pestañas (inventario, valor, amortización) armaban su
+ * cláusula WHERE concatenando `real_escape_string()`, mientras SECURITY.md dice
+ * "todo el acceso a la base usa sentencias preparadas" y CONTRIBUTING.md "SQL:
+ * siempre preparado". Las otras dos (trazabilidad, archivados) ya usaban `?`:
+ * el mismo archivo hacía las dos cosas.
+ *
+ * No era explotable —la conexión fija utf8mb4 con set_charset(), así que el
+ * escapado es consciente del charset y no hay bypass por multibyte—, pero la
+ * regla existe para no depender de que eso siga siendo cierto.
+ *
+ * Se define acá arriba, y no dentro del bloque de la primera pestaña, porque
+ * hoy todas se renderizan siempre (se muestran y ocultan por CSS con
+ * is_tab()). Si mañana alguna se envuelve en un condicional, el helper tiene
+ * que seguir existiendo para las demás.
+ */
+function rp_consultar(mysqli $conn, string $sql, string $types = '', array $params = []) {
+    if ($types === '') { return $conn->query($sql); }
+    $st = $conn->prepare($sql);
+    if (!$st) { return false; }
+    $st->bind_param($types, ...$params);
+    $st->execute();
+    return $st->get_result();
+}
 
 function is_tab($needle, $tab) { return $needle === $tab ? 'show active' : ''; }
 function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
@@ -328,24 +358,21 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
 <?php
-      $f = [];
-      if (!empty($_GET['categoria']))    $f[] = "categoria = '".$conn->real_escape_string($_GET['categoria'])."'";
-      if (!empty($_GET['subcategoria'])) $f[] = "subcategoria = '".$conn->real_escape_string($_GET['subcategoria'])."'";
-      if (!empty($_GET['marca']))        $f[] = "LOWER(marca) LIKE LOWER('%".$conn->real_escape_string($_GET['marca'])."%')";
-      if (!empty($_GET['modelo']))       $f[] = "LOWER(modelo) LIKE LOWER('%".$conn->real_escape_string($_GET['modelo'])."%')";
-      if (!empty($_GET['estado']))       $f[] = "estado = '".$conn->real_escape_string($_GET['estado'])."'";
-      if (!empty($_GET['ubicacion']))    $f[] = "LOWER(ubicacion) LIKE LOWER('%".$conn->real_escape_string($_GET['ubicacion'])."%')";
+      $f = []; $pInv = []; $tInv = '';
+      if (!empty($_GET['categoria']))    { $f[] = "categoria = ?";                   $pInv[] = $_GET['categoria'];              $tInv .= 's'; }
+      if (!empty($_GET['subcategoria'])) { $f[] = "subcategoria = ?";                $pInv[] = $_GET['subcategoria'];           $tInv .= 's'; }
+      if (!empty($_GET['marca']))        { $f[] = "LOWER(marca) LIKE LOWER(?)";      $pInv[] = '%'.$_GET['marca'].'%';          $tInv .= 's'; }
+      if (!empty($_GET['modelo']))       { $f[] = "LOWER(modelo) LIKE LOWER(?)";     $pInv[] = '%'.$_GET['modelo'].'%';         $tInv .= 's'; }
+      if (!empty($_GET['estado']))       { $f[] = "estado = ?";                      $pInv[] = $_GET['estado'];                 $tInv .= 's'; }
+      if (!empty($_GET['ubicacion']))    { $f[] = "LOWER(ubicacion) LIKE LOWER(?)";  $pInv[] = '%'.$_GET['ubicacion'].'%';      $tInv .= 's'; }
       $col_carga = "IF(fecha_carga IS NOT NULL AND fecha_carga != '0000-00-00 00:00:00', DATE(fecha_carga), DATE(fecha_modificacion))";
       if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-          $fd = $conn->real_escape_string($_GET['fecha_desde']);
-          $fh = $conn->real_escape_string($_GET['fecha_hasta']);
-          $f[] = "($col_carga) BETWEEN '$fd' AND '$fh'";
+          $f[] = "($col_carga) BETWEEN ? AND ?";
+          $pInv[] = $_GET['fecha_desde']; $pInv[] = $_GET['fecha_hasta']; $tInv .= 'ss';
       } elseif (!empty($_GET['fecha_desde'])) {
-          $fd = $conn->real_escape_string($_GET['fecha_desde']);
-          $f[] = "($col_carga) >= '$fd'";
+          $f[] = "($col_carga) >= ?"; $pInv[] = $_GET['fecha_desde']; $tInv .= 's';
       } elseif (!empty($_GET['fecha_hasta'])) {
-          $fh = $conn->real_escape_string($_GET['fecha_hasta']);
-          $f[] = "($col_carga) <= '$fh'";
+          $f[] = "($col_carga) <= ?"; $pInv[] = $_GET['fecha_hasta']; $tInv .= 's';
       }
       // Permitir incluir archivados opcionalmente
       if (empty($_GET['incluir_archivados'])) { $f[] = "archivado = 0"; }
@@ -356,13 +383,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
       $per_page = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts, true) ? (int)$_GET['per_page'] : 20;
       $page = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
       $countSql = "SELECT COUNT(*) AS total FROM `{$prodTable}`{$whereClause}";
-      $countRes = $conn->query($countSql);
+      $countRes = rp_consultar($conn, $countSql, $tInv, $pInv);
       $totalRows = $countRes ? (int)($countRes->fetch_assoc()['total'] ?? 0) : 0;
       $totalPages = max(1, (int)ceil($totalRows / $per_page));
       if ($page > $totalPages) $page = $totalPages;
+      // LIMIT/OFFSET van interpolados: son enteros derivados de una whitelist
+      // (per_page) y de un cast (page), no texto del request.
       $offset = ($page - 1) * $per_page;
       $sql = "SELECT * FROM `{$prodTable}`{$whereClause} ORDER BY id DESC LIMIT $per_page OFFSET $offset";
-      $res = $conn->query($sql);
+      $res = rp_consultar($conn, $sql, $tInv, $pInv);
       while ($row = $res->fetch_assoc()):
 ?>
       <tr>
@@ -451,17 +480,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
     <?php
-      $f = [];
-      if (!empty($_GET['categoria']))    $f[] = "categoria = '".$conn->real_escape_string($_GET['categoria'])."'";
-      if (!empty($_GET['subcategoria'])) $f[] = "subcategoria = '".$conn->real_escape_string($_GET['subcategoria'])."'";
+      $f = []; $pVal = []; $tVal = '';
+      if (!empty($_GET['categoria']))    { $f[] = "categoria = ?";    $pVal[] = $_GET['categoria'];    $tVal .= 's'; }
+      if (!empty($_GET['subcategoria'])) { $f[] = "subcategoria = ?"; $pVal[] = $_GET['subcategoria']; $tVal .= 's'; }
       $col_carga_r = "IF(fecha_carga IS NOT NULL AND fecha_carga != '0000-00-00 00:00:00', DATE(fecha_carga), DATE(fecha_modificacion))";
       if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
-        $fd = $conn->real_escape_string($_GET['fecha_desde']); $fh = $conn->real_escape_string($_GET['fecha_hasta']);
-        $f[] = "($col_carga_r) BETWEEN '$fd' AND '$fh'";
+        $f[] = "($col_carga_r) BETWEEN ? AND ?";
+        $pVal[] = $_GET['fecha_desde']; $pVal[] = $_GET['fecha_hasta']; $tVal .= 'ss';
       } elseif (!empty($_GET['fecha_desde'])) {
-        $fd = $conn->real_escape_string($_GET['fecha_desde']); $f[] = "($col_carga_r) >= '$fd'";
+        $f[] = "($col_carga_r) >= ?"; $pVal[] = $_GET['fecha_desde']; $tVal .= 's';
       } elseif (!empty($_GET['fecha_hasta'])) {
-        $fh = $conn->real_escape_string($_GET['fecha_hasta']); $f[] = "($col_carga_r) <= '$fh'";
+        $f[] = "($col_carga_r) <= ?"; $pVal[] = $_GET['fecha_hasta']; $tVal .= 's';
       }
       $f[] = "archivado = 0";
       $where = count($f) ? "WHERE ".implode(" AND ", $f) : "";
@@ -479,7 +508,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                    UPPER(REPLACE(TRIM(REPLACE(categoria,CHAR(160),' ')),' ','')),
                    UPPER(REPLACE(TRIM(REPLACE(subcategoria,CHAR(160),' ')),' ',''))
         ) c";
-      $countResV = $conn->query($countSqlV);
+      $countResV = rp_consultar($conn, $countSqlV, $tVal, $pVal);
       $totalRowsV = $countResV ? (int)($countResV->fetch_assoc()['total'] ?? 0) : 0;
       $totalPagesV = max(1, (int)ceil($totalRowsV / $per_page_v));
       if ($page_v > $totalPagesV) $page_v = $totalPagesV;
@@ -506,7 +535,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         ORDER BY SUM(cantidad) DESC, marca ASC, modelo ASC
         LIMIT $per_page_v OFFSET $offsetV
       ";
-      $res = $conn->query($sql);
+      $res = rp_consultar($conn, $sql, $tVal, $pVal);
       $granTotal = 0;
       while ($row = $res->fetch_assoc()):
         $granTotal += (int)$row['total_cant'];
@@ -620,20 +649,26 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </thead>
     <tbody>
     <?php
-      $anios = isset($_GET['anios']) ? max(1, (int)$_GET['anios']) : 4;
+      // Plazo general del reporte. Deja de ser LA amortizacion de todo el
+      // inventario y pasa a ser el valor por defecto: si el activo tiene su
+      // propio plazo cargado (Infocom), manda el del activo. Un servidor y un
+      // patchcord no se amortizan en el mismo tiempo.
+      $anios   = isset($_GET['anios']) ? max(1, (int)$_GET['anios']) : 4;
+      $icTable = tn('activo_infocom');
       $filtrosA = ["(fecha_egreso IS NULL OR fecha_egreso = '0000-00-00')"];
+      $pAmo = []; $tAmo = '';
       if (empty($_GET['incluir_archivados'])) { $filtrosA[] = "archivado = 0"; }
-      if (!empty($_GET['categoria']))    $filtrosA[] = "categoria = '".$conn->real_escape_string($_GET['categoria'])."'";
-      if (!empty($_GET['subcategoria'])) $filtrosA[] = "subcategoria = '".$conn->real_escape_string($_GET['subcategoria'])."'";
-      if (!empty($_GET['marca']))        $filtrosA[] = "LOWER(marca) LIKE LOWER('%".$conn->real_escape_string($_GET['marca'])."%')";
-      if (!empty($_GET['modelo']))       $filtrosA[] = "LOWER(modelo) LIKE LOWER('%".$conn->real_escape_string($_GET['modelo'])."%')";
+      if (!empty($_GET['categoria']))    { $filtrosA[] = "categoria = ?";                  $pAmo[] = $_GET['categoria'];         $tAmo .= 's'; }
+      if (!empty($_GET['subcategoria'])) { $filtrosA[] = "subcategoria = ?";               $pAmo[] = $_GET['subcategoria'];      $tAmo .= 's'; }
+      if (!empty($_GET['marca']))        { $filtrosA[] = "LOWER(marca) LIKE LOWER(?)";     $pAmo[] = '%'.$_GET['marca'].'%';     $tAmo .= 's'; }
+      if (!empty($_GET['modelo']))       { $filtrosA[] = "LOWER(modelo) LIKE LOWER(?)";    $pAmo[] = '%'.$_GET['modelo'].'%';    $tAmo .= 's'; }
       // Filtro por fecha de compra (o ingreso como fallback)
       $col_amort_date = "COALESCE(NULLIF(fecha_compra,'0000-00-00'), NULLIF(fecha_ingreso,'0000-00-00'))";
       if (!empty($_GET['fecha_desde'])) {
-        $filtrosA[] = "$col_amort_date >= '".$conn->real_escape_string($_GET['fecha_desde'])."'";
+        $filtrosA[] = "$col_amort_date >= ?"; $pAmo[] = $_GET['fecha_desde']; $tAmo .= 's';
       }
       if (!empty($_GET['fecha_hasta'])) {
-        $filtrosA[] = "$col_amort_date <= '".$conn->real_escape_string($_GET['fecha_hasta'])."'";
+        $filtrosA[] = "$col_amort_date <= ?"; $pAmo[] = $_GET['fecha_hasta']; $tAmo .= 's';
       }
       $whereA = "WHERE ".implode(" AND ", $filtrosA);
 
@@ -641,7 +676,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       $per_page_opts_a = [20, 50, 100, 200];
       $per_page_a = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_a, true) ? (int)$_GET['per_page'] : 20;
       $page_a = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
-      $countResA = $conn->query("SELECT COUNT(*) AS total FROM `{$prodTable}` $whereA");
+      $countResA = rp_consultar($conn, "SELECT COUNT(*) AS total FROM `{$prodTable}` pr $whereA", $tAmo, $pAmo);
       $totalRowsA = $countResA ? (int)($countResA->fetch_assoc()['total'] ?? 0) : 0;
       $totalPagesA = max(1, (int)ceil($totalRowsA / $per_page_a));
       if ($page_a > $totalPagesA) $page_a = $totalPagesA;
@@ -649,7 +684,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
       // Para los totales generales (de TODOS los registros filtrados, no solo la pagina)
       $totalCompra = 0; $totalActual = 0;
-      $resTotales = $conn->query("SELECT valor_usd, cantidad, fecha_compra, fecha_ingreso FROM `{$prodTable}` $whereA");
+      $resTotales = rp_consultar($conn,
+        "SELECT pr.valor_usd, pr.cantidad, pr.fecha_compra, pr.fecha_ingreso, ic.amortizacion_anios
+           FROM `{$prodTable}` pr LEFT JOIN `{$icTable}` ic ON ic.producto_id = pr.id $whereA", $tAmo, $pAmo);
       if ($resTotales) {
         $hoyTot = new DateTime();
         while ($rt = $resTotales->fetch_assoc()) {
@@ -661,7 +698,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
           if ($fbT) {
             $diasTrans = (int)$hoyTot->diff($fbT)->days;
             $aniosTrans = $diasTrans / 365.25;
-            $depr = min(1, $aniosTrans / $anios);
+            $aniosAct = infocom_amortizacion_anios($rt, $anios);
+            $depr = min(1, $aniosTrans / $aniosAct);
             $va = round($vc * (1 - $depr), 2);
             if ($va < 0) $va = 0;
           } else { $va = $vc; }
@@ -670,8 +708,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
         $resTotales->close();
       }
 
-      $sql = "SELECT * FROM `{$prodTable}` $whereA ORDER BY id DESC LIMIT $per_page_a OFFSET $offsetA";
-      $res = $conn->query($sql);
+      $sql = "SELECT pr.*, ic.amortizacion_anios, ic.amortizacion_tipo
+                FROM `{$prodTable}` pr LEFT JOIN `{$icTable}` ic ON ic.producto_id = pr.id
+               $whereA ORDER BY pr.id DESC LIMIT $per_page_a OFFSET $offsetA";
+      $res = rp_consultar($conn, $sql, $tAmo, $pAmo);
       while($row = $res->fetch_assoc()):
         $fecha_base = null;
         if (!empty($row['fecha_compra']) && $row['fecha_compra'] !== '0000-00-00') {
@@ -681,11 +721,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
         }
         $hoy = new DateTime();
         $valor_compra = (float)$row['valor_usd'] * (int)$row['cantidad'];
-        if ($fecha_base && $anios > 0) {
+        $anios_activo = infocom_amortizacion_anios($row, $anios);
+        if ($fecha_base && $anios_activo > 0) {
           // Calculo basado en dias para mas precision
           $diasTrans = (int)$hoy->diff($fecha_base)->days;
           $aniosTrans = $diasTrans / 365.25;
-          $depreciacion = min(1, $aniosTrans / $anios);
+          $depreciacion = min(1, $aniosTrans / $anios_activo);
           $valor_actual = round($valor_compra * (1 - $depreciacion), 2);
           if ($valor_actual < 0) $valor_actual = 0;
         } else {
@@ -707,7 +748,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <?php endif; ?>
         </td>
         <td>$<?= number_format($valor_compra,2) ?></td>
-        <td><?=$anios?></td>
+        <td><?=$anios_activo?><?= $anios_activo !== $anios ? ' <span class="ih-badge ih-badge--info">propio</span>' : '' ?></td>
         <td>$<?= number_format($valor_actual,2) ?></td>
       </tr>
     <?php endwhile; ?>

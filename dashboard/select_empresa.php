@@ -4,6 +4,13 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../core/security/session_guard.php';
+require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
+if (is_file(__DIR__ . '/../logs/logger.php')) { require_once __DIR__ . '/../logs/logger.php'; }
+if (!function_exists('log_event')) {
+    function log_event($origin, $type, $msg, $tag = 'app') {}
+}
 
 $db = new MasterDB();
 $companies = [];
@@ -11,18 +18,55 @@ $res = $db->pquery('SELECT id, nombre, razon_social FROM companies WHERE active 
 $rs = $res->get_result();
 while ($row = $rs->fetch_assoc()) { $companies[] = $row; }
 
+$csrf_token = generateCsrfToken('select_empresa');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cid = (int)($_POST['company_id'] ?? 0);
-    foreach ($companies as $c) {
-        if ((int)$c['id'] === $cid) {
-            $_SESSION['company_id'] = $cid;
-            break;
-        }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Esta página era una escalada de privilegios entre empresas.
+    //
+    // No pedía sesión ni token: aceptaba `company_id` por POST, verificaba sólo
+    // que la empresa estuviera ACTIVA —nunca que el usuario perteneciera a
+    // ella— y escribía $_SESSION['company_id'] dejando $_SESSION['user_id']
+    // intacto. A partir de ahí tn() resuelve contra las tablas de la empresa
+    // nueva, e inventario/index.php hace `SELECT ... FROM <nuevo>.users WHERE
+    // id = $user_id`. Si existe una fila con ese mismo id numérico, el usuario
+    // QUEDA LOGUEADO COMO ESA PERSONA, con su rol. El usuario 1 de una empresa
+    // entraba como el usuario 1 de otra — que en un tenant recién creado es el
+    // admin que genera dashboard_empresas.php.
+    //
+    // El arreglo no es sólo el CSRF: es que elegir empresa no puede conservar
+    // una identidad de otra. Un usuario del tenant es una fila en la tabla
+    // `users` de SU empresa; "tener acceso a dos empresas" son dos cuentas
+    // distintas, no una que viaja. Así que acá se fija la empresa, se descarta
+    // toda la autenticación y se manda al login de esa empresa.
+    // ─────────────────────────────────────────────────────────────────────────
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '', 'select_empresa')) {
+        log_event('select_empresa', 'CSRF_BLOCK', 'Token inválido al elegir empresa', 'seguridad');
+        http_response_code(403);
+        echo 'Formulario expirado. Volvé a cargar la página.';
+        exit;
     }
-    $target = $_SESSION['pending_target'] ?? '/inventario/index.php';
-    unset($_SESSION['pending_target']);
-    header('Location: ' . $target);
-    exit;
+
+    $cid   = (int)($_POST['company_id'] ?? 0);
+    $valida = false;
+    foreach ($companies as $c) {
+        if ((int)$c['id'] === $cid) { $valida = true; break; }
+    }
+
+    if (!$valida) {
+        log_event('select_empresa', 'AUTH_FAIL', "company_id inválido o inactivo: {$cid}", 'seguridad');
+        header('Location: /dashboard/select_empresa.php');
+        exit;
+    }
+
+    // Descartar la sesión entera y quedarse sólo con la empresa elegida.
+    // app_session_rotar() además regenera el ID, así que no sobrevive nada del
+    // contexto anterior: ni user_id, ni role, ni access_token de Drive, ni el
+    // flag de cambio de contraseña obligatorio.
+    app_session_rotar([]);
+    $_SESSION['company_id'] = $cid;
+
+    app_session_cerrar_y_redirigir(tenant_login_url($cid));
 }
 ?>
 <!doctype html>
@@ -68,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       <?php else: ?>
         <form method="post" id="form-empresa">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
           <input type="hidden" name="company_id" id="company_id">
           <div class="company-list">
             <?php foreach ($companies as $c): ?>

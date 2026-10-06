@@ -476,3 +476,14 @@ dialog.ih-modal::backdrop{background:rgba(22,25,34,.45)}
   .ih-card{box-shadow:none;border-color:#ddd}
   body{background:#fff}
 }
+
+/* Rejilla de formulario del alta y la edicion de activos.
+   Estaba en un <style> dentro de inventario/agregar.php: funcionaba, pero una
+   clase del sistema de diseno definida en una pagina no la ve ninguna otra
+   pantalla ni el chequeo de cobertura de la bateria. */
+.ih-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-4);margin-bottom:var(--sp-4)}
+
+/* Encabezado de columna ordenable del listado.
+   Misma historia: vivia dentro de inventario/index.php. */
+.ih-sort-link{display:inline-flex;align-items:center;gap:4px;color:inherit;text-decoration:none;white-space:nowrap}
+.ih-sort-link:hover,.ih-sort-link.is-active,.ih-sort-link.is-active i{color:var(--ih-green)}

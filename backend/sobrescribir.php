@@ -20,8 +20,14 @@ require_once __DIR__ . '/db.php';
 // Scope debe coincidir con el que usamos en confirmar_accion.php
 csrf_or_fail('confirmar_accion', true); // true = el token se rota, un solo uso
 
+// Autorización: sobrescribir un archivo del activo es editarlo. Faltaba, y
+// sobrescribir es destructivo (reemplaza la versión anterior en Drive), así que
+// era el peor de los tres del flujo de duplicados sin chequeo.
+require_once __DIR__ . '/../core/security/permissions.php';
+$_me = require_tenant_permission('asset.edit');
+
 // Identificar usuario responsable
-$user_id = $_SESSION['user_id'] ?? 'usuario_desconocido';
+$user_id = (int)$_me['id'];
 
 // =========================
 // Autenticación Google Drive — plataforma primero, cloud_config como override

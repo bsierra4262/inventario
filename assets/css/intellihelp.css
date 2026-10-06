@@ -773,3 +773,9 @@ img { max-width: 100%; height: auto; display: block; }
    --------------------------------------------------------------------- */
 @keyframes ih-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .ih-anim-fade { animation: ih-fade-in 350ms ease both; }
+
+/* head.php emite <body class="ih-portal-{portal}">. Existia .ih-portal-tenant
+   (en app.css) pero no su par del panel: el fondo del superadmin salia del
+   `body` y no del portal, asi que las dos hojas decian lo mismo de dos formas
+   distintas. No habia bug visual; si una asimetria que se nota al tocarlo. */
+.ih-portal-superadmin{background:var(--ih-gray-50)}

@@ -8,22 +8,75 @@
  * desplegables alimentados por esta tabla; el admin (y sólo el admin) da de
  * alta valores nuevos.
  *
- * Tipos usados hoy: 'asignado_a' (personas o departamentos) y 'ubicacion'.
- * Agregar uno nuevo es sumarlo a CATALOGO_TIPOS.
+ * Agregar un tipo nuevo es sumarlo a CATALOGO_TIPOS. Cada entrada declara en
+ * qué tabla y columna se usa el valor, porque de eso dependen "cuántos activos
+ * lo usan" y el arrastre al renombrar. Antes se asumía que el tipo *era* el
+ * nombre de la columna en `productos`; sigue siendo así para la mayoría, pero
+ * los catálogos de Infocom viven en otra tabla.
+ *
+ * `ubicacion` es el caso aparte: dejó de ser una lista plana y pasó a ser un
+ * árbol con dirección y coordenadas (core/tenants/ubicaciones.php). Se mantiene
+ * acá para que todo el código que ya llamaba a catalogo_valores($conn,
+ * 'ubicacion') o catalogo_normalizar(...) siga funcionando sin cambios: estas
+ * funciones delegan y devuelven la lista de rutas completas.
  */
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/ubicaciones.php';
+
 if (!defined('CATALOGO_TIPOS')) {
     define('CATALOGO_TIPOS', [
-        'asignado_a' => ['label' => 'Asignado a', 'ayuda' => 'Personas o departamentos a los que se asigna un activo'],
-        'ubicacion'  => ['label' => 'Ubicación',  'ayuda' => 'Sedes, oficinas, depósitos o racks donde puede estar un activo'],
+        // ── Del activo ──────────────────────────────────────────────────────
+        'asignado_a'   => ['label' => 'Asignado a',   'tabla' => 'productos', 'columna' => 'asignado_a',
+                           'ayuda' => 'Personas o departamentos a los que se asigna un activo'],
+        'ubicacion'    => ['label' => 'Ubicación',    'tabla' => 'productos', 'columna' => 'ubicacion', 'arbol' => true,
+                           'ayuda' => 'Sedes, oficinas, depósitos o racks. Es un árbol: una sede contiene pisos, y un piso depósitos'],
+        'marca'        => ['label' => 'Marca',        'tabla' => 'productos', 'columna' => 'marca',
+                           'ayuda' => 'Fabricantes de los activos'],
+        'modelo'       => ['label' => 'Modelo',       'tabla' => 'productos', 'columna' => 'modelo',
+                           'ayuda' => 'Modelos de equipo'],
+        'categoria'    => ['label' => 'Categoría',    'tabla' => 'productos', 'columna' => 'categoria',
+                           'ayuda' => 'Tipo de activo: notebook, switch, impresora…'],
+        'subcategoria' => ['label' => 'Subcategoría', 'tabla' => 'productos', 'columna' => 'subcategoria',
+                           'ayuda' => 'Detalle dentro de la categoría'],
+        'estado'       => ['label' => 'Estado',       'tabla' => 'productos', 'columna' => 'estado',
+                           'ayuda' => 'En uso, en depósito, en reparación, de baja…'],
+
+        // ── Financiero y administrativo (Infocom) ───────────────────────────
+        'proveedor'    => ['label' => 'Proveedor',    'tabla' => 'activo_infocom', 'columna' => 'proveedor',
+                           'ayuda' => 'A quién se le compró el activo'],
+        'presupuesto'  => ['label' => 'Presupuesto',  'tabla' => 'activo_infocom', 'columna' => 'presupuesto',
+                           'ayuda' => 'Partida presupuestaria con la que se compró'],
+        'criticidad'   => ['label' => 'Criticidad',   'tabla' => 'activo_infocom', 'columna' => 'criticidad',
+                           'ayuda' => 'Qué tan crítico es el activo para la operación'],
     ]);
 }
 
 if (!function_exists('catalogo_tipo_valido')) {
 function catalogo_tipo_valido(string $tipo): bool {
     return array_key_exists($tipo, CATALOGO_TIPOS);
+}
+}
+
+if (!function_exists('catalogo_es_arbol')) {
+/** True si el tipo se gestiona como árbol (hoy sólo 'ubicacion'). */
+function catalogo_es_arbol(string $tipo): bool {
+    return !empty(CATALOGO_TIPOS[$tipo]['arbol']);
+}
+}
+
+if (!function_exists('catalogo_destino')) {
+/**
+ * Tabla y columna donde se usa el valor de este catálogo.
+ * Salen de CATALOGO_TIPOS, nunca del request: se interpolan en el SQL.
+ *
+ * @return array{0:string,1:string}|null
+ */
+function catalogo_destino(string $tipo): ?array {
+    $def = CATALOGO_TIPOS[$tipo] ?? null;
+    if (!$def || empty($def['tabla']) || empty($def['columna'])) { return null; }
+    return [(string)$def['tabla'], (string)$def['columna']];
 }
 }
 
@@ -36,6 +89,17 @@ function catalogo_tipo_valido(string $tipo): bool {
 if (!function_exists('catalogo_valores')) {
 function catalogo_valores(mysqli $conn, string $tipo, bool $incluirInactivos = false): array {
     if (!catalogo_tipo_valido($tipo)) { return []; }
+
+    // Los tipos en árbol no viven en `catalogos`: devuelven sus rutas completas.
+    // Así el <select> de alta y edición sigue recibiendo una lista de strings.
+    //
+    // Salvo que todavía no se haya migrado: entre el despliegue del código y el
+    // `php bin/migrar.php` hay una ventana con código nuevo y esquema viejo. Ahí
+    // se sigue leyendo la lista plana de `catalogos` —lo que había antes— en vez
+    // de devolver vacío y dejar el desplegable de Ubicación sin opciones.
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) {
+        return ubicaciones_rutas($conn, $incluirInactivos);
+    }
 
     static $cache = [];
     $clave = $tipo . ($incluirInactivos ? ':all' : ':activos');
@@ -64,6 +128,16 @@ function catalogo_valores(mysqli $conn, string $tipo, bool $incluirInactivos = f
 if (!function_exists('catalogo_filas')) {
 function catalogo_filas(mysqli $conn, string $tipo): array {
     if (!catalogo_tipo_valido($tipo)) { return []; }
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) {
+        $filas = ubicaciones_arbol_plano($conn, false);
+        // La pantalla de gestión espera una clave 'valor'. En un árbol lo
+        // editable es el NOMBRE del nodo, no la ruta: renombrar "Depósito" no
+        // puede obligar a reescribir "Sede Centro > Piso 2 > Depósito". La ruta
+        // viaja aparte, en 'ruta', que es lo que guardan los activos.
+        foreach ($filas as &$f) { $f['valor'] = $f['nombre']; }
+        unset($f);
+        return $filas;
+    }
     $out = [];
     try {
         $tabla = tn('catalogos');
@@ -82,10 +156,15 @@ function catalogo_filas(mysqli $conn, string $tipo): array {
 if (!function_exists('catalogo_uso')) {
 function catalogo_uso(mysqli $conn, string $tipo, string $valor): int {
     if (!catalogo_tipo_valido($tipo)) { return 0; }
+    $destino = catalogo_destino($tipo);
+    if ($destino === null) { return 0; }
     try {
-        $tabla = tn('productos');
-        // El nombre de columna sale de CATALOGO_TIPOS, nunca del request.
-        $col = $tipo;
+        // Tabla y columna salen de CATALOGO_TIPOS, nunca del request. Antes se
+        // asumía `productos` y que la columna se llamaba igual que el tipo; los
+        // catálogos de Infocom (proveedor, presupuesto, criticidad) viven en
+        // otra tabla y con eso habrían contado siempre cero.
+        $tabla = tn($destino[0]);
+        $col   = $destino[1];
         $st = $conn->prepare("SELECT COUNT(*) c FROM `{$tabla}` WHERE `{$col}` = ?");
         $st->bind_param('s', $valor);
         $st->execute();
@@ -97,8 +176,10 @@ function catalogo_uso(mysqli $conn, string $tipo, string $valor): int {
 }
 
 if (!function_exists('catalogo_agregar')) {
-function catalogo_agregar(mysqli $conn, string $tipo, string $valor): bool {
+function catalogo_agregar(mysqli $conn, string $tipo, string $valor, ?int $padreId = null): bool {
     if (!catalogo_tipo_valido($tipo)) { return false; }
+    // En árbol, $padreId dice de quién cuelga; null lo deja como raíz.
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) { return ubicacion_agregar($conn, $valor, $padreId) > 0; }
     $valor = trim(preg_replace('/\s+/u', ' ', $valor));
     if ($valor === '' || mb_strlen($valor) > 255) { return false; }
     try {
@@ -120,6 +201,8 @@ function catalogo_agregar(mysqli $conn, string $tipo, string $valor): bool {
 if (!function_exists('catalogo_renombrar')) {
 function catalogo_renombrar(mysqli $conn, string $tipo, int $id, string $nuevo): bool {
     if (!catalogo_tipo_valido($tipo)) { return false; }
+    // En árbol renombrar recalcula además la ruta de todo el subárbol.
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) { return ubicacion_renombrar($conn, $id, $nuevo); }
     $nuevo = trim(preg_replace('/\s+/u', ' ', $nuevo));
     if ($nuevo === '' || mb_strlen($nuevo) > 255) { return false; }
     try {
@@ -139,8 +222,10 @@ function catalogo_renombrar(mysqli $conn, string $tipo, int $id, string $nuevo):
         $up->execute();
         $up->close();
 
-        $prod = tn('productos');
-        $col  = $tipo;
+        $destino = catalogo_destino($tipo);
+        if ($destino === null) { $conn->rollback(); return false; }
+        $prod = tn($destino[0]);
+        $col  = $destino[1];
         $up2 = $conn->prepare("UPDATE `{$prod}` SET `{$col}` = ? WHERE `{$col}` = ?");
         $up2->bind_param('ss', $nuevo, $viejo);
         $up2->execute();
@@ -159,6 +244,7 @@ function catalogo_renombrar(mysqli $conn, string $tipo, int $id, string $nuevo):
 if (!function_exists('catalogo_activar')) {
 function catalogo_activar(mysqli $conn, string $tipo, int $id, bool $activo): bool {
     if (!catalogo_tipo_valido($tipo)) { return false; }
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) { return ubicacion_activar($conn, $id, $activo); }
     try {
         $tabla = tn('catalogos');
         $v = $activo ? 1 : 0;
@@ -175,6 +261,9 @@ function catalogo_activar(mysqli $conn, string $tipo, int $id, bool $activo): bo
 if (!function_exists('catalogo_eliminar')) {
 function catalogo_eliminar(mysqli $conn, string $tipo, int $id): bool {
     if (!catalogo_tipo_valido($tipo)) { return false; }
+    // En árbol se rechaza además si tiene hijos: borrar un padre dejaría
+    // colgando a los descendientes.
+    if (catalogo_es_arbol($tipo) && ubicaciones_disponible($conn)) { return ubicacion_eliminar($conn, $id); }
     try {
         $tabla = tn('catalogos');
         $st = $conn->prepare("SELECT valor FROM `{$tabla}` WHERE id = ? AND tipo = ? LIMIT 1");

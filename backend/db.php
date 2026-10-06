@@ -39,6 +39,48 @@ try {
 }
 
 // ============================================================
+// Guard: la identidad tiene que corresponder a la empresa activa
+//
+// `user_id` es el id de una fila en la tabla `users` DE UNA EMPRESA. No
+// identifica a nadie fuera de ella. Si `company_id` cambia y `user_id`
+// sobrevive, tn() resuelve contra las tablas de la empresa nueva y el
+// `SELECT ... WHERE id = $user_id` de cada página devuelve a OTRA persona:
+// quedás logueado como el usuario que tenga ese mismo id numérico allá, con su
+// rol. El usuario 1 de una empresa entraba como el usuario 1 de otra.
+//
+// Había al menos dos formas de provocar ese desfasaje:
+//   - dashboard/select_empresa.php fijaba company_id sin tocar user_id;
+//   - auth/login.php sobrescribe company_id con el del POST aunque ya haya una
+//     sesión viva de otra empresa, así que un login fallido dejaba la sesión
+//     cruzada.
+//
+// Cerrar los dos caminos no alcanza: cualquier código futuro que escriba
+// company_id reabre el agujero. Así que la empresa contra la que se autenticó
+// queda grabada en la sesión y acá se compara en cada request. Si no coinciden,
+// la sesión no es de fiar y se destruye.
+// ============================================================
+if (!empty($_SESSION['user_id'])) {
+    $_auth_cid = (int)($_SESSION['auth_company_id'] ?? 0);
+    $_curr_cid = (int)($_SESSION['company_id'] ?? 0);
+
+    if ($_auth_cid === 0) {
+        // Sesión abierta antes de que existiera el guard: se adopta la empresa
+        // actual como la de autenticación. Es el estado en el que ya estaba, no
+        // afloja nada; a partir del próximo cambio de empresa queda protegida.
+        $_SESSION['auth_company_id'] = $_curr_cid;
+    } elseif ($_auth_cid !== $_curr_cid) {
+        log_event('db.php', 'AUTH_FAIL',
+            "Sesión cruzada entre empresas: user_id={$_SESSION['user_id']} autenticado en cid={$_auth_cid}, pedido cid={$_curr_cid}",
+            'seguridad');
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) { session_destroy(); }
+        require_once ROOT_PATH . '/core/tenants/tenant_url_helper.php';
+        header('Location: ' . tenant_login_url($_curr_cid, ['err' => 'Tu sesión no corresponde a esta empresa. Volvé a iniciar sesión.']));
+        exit();
+    }
+}
+
+// ============================================================
 // Guard: cambio de contraseña obligatorio (solo check de sesión)
 // ============================================================
 $_excluded_from_force = ['login.php', 'select_empresa.php', 'change_password.php', 'logout.php'];

@@ -316,6 +316,34 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     </div>
     <?php endif; ?>
 
+    <!-- Campos configurables de la categoría -->
+    <?php
+    // Los catorce de arriba tienen columna propia en `productos`; estos se
+    // definen desde Campos y viven en `campos_valor`. Se muestran aparte para
+    // que se vea de dónde sale cada cosa.
+    require_once __DIR__ . '/../core/tenants/campos.php';
+    $defsCat = campos_para($conn, (string)($producto['categoria'] ?? ''), (string)($producto['subcategoria'] ?? ''));
+    $valsCat = campos_valores_de($conn, $producto_id, $producto);
+    $propios = [];
+    foreach ($defsCat as $dc) {
+        if ((string)($dc['columna_legacy'] ?? '') !== '') { continue; }
+        $v = trim((string)($valsCat[(string)$dc['clave']] ?? ''));
+        if ($v !== '') { $propios[] = [$dc, $v]; }
+    }
+    if ($propios): ?>
+    <div class="ih-card vd-section">
+      <div class="ih-card__body" style="padding:1rem;">
+        <div class="vd-section-title"><i class="bi bi-sliders"></i> Detalles de la categoría</div>
+        <div class="vd-grid">
+          <?php foreach ($propios as [$dc, $v]) {
+              $mostrar = (string)$dc['tipo'] === 'booleano' ? ($v === '1' ? 'Sí' : 'No') : $v;
+              vd_row((string)$dc['etiqueta'], $mostrar, 'dot');
+          } ?>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Drive -->
     <div class="ih-card vd-section">
       <div class="ih-card__body" style="padding:1rem;">

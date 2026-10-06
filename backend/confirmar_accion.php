@@ -23,6 +23,14 @@ if (!$user_id) {
 // --- Conexión del tenant (multiempresa)
 require_once __DIR__ . '/../backend/db.php';
 
+// --- Autorización ---
+// La página decide qué pasa con un archivo de un activo (sobrescribir o
+// renombrar), así que pide el mismo permiso que las dos acciones que ofrece.
+// Sin esto un `viewer` veía el nombre de los archivos del activo y tenía los
+// dos botones a mano.
+require_once __DIR__ . '/../core/security/permissions.php';
+require_tenant_permission('asset.edit');
+
 // --- Logger
 $loggerPath = __DIR__ . '/../logs/logger.php';
 if (is_file($loggerPath)) {

@@ -5,7 +5,10 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
+require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/integraciones/drive.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     log_event('usuario_desconocido', 'ERROR', 'Solicitud inválida a upload_renamed', 'transaccion');
@@ -13,12 +16,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$user_id = (int)($_SESSION['user_id'] ?? 0);
-if (!$user_id) {
-    require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
-    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
-    exit();
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Guardias
+//
+// Este archivo no tenía NINGUNA: ni token CSRF (no incluía csrf.php siquiera),
+// ni chequeo de permiso, ni validación del archivo. Cualquier usuario con
+// sesión —incluido un `viewer`— podía subir un archivo de cualquier tipo y
+// cualquier tamaño a una carpeta arbitraria del Drive de la empresa, con sólo
+// pasar un folder_id.
+//
+// Además está huérfano: ningún formulario, link ni redirect del proyecto apunta
+// acá. El flujo vivo de duplicados es confirmar_accion.php → renombrar.php /
+// sobrescribir.php, y renombrar.php ya hace el renombrar-y-subir. Quedó de un
+// diseño anterior. Se blinda igual en vez de borrarlo, pero conviene darlo de
+// baja: código muerto alcanzable por HTTP es superficie sin dueño.
+// ─────────────────────────────────────────────────────────────────────────────
+csrf_or_fail('confirmar_accion', true);
+$_me     = require_tenant_permission('asset.edit');
+$user_id = (int)$_me['id'];
 
 if (!isset($_POST['new_name'], $_FILES['archivo']['tmp_name'], $_POST['folder_id'])) {
     log_event((string)$user_id, 'ERROR', 'Datos insuficientes para renombrar y subir el archivo', 'transaccion');
@@ -26,9 +41,25 @@ if (!isset($_POST['new_name'], $_FILES['archivo']['tmp_name'], $_POST['folder_id
     exit();
 }
 
-$newName  = htmlspecialchars((string)$_POST['new_name'], ENT_QUOTES, 'UTF-8');
-$tempPath = $_FILES['archivo']['tmp_name'];
-$folderId = htmlspecialchars((string)$_POST['folder_id'], ENT_QUOTES, 'UTF-8');
+$newName  = drive_nombre_archivo_seguro((string)$_POST['new_name']);
+$tempPath = (string)$_FILES['archivo']['tmp_name'];
+$folderId = (string)$_POST['folder_id'];
+
+// El folder_id va dentro de un pedido a la API de Drive: se valida con el mismo
+// patrón que confirmar_accion.php, no con htmlspecialchars() —que escapa para
+// HTML, un contexto que acá no existe.
+if (!preg_match('/^[A-Za-z0-9_\-\.!]+$/', $folderId)) {
+    log_event((string)$user_id, 'ERROR', "ID de carpeta no válido: $folderId", 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode('Error: ID de carpeta no válido.'));
+    exit();
+}
+
+// Tipo MIME real y tamaño, con el mismo criterio que el alta de activos.
+if (!drive_adjunto_valido($tempPath, $motivoRechazo)) {
+    log_event((string)$user_id, 'ARCHIVO RECHAZADO', "$newName: $motivoRechazo", 'transaccion');
+    header('Location: resultado.php?status=error&msg=' . urlencode("Archivo rechazado: $motivoRechazo."));
+    exit();
+}
 
 // Credenciales Google — plataforma primero, cloud_config como override
 $googleClientId     = GOOGLE_CLIENT_ID;
@@ -82,11 +113,8 @@ if ($client->isAccessTokenExpired()) {
 
 $service = new Google\Service\Drive($client);
 
-if (!file_exists($tempPath) || filesize($tempPath) === 0) {
-    log_event((string)$user_id, 'ERROR', 'Archivo no existe o está vacío en upload_renamed', 'transaccion');
-    header('Location: resultado.php?status=error&msg=' . urlencode('Error: El archivo no existe o está vacío.'));
-    exit();
-}
+// La existencia y el tamaño ya se verificaron arriba con drive_adjunto_valido(),
+// antes de armar el cliente de Drive.
 
 try {
     $fileMetadata = new Google\Service\Drive\DriveFile([

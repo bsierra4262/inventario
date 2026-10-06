@@ -140,6 +140,11 @@ if (!function_exists('require_permission')) {
     function require_permission(string $action, $userOrRole): void {
         if (!user_can($action, $userOrRole)) {
             http_response_code(403);
+            // platform_logo_html() vive en core/config/platform.php. Los endpoints
+            // del flujo de duplicados (renombrar, sobrescribir) no lo incluyen, y
+            // sin este guard el 403 moría con un "undefined function" — un fatal
+            // en lugar de la pantalla de acceso denegado.
+            $logo = function_exists('platform_logo_html') ? platform_logo_html() : 'i';
             ?>
             <!doctype html>
             <html lang="es"><head><meta charset="utf-8"><title>403</title>
@@ -151,7 +156,7 @@ if (!function_exists('require_permission')) {
               <div class="ih-auth__card">
                 <div class="ih-auth__header">
                   <div class="ih-auth__brand">
-                    <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
+                    <div class="ih-auth__logo"><?= $logo ?></div>
                     <div class="ih-auth__brand-text">
                       <strong>INTELLIHELP</strong>
                       <span>Asset Vault</span>
@@ -175,6 +180,73 @@ if (!function_exists('require_permission')) {
             <?php
             exit;
         }
+    }
+}
+
+/**
+ * Usuario del tenant autenticado, leído de la base (no de la sesión).
+ *
+ * El rol se lee de `tn('users')` en cada request a propósito: si el admin le
+ * baja el rol a alguien que ya tiene la sesión abierta, el cambio tiene efecto
+ * en el request siguiente y no cuando se le vence la cookie.
+ *
+ * Devuelve null si no hay sesión de tenant o si el usuario ya no existe.
+ */
+if (!function_exists('current_tenant_user')) {
+    function current_tenant_user(): ?array {
+        global $conn;
+
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if ($uid <= 0 || !isset($conn) || !($conn instanceof mysqli) || !function_exists('tn')) {
+            return null;
+        }
+
+        try {
+            $stmt = $conn->prepare('SELECT id, username, email, role FROM `' . tn('users') . '` WHERE id = ? LIMIT 1');
+            if (!$stmt) { return null; }
+            $stmt->bind_param('i', $uid);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            return $row ?: null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+}
+
+/**
+ * Guardia completa para un endpoint del tenant: exige sesión y permiso.
+ *
+ * Reemplaza el bloque de seis líneas (prepare + bind + execute + fetch +
+ * close + require_permission) que estaba copiado en cada archivo de backend/.
+ * Estaba copiado en ocho, y faltaba en cinco: renombrar.php, sobrescribir.php,
+ * upload_to_drive.php, upload_renamed.php y confirmar_accion.php dejaban pasar
+ * a cualquier usuario autenticado, incluido el rol `viewer`.
+ *
+ * Devuelve el usuario para que el llamador no tenga que volver a buscarlo.
+ */
+if (!function_exists('require_tenant_permission')) {
+    function require_tenant_permission(string $action): array {
+        $me = current_tenant_user();
+
+        if ($me === null) {
+            // Sin sesión válida no hay a quién pedirle permiso: al login del tenant.
+            $helper = __DIR__ . '/../tenants/tenant_url_helper.php';
+            if (is_file($helper)) {
+                require_once $helper;
+                if (function_exists('tenant_login_url')) {
+                    header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
+                    exit;
+                }
+            }
+            http_response_code(403);
+            echo 'Sesión no válida.';
+            exit;
+        }
+
+        require_permission($action, $me);
+        return $me;
     }
 }
 

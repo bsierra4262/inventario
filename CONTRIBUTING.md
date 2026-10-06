@@ -30,6 +30,19 @@ php test/run_tests.php
 
 Tiene que terminar en verde. Corre sin base de datos ni servidor.
 
+Si el cambio toca el esquema, una migración o algo que sólo se ve ejecutando, corré además la
+batería de integración contra una base **descartable** (la vacía al empezar):
+
+```bash
+AV_TEST_DB_HOST=127.0.0.1 AV_TEST_DB_PORT=3306 AV_TEST_DB_USER=root AV_TEST_DB_PASS=secreto AV_TEST_DB_NAME=av_test AV_TEST_DB_MASTER=av_test_master php test/integracion.php
+```
+
+Sin esas variables no corre nada y sale en 0, así que no rompe donde no haya base.
+
+Esa batería existe porque hay defectos que no se ven leyendo el código: el recálculo de rutas
+del árbol de ubicaciones parecía correcto, pasaba la revisión y la batería estática, y no bajaba
+más de un nivel. Lo encontró la primera corrida contra una base real.
+
 ## Estructura
 
 ```

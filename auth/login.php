@@ -292,6 +292,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             $_SESSION['role']       = $user['role'];
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
+            // Empresa contra la que se validó esta credencial. backend/db.php la
+            // compara con company_id en cada request: si alguien cambia la
+            // empresa sin volver a autenticarse, la sesión se destruye en vez de
+            // reinterpretar el user_id contra las tablas de otro tenant.
+            $_SESSION['auth_company_id'] = (int)($_SESSION['company_id'] ?? 0);
+
             log_event($user['email'] ?? "id:{$user['id']}", "LOGIN LOCAL", "IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
 
             // Verificar cambio de contraseña obligatorio

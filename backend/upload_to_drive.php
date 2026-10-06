@@ -22,6 +22,13 @@ if (!verifyCsrfToken(null, 'upload_producto')) {
     exit();
 }
 
+// --- Guardia de autorización ---
+// Este es el alta de activos (lo postea inventario/agregar.php), así que pide
+// `asset.create`. Antes sólo verificaba que hubiera sesión: un rol `viewer`
+// podía dar de alta activos y subir archivos al Drive de la empresa.
+require_once __DIR__ . '/../core/security/permissions.php';
+require_tenant_permission('asset.create');
+
 // Función helper para errores de agregar — vuelve al form con el error visible
 function agregar_error(string $msg): never {
     $_SESSION['form_data'] = $_SESSION['form_data'] ?? [];
@@ -138,6 +145,9 @@ if ($fecha_compra  === '' || $fecha_compra  === '0000-00-00') $fecha_compra  = '
 require_once __DIR__ . '/../core/tenants/catalogos.php';
 $asignado_a = catalogo_normalizar($conn, 'asignado_a', $asignado_a);
 $ubicacion  = catalogo_normalizar($conn, 'ubicacion',  $ubicacion);
+// `estado` pasó a ser catálogo: se valida en el servidor igual que los otros
+// dos. El <select> del formulario es comodidad visual, no el control.
+$estado     = catalogo_normalizar($conn, 'estado',     $estado);
 
 $fi = $fecha_ingreso ?: null;
 $fc = $fecha_compra  ?: null;
@@ -200,6 +210,23 @@ try {
         throw new Exception('Error al insertar producto: ' . $stmt->error);
     }
     $producto_id = $stmt->insert_id;
+
+    // Enlace al nodo del árbol de ubicaciones. `ubicacion` guarda la ruta como
+    // texto (y así la siguen leyendo listado, reportes y exportaciones);
+    // `ubicacion_id` es lo que permite filtrar por rama.
+    ubicacion_sincronizar_id($conn, (int)$producto_id, (string)$ubicacion);
+
+    // Datos financieros y administrativos. Viven en su propia tabla, asi que
+    // se guardan aparte del INSERT del activo. Todos opcionales: si el alta
+    // no los trae, queda la fila vacia y se completan desde la edicion.
+    require_once __DIR__ . '/../core/tenants/infocom.php';
+    infocom_guardar($conn, (int)$producto_id, $_POST);
+
+    // Campos especificos de la categoria definidos en datos. Los catorce
+    // heredados siguen viajando en el INSERT de `productos`; aca se guardan
+    // los configurables, que viven en `campos_valor`.
+    require_once __DIR__ . '/../core/tenants/campos.php';
+    campos_guardar($conn, (int)$producto_id, $categoria, $subcategoria, $_POST);
     $stmt->close();
 
     // Crear estructura de carpetas en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)

@@ -319,6 +319,93 @@ chequear('Ninguna página pública crea el superadmin', $autoSeed === [], implod
 chequear('El alta de superadmin vive en bin/ y genera la contraseña al azar',
     str_contains(leer('bin/crear_superadmin.php'), 'random_int'));
 
+// ───────────────────────────────────────────────────────────────────────────
+// El historial de git, no sólo el árbol de trabajo.
+//
+// Acá estaba el punto ciego que dejó pasar una fuga real: el chequeo de arriba
+// recorre los archivos que existen HOY. `auth/credentials.json` no existe hoy
+// —se borró y está en .gitignore— pero sigue vivo en el primer commit, que es
+// alcanzable desde main y desde los dos remotos. Borrar un archivo no lo saca
+// de la historia, y el test daba verde igual.
+//
+// Se buscan patrones de secreto en los blobs de los archivos sensibles que
+// alguna vez existieron. Los valores NO se escriben en este archivo ni se pasan
+// por línea de comandos (serían visibles en la lista de procesos): se busca por
+// forma, no por valor.
+//
+// Necesita git. En hosting compartido exec() está deshabilitado, así que cuando
+// no se puede correr el chequeo se dice, en vez de dar un verde que no verificó
+// nada.
+$execDisponible = function_exists('exec')
+    && !in_array('exec', array_map('trim', explode(',', (string)ini_get('disable_functions'))), true);
+
+if (!$execDisponible || !is_dir(RAIZ . '/.git')) {
+    chequear('Historial de git sin secretos — NO VERIFICADO (sin git o sin exec en este entorno)', true);
+} else {
+    $git = static function (string $args) : array {
+        $out = []; $code = 0;
+        @exec('git -C ' . escapeshellarg(RAIZ) . ' ' . $args . ' 2>&1', $out, $code);
+        return $code === 0 ? $out : [];
+    };
+
+    // Patrones por forma. Son los que identifican un secreto sin conocerlo.
+    $patrones = [
+        'client_secret de Google OAuth' => '/GOCSPX-[A-Za-z0-9_\-]{20,}/',
+        'API key de Google'             => '/\bAIza[0-9A-Za-z_\-]{30,}\b/',
+        'clave privada PEM'             => '/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/',
+        // El valor no puede contener `*` ni ser uno de los marcadores: la
+        // contraseña de la master YA se purgó del historial y quedó como
+        // '***SECRETO-PURGADO***'. Sin esta exclusión el chequeo reporta como
+        // fuga justamente la prueba de que la fuga se arregló.
+        'contraseña en define()'        => '/define\s*\(\s*[\'"](?:MASTER_DB_PASS|DB_PASS)[\'"]\s*,\s*[\'"](?!CAMBIAR|REMOVED|REDACTED|PURGADO)[^\'"*]{6,}[\'"]/i',
+    ];
+
+    // Fugas ya conocidas y asumidas. Baseline explícito: mantiene la batería en
+    // verde sobre lo que ya se decidió no tocar, y falla con cualquier fuga
+    // NUEVA. Para darla de baja: rotar la credencial y purgar el historial.
+    //
+    //   auth/credentials.json — client_secret de Google en el primer commit
+    //   (e811ff7b). Repositorios privados; se decidió no rotar todavía porque
+    //   la credencial está en uso. Registrado el 2026-10-06.
+    $fugasAceptadas = ['auth/credentials.json'];
+
+    $sensible = '/(secret|credential|password|token|\.env$|\.pem$|\.key$|\.p12$)/i';
+    $altas = $git('log --all --pretty=format: --diff-filter=A --name-only');
+
+    $candidatos = [];
+    foreach ($altas as $p) {
+        $p = trim($p);
+        if ($p === '' || str_starts_with($p, 'vendor/')) { continue; }
+        if (preg_match($sensible, $p)) { $candidatos[$p] = true; }
+    }
+    // platform.php guardaba la contraseña de la master y no matchea el patrón.
+    $candidatos['core/config/platform.php'] = true;
+
+    $fugas = [];
+    foreach (array_keys($candidatos) as $path) {
+        foreach ($git('log --all --format=%H -- ' . escapeshellarg($path)) as $commit) {
+            $blob = implode("\n", $git('show ' . escapeshellarg($commit . ':' . $path)));
+            if ($blob === '') { continue; }
+            foreach ($patrones as $queEs => $re) {
+                if (preg_match($re, $blob)) {
+                    $fugas[$path] = "{$path} filtra {$queEs} (commit " . substr($commit, 0, 8) . ')';
+                    break 2; // una por archivo alcanza para reportarlo
+                }
+            }
+        }
+    }
+
+    $nuevas = array_diff_key($fugas, array_flip($fugasAceptadas));
+    chequear(count($candidatos) . ' archivos sensibles del historial: ninguna fuga nueva',
+        $nuevas === [], implode('; ', $nuevas));
+
+    // Que el baseline no quede como letra muerta: si la fuga aceptada ya se
+    // purgó, hay que sacarla de la lista para que el chequeo vuelva a ser real.
+    $yaLimpias = array_diff($fugasAceptadas, array_keys($fugas));
+    chequear('El baseline de fugas aceptadas no tiene entradas obsoletas',
+        $yaLimpias === [], 'ya purgadas, sacar de $fugasAceptadas: ' . implode(', ', $yaLimpias));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('SEGURIDAD · sesión');
 // ═══════════════════════════════════════════════════════════════════════════
@@ -409,6 +496,122 @@ chequear('empresa_backup.php exige company.backup (no company.view)',
 chequear('empresa_detalle.php exige permiso para las acciones de gestión',
     str_contains(leer('dashboard/empresa_detalle.php'), "platform_can('tenant_user.manage')"));
 
+// core/ e includes/ son librería, no entry points. /core/config/platform.php,
+// /core/db/TenantDB.php y /backend/db.php devolvían HTTP 200 pedidos por URL, e
+// /includes/layout/head.php devolvía 500: correr un include fuera de contexto.
+foreach (['core', 'includes'] as $d) {
+    chequear(".htaccess bloquea /{$d} (es librería, no entry point)",
+        preg_match('/RewriteRule\s+\^' . $d . '\(\/\|\$\)/', $ht) === 1);
+}
+
+// auth/credentials.json se servía en texto plano si llegaba a estar en el
+// servidor: el patrón de archivos sensibles sólo cubría `composer.json`.
+chequear('.htaccess bloquea cualquier .json (no sólo composer.json)',
+    preg_match('/FilesMatch[^>]*\|json\|/', $ht) === 1);
+
+// Todo endpoint que escribe tiene que pedir permiso, no sólo sesión. Estos cinco
+// sólo verificaban que hubiera un user_id: un rol `viewer` llegaba a todos.
+foreach ([
+    'backend/upload_to_drive.php'  => 'asset.create',
+    'backend/upload_renamed.php'   => 'asset.edit',
+    'backend/renombrar.php'        => 'asset.edit',
+    'backend/sobrescribir.php'     => 'asset.edit',
+    'backend/confirmar_accion.php' => 'asset.edit',
+] as $f => $accion) {
+    chequear("{$f} exige {$accion}",
+        str_contains(leer($f), "require_tenant_permission('{$accion}')"));
+}
+
+// upload_renamed.php no incluía csrf.php siquiera, y usaba mime_content_type()
+// sólo para etiquetar el upload, nunca para validarlo: subía cualquier tipo y
+// cualquier tamaño a una carpeta arbitraria del Drive de la empresa.
+$ur = sin_comentarios(leer('backend/upload_renamed.php'));
+chequear('upload_renamed.php valida el token CSRF', str_contains($ur, 'csrf_or_fail'));
+chequear('upload_renamed.php valida tipo real y tamaño del adjunto', str_contains($ur, 'drive_adjunto_valido'));
+chequear('La validación de adjuntos vive una sola vez, en drive.php',
+    str_contains(leer('core/integraciones/drive.php'), 'function drive_adjunto_valido'));
+chequear('El nombre de archivo no se "escapa" con htmlspecialchars (no es contexto HTML)',
+    !str_contains($ur, 'htmlspecialchars'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('SEGURIDAD · aislamiento entre empresas');
+// ═══════════════════════════════════════════════════════════════════════════
+// Escalada de privilegios entre empresas.
+//
+// `user_id` es el id de una fila en la tabla `users` DE UNA EMPRESA; fuera de
+// ella no identifica a nadie. dashboard/select_empresa.php no pedía sesión ni
+// token, aceptaba company_id por POST validando sólo que la empresa estuviera
+// ACTIVA —nunca que el usuario perteneciera a ella— y escribía company_id
+// dejando user_id intacto. A partir de ahí tn() resuelve contra el tenant nuevo
+// y el `SELECT ... WHERE id = $user_id` de cada página devuelve a otra persona:
+// el usuario 1 de una empresa entraba como el usuario 1 de otra, con su rol —y
+// en un tenant recién creado ese id 1 es el admin.
+//
+// auth/login.php abría el mismo desfasaje por otro lado: sobrescribe company_id
+// con el del POST aunque ya haya una sesión viva de otra empresa, así que un
+// login fallido dejaba la sesión cruzada.
+$se = leer('dashboard/select_empresa.php');
+chequear('select_empresa.php valida el token CSRF', str_contains($se, "verifyCsrfToken"));
+chequear('select_empresa.php descarta la autenticación al cambiar de empresa',
+    str_contains($se, 'app_session_rotar([])'));
+chequear('select_empresa.php manda al login de la empresa elegida',
+    str_contains($se, 'tenant_login_url'));
+chequear('select_empresa.php no conserva user_id', !preg_match("/\\\$_SESSION\['user_id'\]\s*=/", $se));
+
+// La defensa de fondo: cerrar esos dos caminos no alcanza, porque cualquier
+// código futuro que escriba company_id reabre el agujero. La empresa contra la
+// que se autenticó queda grabada y se compara en cada request.
+$dbp = leer('backend/db.php');
+chequear('backend/db.php compara la empresa de la sesión con la de autenticación',
+    str_contains($dbp, "auth_company_id"));
+chequear('Una sesión cruzada entre empresas se destruye, no se reinterpreta',
+    str_contains($dbp, 'session_destroy'));
+foreach (['auth/login.php', 'auth/superadmin_callback.php'] as $f) {
+    chequear("{$f} graba la empresa de autenticación",
+        preg_match("/_SESSION\['auth_company_id'\]\s*=/", leer($f)) === 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('ESQUEMA · master');
+// ═══════════════════════════════════════════════════════════════════════════
+// `users_platform` se declaraba en TRES archivos, cada uno con un `role`
+// distinto: ENUM('superadmin','support') en install.php y en
+// superadmin_login.php, ENUM de los cuatro valores en superadmin_usuarios.php.
+// Qué roles eran asignables dependía de qué archivo hubiera corrido primero: en
+// una instalación limpia `admin` y `viewer` no se podían guardar. Lo "arreglaba"
+// un MODIFY COLUMN que superadmin_usuarios.php corría en CADA carga.
+$conEnumRole = [];
+foreach (archivos_php() as $f) {
+    $r = rel($f);
+    // test/integracion.php crea el ENUM viejo a propósito, para partir del estado
+    // roto y comprobar que la migración lo repara. Es la prueba, no el defecto.
+    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR)) { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (!str_contains($src, 'users_platform')) { continue; }
+    if (preg_match('/role\s+ENUM\s*\(/i', $src)) { $conEnumRole[] = $r; }
+}
+chequear('`users_platform.role` no se declara como ENUM en ningún archivo',
+    $conEnumRole === [], implode(', ', $conEnumRole));
+
+$mig = leer('core/db/migraciones.php');
+chequear('Existe la vía de migraciones de la master', str_contains($mig, 'function migraciones_master'));
+chequear('La versión de la master se guarda en platform_config',
+    str_contains($mig, 'MASTER_SCHEMA_VERSION_KEY') && str_contains($mig, 'platform_config'));
+chequear('bin/migrar.php aplica también las migraciones de la master',
+    str_contains(leer('bin/migrar.php'), 'migrar_master'));
+
+// Nada de DDL suelto en las páginas (regla 5 de CONTRIBUTING.md): tres páginas
+// —una de ellas pública— corrían ALTER TABLE sobre users_platform en cada request.
+$conDdlPlataforma = [];
+foreach (archivos_php() as $f) {
+    $r = rel($f);
+    if (str_contains($r, 'migraciones.php') || str_starts_with($r, 'test' . DIRECTORY_SEPARATOR)) { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (preg_match('/ALTER\s+TABLE\s+`?users_platform`?/i', $src)) { $conDdlPlataforma[] = $r; }
+}
+chequear('Ninguna página hace ALTER TABLE sobre users_platform',
+    $conDdlPlataforma === [], implode(', ', $conDdlPlataforma));
+
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('CATALOGOS');
 // ═══════════════════════════════════════════════════════════════════════════
@@ -429,6 +632,200 @@ chequear('catalog.manage es sólo de admin por defecto',
     preg_match("/'catalog\.manage'\s*=>\s*\['admin'\]/", leer('core/security/permissions.php')) === 1);
 chequear('Renombrar arrastra el cambio a los activos', str_contains($cat, 'function catalogo_renombrar')
     && str_contains($cat, "UPDATE `{\$prod}`"));
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('INVENTARIO · modelo (fases 1 y 2)');
+// ═══════════════════════════════════════════════════════════════════════════
+// Se toma de GLPI la forma de modelar, no sólo los campos: catálogos para todo
+// lo que era texto libre, ubicaciones como árbol con dirección, y lo financiero
+// y administrativo en su propia tabla (lo que GLPI llama Infocom).
+$cat = leer('core/tenants/catalogos.php');
+$ubi = leer('core/tenants/ubicaciones.php');
+$mig = leer('core/db/migraciones.php');
+
+// Fase 1a — marca, modelo, categoría, subcategoría y estado seguían siendo
+// texto libre: el mismo problema de "Depósito / deposito / Dep." que la
+// migración 3 resolvió para ubicación y responsable, intacto en cinco campos.
+foreach (['marca', 'modelo', 'categoria', 'subcategoria', 'estado'] as $t) {
+    chequear("CATALOGO_TIPOS incluye «{$t}»", preg_match("/'{$t}'\s*=>\s*\[/", $cat) === 1);
+}
+chequear('La migración siembra los catálogos nuevos con lo que ya estaba cargado',
+    preg_match("/foreach\s*\(\s*\['marca',\s*'modelo',\s*'categoria',\s*'subcategoria',\s*'estado'\]/", $mig) === 1);
+
+// Cada tipo declara dónde se usa su valor. Antes se asumía que el tipo era el
+// nombre de la columna en `productos`; los catálogos de Infocom no lo son, y
+// con esa suposición catalogo_uso() habría contado siempre cero.
+chequear('Cada catálogo declara tabla y columna de destino',
+    str_contains($cat, "'tabla' => 'activo_infocom'") && str_contains($cat, 'function catalogo_destino'));
+chequear('catalogo_uso() usa el destino declarado y no asume `productos`',
+    preg_match('/function catalogo_uso.*?catalogo_destino/s', $cat) === 1);
+
+// Fase 1b — ubicaciones como árbol.
+chequear('Existe el módulo de ubicaciones', $ubi !== '');
+chequear('La migración crea la tabla de ubicaciones', str_contains($mig, 'ubicaciones'));
+chequear('Las ubicaciones tienen dirección y coordenadas',
+    str_contains($mig, 'codigo_postal') && str_contains($mig, 'latitud'));
+chequear('Las ubicaciones son un árbol (padre_id)', str_contains($mig, 'padre_id'));
+chequear('catalogo_valores() delega en el árbol para ubicación',
+    str_contains($cat, 'ubicaciones_rutas'));
+chequear('Renombrar una ubicación arrastra la ruta de todo el subárbol',
+    str_contains($ubi, 'function ubicacion_recalcular_rutas'));
+chequear('Renombrar una ubicación propaga el cambio a los activos',
+    preg_match('/function ubicacion_recalcular_rutas.*?UPDATE `\{\$prod\}` SET ubicacion = /s', $ubi) === 1);
+chequear('Un nodo no puede colgar de un descendiente suyo',
+    str_contains($ubi, 'ubicacion_descendientes($conn, $id)'));
+chequear('No se borra una ubicación con hijos ni con activos',
+    preg_match('/function ubicacion_eliminar.*?ubicacion_uso.*?hijos/s', $ubi) === 1);
+
+// La ruta completa se sigue guardando en `productos.ubicacion`, así que listado,
+// reportes, CSV y backup no cambian; `ubicacion_id` es el enlace preciso.
+chequear('La migración agrega productos.ubicacion_id', str_contains($mig, 'ubicacion_id'));
+foreach (['backend/upload_to_drive.php' => 'alta', 'backend/edit.php' => 'edición'] as $t => $q) {
+    chequear("La {$q} sincroniza ubicacion_id", str_contains(leer($t), 'ubicacion_sincronizar_id'));
+}
+// Una sola fuente de verdad: el dato no puede quedar en `catalogos` y en
+// `ubicaciones` a la vez, que es de donde salen las inconsistencias.
+chequear('Las ubicaciones salen de `catalogos` al migrar',
+    preg_match("/DELETE FROM `\{\\\$p\}catalogos` WHERE tipo = 'ubicacion'/", $mig) === 1);
+
+// Entre que el código se despliega y que alguien corre `php bin/migrar.php` hay
+// una ventana con código nuevo y esquema viejo. Sin esto, el desplegable de
+// Ubicación aparecía VACÍO en el alta y en la edición: una regresión visible
+// causada por un despliegue a medio aplicar.
+chequear('Hay un chequeo de si el árbol ya existe', str_contains($ubi, 'function ubicaciones_disponible'));
+chequear('Sin migrar, Ubicación sigue leyendo la lista plana de antes',
+    substr_count($cat, 'ubicaciones_disponible($conn)') >= 6,
+    'puntos protegidos: ' . substr_count($cat, 'ubicaciones_disponible($conn)'));
+
+// Fase 2 — Infocom.
+chequear('La migración crea la tabla de datos financieros y administrativos',
+    str_contains($mig, 'activo_infocom'));
+foreach (['numero_pedido', 'numero_remito', 'numero_factura', 'proveedor', 'presupuesto',
+          'fecha_puesta_servicio', 'fecha_decomiso', 'criticidad'] as $campo) {
+    chequear("Infocom tiene «{$campo}»", str_contains($mig, $campo));
+}
+// Lo que de verdad destraba: el reporte de amortización calculaba con un `anios`
+// del querystring, igual para todos los activos, porque no había dónde guardarla.
+foreach (['amortizacion_anios', 'amortizacion_tipo', 'amortizacion_coeficiente'] as $campo) {
+    chequear("La amortización se guarda por activo: «{$campo}»", str_contains($mig, $campo));
+}
+chequear('Cada activo arranca con su fila de Infocom',
+    preg_match('/INSERT IGNORE INTO `\{\$p\}activo_infocom` \(producto_id\) SELECT id/', $mig) === 1);
+chequear('Infocom no duplica los campos que ya viven en productos',
+    !preg_match('/activo_infocom.*?\n.*?valor_usd/s', $mig));
+chequear('La criticidad arranca con la escala de GLPI',
+    str_contains($mig, 'Muy baja') && str_contains($mig, 'Muy alta'));
+
+// Un esquema que nadie puede llenar no sirve: la edición tiene que cargarlo y
+// el reporte tiene que usarlo.
+$ed = leer('backend/edit.php');
+chequear('La edición del activo carga y guarda los datos de Infocom',
+    str_contains($ed, 'infocom_de(') && str_contains($ed, 'infocom_guardar('));
+foreach (['numero_factura', 'fecha_puesta_servicio', 'amortizacion_anios'] as $campo) {
+    chequear("El formulario de edición tiene «{$campo}»", str_contains($ed, 'name="' . $campo . '"'));
+}
+// Proveedor, presupuesto y criticidad son catálogos: los pinta campo_catalogo(),
+// que es lo que les da el desplegable y el botón «+» del admin.
+foreach (['proveedor', 'presupuesto', 'criticidad'] as $campo) {
+    chequear("El formulario de edición pide «{$campo}» del catálogo",
+        str_contains($ed, "campo_catalogo(\$conn, '{$campo}'"));
+}
+// «Estado» tenía DOS listas fijas y distintas: el alta ofrecía cuatro valores
+// escritos en el formulario y la edición sólo Nuevo/Usado. El mismo campo, dos
+// conjuntos de opciones según la pantalla.
+foreach (['backend/edit.php' => 'La edición', 'inventario/agregar.php' => 'El alta'] as $t => $q) {
+    chequear("{$q} toma «Estado» del catálogo, no de una lista fija",
+        str_contains(leer($t), "campo_catalogo(\$conn, 'estado'")
+     && !preg_match('/<option value="Usado"/', leer($t)));
+}
+chequear('El alta valida «Estado» en el servidor',
+    str_contains(leer('backend/upload_to_drive.php'), "catalogo_normalizar(\$conn, 'estado'"));
+chequear('La migración siembra los estados que estaban escritos en el formulario',
+    str_contains($mig, "'estado'     => ['Nuevo', 'Usado', 'A reparar', 'Dado de baja']"));
+chequear('Los catálogos de Infocom se validan en el servidor, no sólo en el <select>',
+    preg_match("/function infocom_guardar.*?catalogo_normalizar/s", leer('core/tenants/infocom.php')) === 1);
+chequear('Los tipos de bind_param de Infocom se derivan de la lista de columnas',
+    preg_match('/strlen\(\$tipos\) !== count\(\$vals\)/', leer('core/tenants/infocom.php')) === 1);
+
+$rep = leer('inventario/reportes.php');
+chequear('El reporte de amortización usa el plazo guardado por activo',
+    str_contains($rep, 'infocom_amortizacion_anios'));
+chequear('El plazo del reporte queda como respaldo, no como único valor',
+    preg_match('/infocom_amortizacion_anios\(\$row, \$anios\)/', $rep) === 1);
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('INVENTARIO · campos por categoría (fase 3)');
+// ═══════════════════════════════════════════════════════════════════════════
+// `productos` tenía CATORCE columnas para campos que sólo aplican a una
+// subcategoría. Agregar una categoría era un ALTER TABLE más tocar el alta, la
+// edición, el detalle, los dos export y los dos import.
+$cmp = leer('core/tenants/campos.php');
+chequear('Existe el módulo de campos por categoría', $cmp !== '');
+chequear('La migración crea las dos tablas',
+    str_contains($mig, 'campos_definicion') && str_contains($mig, 'campos_valor'));
+chequear('Se siembran los 14 campos que ya existían',
+    substr_count($mig, "'lista',") + substr_count($mig, "'texto',") >= 14);
+
+// La pieza que hace que esto sea seguro: los campos viejos NO se mueven de
+// lugar. Siguen en su columna, así que export, import y respaldo no cambian.
+chequear('Una definición puede apuntar a una columna heredada',
+    str_contains($mig, 'columna_legacy') && str_contains($cmp, 'columna_legacy'));
+chequear('Los valores heredados se leen de su columna de productos',
+    preg_match('/function campos_valores_de.*?columna_legacy/s', $cmp) === 1);
+chequear('Los campos heredados no se escriben en campos_valor',
+    preg_match("/function campos_guardar.*?columna_legacy.*?continue/s", $cmp) === 1);
+chequear('Una definición heredada no se puede borrar',
+    preg_match("/function campo_definicion_eliminar.*?columna_legacy/s", $cmp) === 1);
+chequear('Una definición en uso no se puede borrar',
+    preg_match('/function campo_definicion_eliminar.*?campo_definicion_uso/s', $cmp) === 1);
+chequear('Una clave no puede pisar una columna real de productos',
+    str_contains($cmp, 'function campos_clave_reservada'));
+
+// La validación es del servidor, como con los catálogos.
+chequear('El valor se valida contra la definición en el servidor',
+    str_contains($cmp, 'function campos_normalizar_valor'));
+chequear('Un valor fuera de la lista de opciones se descarta',
+    preg_match("/case 'lista':.*?in_array\(\\\$valor, \\\$ops, true\)/s", $cmp) === 1);
+
+// Render y guardado en las dos pantallas.
+chequear('Existe el render de los campos configurables', leer('includes/campos_dinamicos.php') !== '');
+foreach (['inventario/agregar.php' => 'El alta', 'backend/edit.php' => 'La edición'] as $t => $q) {
+    chequear("{$q} dibuja los campos configurables", str_contains(leer($t), 'campos_dinamicos_render'));
+}
+foreach (['backend/upload_to_drive.php' => 'El alta', 'backend/edit.php' => 'La edición'] as $t => $q) {
+    chequear("{$q} guarda los campos configurables", str_contains(leer($t), 'campos_guardar('));
+}
+chequear('El detalle del activo los muestra',
+    str_contains(leer('backend/view_details.php'), 'campos_valores_de'));
+
+// La pantalla de administración: sin ella habría que definir campos por SQL.
+chequear('Existe la pantalla para definir campos', is_file(RAIZ . '/inventario/campos.php'));
+chequear('Existe el ABM de definiciones', is_file(RAIZ . '/backend/campos_crud.php'));
+chequear('El ABM de campos exige permiso, no sólo sesión',
+    str_contains(leer('backend/campos_crud.php'), "require_tenant_permission('catalog.manage')"));
+chequear('El ABM de campos valida CSRF',
+    str_contains(leer('backend/campos_crud.php'), 'verifyCsrfToken'));
+chequear('La pantalla de campos está en el menú',
+    str_contains(leer('includes/layout/sidebar_tenant.php'), '/inventario/campos.php'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('TESTS · batería de integración');
+// ═══════════════════════════════════════════════════════════════════════════
+// Hay cosas que no se comprueban leyendo el código: que una migración aplique
+// sin error, que sea idempotente, que renombrar una ubicación recalcule el
+// subárbol. Eso necesita una base de verdad, y vive aparte para que esta
+// batería siga corriendo en cualquier lado.
+$itg = leer('test/integracion.php');
+chequear('Existe la batería de integración', $itg !== '');
+chequear('Sale limpio si no hay base configurada', str_contains($itg, 'AV_TEST_DB_HOST'));
+chequear('Verifica que las migraciones sean idempotentes',
+    str_contains($itg, 'no aplica nada ni falla'));
+chequear('Verifica el recálculo de rutas del árbol',
+    str_contains($itg, 'La ruta del nieto se recalculó'));
+chequear('Verifica que los cuatro roles de plataforma se puedan guardar',
+    str_contains($itg, 'Los cuatro roles de plataforma se pueden guardar'));
+chequear('El esquema base es armable sin conexión (para poder testearlo)',
+    str_contains(leer('core/tenants/install_tenant.php'), 'function tenant_schema_sql'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('PAPELERA');
@@ -507,20 +904,47 @@ foreach (glob(RAIZ . '/inventario/*.php') as $f) {
 chequear('Ninguna pantalla del inventario usa la hoja del superadmin', $hojaVieja === [], implode(', ', $hojaVieja));
 
 // Todas las clases ih- del markup tienen que existir en alguna hoja.
+//
+// El regex de antes era /\bih-[a-zA-Z0-9_]+.../ — **sin guión** en la clase de
+// caracteres. `ih-form-grid` se truncaba a `ih-form` y `ih-portal-superadmin` a
+// `ih-portal`, que sí existían, así que el chequeo daba verde validando
+// prefijos en lugar de clases. Además comparaba contra `styles.css`, una hoja
+// que ninguna página carga. Lo descubrió una comparación contra el HTML que
+// sirve el servidor, no esta batería.
+//
+// Ahora las clases se sacan de los atributos `class="…"` y se exigen enteras.
 $enMarkup = [];
 foreach (archivos_php() as $f) {
-    if (preg_match_all('/\bih-[a-zA-Z0-9_]+(?:__[a-zA-Z0-9_-]+)?(?:--[a-zA-Z0-9_-]+)?/', (string)file_get_contents($f), $mm)) {
-        foreach ($mm[0] as $c) { $enMarkup[$c] = true; }
+    $src = (string)file_get_contents($f);
+    if (!preg_match_all('/class\s*=\s*"([^"]*)"/', $src, $mm)) { continue; }
+    foreach ($mm[1] as $attr) {
+        foreach (preg_split('/\s+/', $attr) ?: [] as $c) {
+            if (preg_match('/^ih-[a-zA-Z0-9_-]+$/', $c)) { $enMarkup[$c] = true; }
+        }
     }
 }
-$enCss = $css . leer('assets/css/intellihelp.css') . leer('assets/css/styles.css');
-$sinEstilo = [];
-foreach (array_keys($enMarkup) as $c) {
-    // Los tokens (--ih-*) y los prefijos de utilidades con sufijo numérico se ignoran.
-    if (!str_contains($enCss, $c)) { $sinEstilo[] = $c; }
+
+// Las reglas dentro de un <style> de una página también se aplican, así que no
+// son un error — pero una clase del sistema de diseño definida en una sola
+// pantalla no la ve ninguna otra. Se cuentan aparte.
+$inline = '';
+foreach (archivos_php() as $f) {
+    if (preg_match_all('/<style\b[^>]*>(.*?)<\/style>/is', (string)file_get_contents($f), $ss)) {
+        $inline .= implode("\n", $ss[1]);
+    }
 }
-chequear(count($enMarkup) . ' clases ih- del markup tienen estilo definido', $sinEstilo === [],
+
+$enCss = $css . leer('assets/css/intellihelp.css');
+$sinEstilo = []; $soloInline = [];
+foreach (array_keys($enMarkup) as $c) {
+    if (str_contains($enCss, '.' . $c)) { continue; }
+    if (str_contains($inline, '.' . $c)) { $soloInline[] = $c; continue; }
+    $sinEstilo[] = $c;
+}
+chequear(count($enMarkup) . ' clases ih- del markup tienen estilo en una hoja', $sinEstilo === [],
     'sin estilo: ' . implode(', ', array_slice($sinEstilo, 0, 12)));
+chequear('Ninguna clase del sistema de diseño se define sólo dentro de una página',
+    $soloInline === [], 'sólo inline: ' . implode(', ', array_slice($soloInline, 0, 12)));
 
 chequear('Bootstrap CSS ya no se carga en el portal tenant',
     !str_contains(leer('inventario/usuarios.php'), 'bootstrap@5.3.3/dist/css'));

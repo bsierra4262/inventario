@@ -13,6 +13,7 @@ require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/tenants/campos.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {

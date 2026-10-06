@@ -37,21 +37,21 @@ try {
         google_pic  VARCHAR(500) DEFAULT NULL,
         ms_sub      VARCHAR(64)  DEFAULT NULL,
         ms_pic      VARCHAR(500) DEFAULT NULL,
-        role        ENUM('superadmin','support') NOT NULL DEFAULT 'superadmin',
+        -- VARCHAR y no ENUM, igual que install.php y que el lado del tenant:
+        -- el ENUM de dos valores rechazaba `admin` y `viewer`, que la matriz de
+        -- permisos sí define. Además deja la puerta abierta a roles de
+        -- plataforma personalizados sin otro ALTER.
+        role        VARCHAR(40) NOT NULL DEFAULT 'superadmin',
         active      TINYINT(1)  NOT NULL DEFAULT 1,
         last_login  DATETIME    DEFAULT NULL,
         created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uk_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    foreach ([
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `google_sub` VARCHAR(64) DEFAULT NULL",
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `google_pic` VARCHAR(500) DEFAULT NULL",
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_sub`     VARCHAR(64) DEFAULT NULL",
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_pic`     VARCHAR(500) DEFAULT NULL",
-        "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `last_login` DATETIME DEFAULT NULL",
-        "ALTER TABLE `users_platform` MODIFY COLUMN `password` VARCHAR(255) DEFAULT NULL",
-    ] as $a) { try { $db->conn->query($a); } catch (Throwable) {} }
+    // Los seis ALTER TABLE que corrían acá en cada carga de la página de login
+    // se movieron a migraciones_master() (core/db/migraciones.php), que se
+    // aplica con `php bin/migrar.php`. Eran DDL en una página pública, en cada
+    // request, contra la tabla de usuarios de la plataforma.
 
     // NO se siembra ningún superadmin desde acá.
     //

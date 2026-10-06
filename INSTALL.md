@@ -134,3 +134,21 @@ php test/run_tests.php
 ```
 
 Corre la batería completa sin necesitar base ni servidor. Debe terminar en verde.
+
+### Batería de integración (opcional, contra una base real)
+
+Hay cosas que no se comprueban leyendo el código: que una migración aplique sin error, que sea
+idempotente, que renombrar una ubicación recalcule todo su subárbol. Para eso está
+`test/integracion.php`.
+
+```bash
+AV_TEST_DB_HOST=127.0.0.1 AV_TEST_DB_PORT=3306 \
+AV_TEST_DB_USER=root AV_TEST_DB_PASS=secreto \
+AV_TEST_DB_NAME=av_test AV_TEST_DB_MASTER=av_test_master \
+php test/integracion.php
+```
+
+> **La base que se le indique se vacía al empezar.** Nunca apuntarla a una base con datos: creá
+> dos bases descartables sólo para esto.
+
+Sin esas variables no corre nada y sale en 0, así que se puede dejar en cualquier pipeline.

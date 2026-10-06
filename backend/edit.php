@@ -9,7 +9,9 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../core/tenants/catalogos.php';
+require_once __DIR__ . '/../core/tenants/infocom.php';
 require_once __DIR__ . '/../includes/campo_catalogo.php';
+require_once __DIR__ . '/../includes/campos_dinamicos.php';
 
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
@@ -127,6 +129,10 @@ $stmt->bind_param('i', $producto_id);
 $stmt->execute();
 $producto = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
+// Datos financieros y administrativos (Infocom). Array vacío si el esquema
+// todavía no se migró: la pantalla funciona igual, sólo sin esa sección.
+$infocom = infocom_de($conn, $producto_id);
 
 if (!$producto) {
     log_event("usuario_desconocido","ERROR","Producto no encontrado ID:$producto_id","transaccion");
@@ -290,6 +296,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     // que el activo ya tenía para no romper la edición de activos viejos.
     $valores['asignado_a'] = catalogo_normalizar($conn, 'asignado_a', $valores['asignado_a'] ?? '', $producto['asignado_a'] ?? null);
     $valores['ubicacion']  = catalogo_normalizar($conn, 'ubicacion',  $valores['ubicacion']  ?? '', $producto['ubicacion']  ?? null);
+    $valores['estado']     = catalogo_normalizar($conn, 'estado',     $valores['estado']     ?? '', $producto['estado']     ?? null);
+
+    // Los datos financieros y administrativos viven en su propia tabla, asi que
+    // se guardan aparte del UPDATE de `productos`. Van siempre, haya o no
+    // cambios en los campos del activo: editar solo el numero de factura tiene
+    // que guardar igual.
+    infocom_guardar($conn, $producto_id, $_POST);
+    campos_guardar($conn, $producto_id,
+        (string)($valores['categoria'] ?? ''), (string)($valores['subcategoria'] ?? ''), $_POST);
 
     // Guardar en sesión para fallback si hay error
     $_SESSION['form_data'] = $valores;
@@ -554,6 +569,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             exit();
         }
         $upd->close();
+
+        // El texto de la ubicación ya quedó guardado; acá se deja el enlace al
+        // nodo del árbol, que es lo que permite filtrar por rama.
+        ubicacion_sincronizar_id($conn, $producto_id, (string)($valores['ubicacion'] ?? ''));
 
         log_event("UsuarioID:{$_SESSION['user_id']}", "EDITAR PRODUCTO",
             "Producto ID:$producto_id actualizado", "transaccion");
@@ -945,11 +964,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <div class="edit-section-title"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
         <div class="edit-grid">
           <div class="ih-field">
-            <label class="ih-field__label">Estado</label>
-            <select class="ih-select" name="estado">
-              <option value="Nuevo" <?= ($producto['estado']??'')==='Nuevo'?'selected':'';?>>Nuevo</option>
-              <option value="Usado" <?= ($producto['estado']??'')==='Usado'?'selected':'';?>>Usado</option>
-            </select>
+            <?php /* Estaba fijo en Nuevo/Usado. Ahora es catálogo: cada empresa
+                     define su escala (en uso, en depósito, en reparación, de baja...). */ ?>
+            <label class="ih-field__label" for="f-estado">Estado</label>
+            <?php campo_catalogo($conn, 'estado', $producto['estado'] ?? '', $puedeGestionarCatalogos); ?>
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Valor en USD</label>
@@ -991,7 +1009,120 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- ── Archivos ──────────────────────────────────────────────── -->
-        <div class="edit-section-title"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
+                <!-- ── Informacion financiera y administrativa (Infocom) ── -->
+        <?php /* Campos especificos de la categoria definidos en datos. */ ?>
+        <?php ob_start(); campos_dinamicos_render($conn, campos_valores_de($conn, $producto_id, $producto)); $camposHtml = ob_get_clean(); ?>
+        <?php if (str_contains($camposHtml, 'campos-dinamicos__grupo')): ?>
+          <div class="edit-section-title"><i class="bi bi-sliders"></i> Detalles de la categoría</div>
+          <?= $camposHtml ?>
+        <?php endif; ?>
+
+        <div class="edit-section-title"><i class="bi bi-receipt"></i> Compra y administración</div>
+        <div class="edit-grid-3">
+          <div class="ih-field">
+            <label class="ih-field__label">N.º de pedido</label>
+            <input type="text" class="ih-input" name="numero_pedido" maxlength="120"
+                   value="<?= htmlspecialchars((string)($infocom['numero_pedido'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">N.º de remito</label>
+            <input type="text" class="ih-input" name="numero_remito" maxlength="120"
+                   value="<?= htmlspecialchars((string)($infocom['numero_remito'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">N.º de factura</label>
+            <input type="text" class="ih-input" name="numero_factura" maxlength="120"
+                   value="<?= htmlspecialchars((string)($infocom['numero_factura'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">N.º contable</label>
+            <input type="text" class="ih-input" name="numero_contable" maxlength="120"
+                   value="<?= htmlspecialchars((string)($infocom['numero_contable'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label" for="f-proveedor">Proveedor</label>
+            <?php campo_catalogo($conn, 'proveedor', $infocom['proveedor'] ?? '', $puedeGestionarCatalogos); ?>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label" for="f-presupuesto">Presupuesto</label>
+            <?php campo_catalogo($conn, 'presupuesto', $infocom['presupuesto'] ?? '', $puedeGestionarCatalogos); ?>
+          </div>
+        </div>
+
+        <div class="edit-grid-3">
+          <div class="ih-field">
+            <label class="ih-field__label">Fecha de orden</label>
+            <input type="date" class="ih-input" name="fecha_orden"
+                   value="<?= htmlspecialchars((string)($infocom['fecha_orden'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Fecha de entrega</label>
+            <input type="date" class="ih-input" name="fecha_entrega"
+                   value="<?= htmlspecialchars((string)($infocom['fecha_entrega'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Puesta en servicio</label>
+            <input type="date" class="ih-input" name="fecha_puesta_servicio"
+                   value="<?= htmlspecialchars((string)($infocom['fecha_puesta_servicio'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Último inventario físico</label>
+            <input type="date" class="ih-input" name="fecha_ultimo_inventario"
+                   value="<?= htmlspecialchars((string)($infocom['fecha_ultimo_inventario'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Fecha de decomiso</label>
+            <input type="date" class="ih-input" name="fecha_decomiso"
+                   value="<?= htmlspecialchars((string)($infocom['fecha_decomiso'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label" for="f-criticidad">Criticidad de negocio</label>
+            <?php campo_catalogo($conn, 'criticidad', $infocom['criticidad'] ?? '', $puedeGestionarCatalogos); ?>
+          </div>
+        </div>
+
+        <div class="edit-section-title"><i class="bi bi-graph-down-arrow"></i> Garantía extendida y amortización</div>
+        <div class="edit-grid-3">
+          <div class="ih-field">
+            <label class="ih-field__label">Datos de la garantía</label>
+            <input type="text" class="ih-input" name="garantia_info" maxlength="255"
+                   value="<?= htmlspecialchars((string)($infocom['garantia_info'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Valor extensión garantía (USD)</label>
+            <input type="number" class="ih-input" name="valor_extension_garantia" step="0.01" min="0"
+                   value="<?= htmlspecialchars((string)($infocom['valor_extension_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Años de amortización</label>
+            <input type="number" class="ih-input" name="amortizacion_anios" step="1" min="0"
+                   value="<?= htmlspecialchars((string)($infocom['amortizacion_anios'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+            <span class="ih-field__hint">Si queda vacío, el reporte usa el plazo general</span>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Tipo de amortización</label>
+            <select class="ih-select" name="amortizacion_tipo">
+              <option value="">—</option>
+              <?php foreach (INFOCOM_TIPOS_AMORTIZACION as $k => $lbl): ?>
+                <option value="<?= htmlspecialchars($k) ?>" <?= ($infocom['amortizacion_tipo'] ?? '') === $k ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($lbl) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Coeficiente</label>
+            <input type="number" class="ih-input" name="amortizacion_coeficiente" step="0.001" min="0"
+                   value="<?= htmlspecialchars((string)($infocom['amortizacion_coeficiente'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+          <div class="ih-field">
+            <label class="ih-field__label">Comentarios administrativos</label>
+            <input type="text" class="ih-input" name="comentarios_infocom" maxlength="255"
+                   value="<?= htmlspecialchars((string)($infocom['comentarios'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+          </div>
+        </div>
+
+<div class="edit-section-title"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
         <?php if (!$cloudUploadOk): ?>
           <?= cloud_upload_disabled_notice($_SESSION['role'] ?? '') ?>
         <?php else: ?>

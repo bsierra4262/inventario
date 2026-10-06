@@ -564,13 +564,7 @@ require __DIR__ . '/../includes/layout/head.php';
 </div>
 
 <style>
-.ih-sort-link {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: inherit; text-decoration: none; white-space: nowrap;
-}
-.ih-sort-link:hover { color: var(--ih-green); }
-.ih-sort-link.is-active { color: var(--ih-green); }
-.ih-sort-link.is-active i { color: var(--ih-green); }
+/* .ih-sort-link vive en assets/css/app.css */
 .disabled { pointer-events: none; opacity: .4; }
 
 /* Flash messages */

@@ -76,12 +76,32 @@
     RewriteRule ^bin(/|$)           - [F,L]
     RewriteRule ^test(/|$)          - [F,L]
     RewriteRule ^md(/|$)            - [F,L]
+
+    # core/ e includes/ son librería, no entry points: se incluyen por __DIR__
+    # desde el filesystem y nunca se piden por URL. Estaban servidos igual:
+    # /core/config/platform.php, /core/db/TenantDB.php y /backend/db.php
+    # devolvían 200 (cuerpo vacío, pero ejecutándose), e
+    # /includes/layout/head.php devolvía 500 — la prueba de que correr un
+    # include fuera de su contexto genera errores. Hoy no se filtra nada porque
+    # display_errors está en 0; con un warning visible o un archivo que imprima
+    # algo, sí. Se bloquea la superficie entera en vez de confiar en eso.
+    RewriteRule ^core(/|$)          - [F,L]
+    RewriteRule ^includes(/|$)      - [F,L]
 </IfModule>
 
 # ── Archivos sensibles: nunca por HTTP ────────────────────────────
 # composer.lock revelaba la versión exacta de cada dependencia;
 # deploy.sh, la mecánica del despliegue.
-<FilesMatch "(^\.|composer\.(json|lock)$|\.(sh|md|lock|sql|log|ini|bak|orig|dist|example)$)">
+#
+# `json` está en la lista por auth/credentials.json: el patrón sólo cubría
+# `composer.json`, así que cualquier otro .json se servía en texto plano. Hoy
+# da 404 nada más que porque .gitignore lo mantiene fuera del deploy — es decir
+# que la protección era "el archivo no está", no "el archivo no se sirve". Un
+# upload manual por FTP o un .gitignore mal editado y queda el client_secret
+# descargable. Nada del front pide un .json (el backup de empresa lo genera
+# empresa_backup.php con Content-Disposition, no es un archivo estático), así
+# que bloquear la extensión entera no rompe nada.
+<FilesMatch "(^\.|composer\.(json|lock)$|\.(sh|md|json|lock|sql|log|ini|bak|orig|dist|example)$)">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

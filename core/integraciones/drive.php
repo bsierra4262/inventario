@@ -19,6 +19,90 @@ if (!defined('DRIVE_CARPETA_ARCHIVADOS')) {
     define('DRIVE_CARPETA_ARCHIVADOS', 'Archivados');
 }
 
+if (!defined('DRIVE_ADJUNTO_MAX_BYTES')) {
+    define('DRIVE_ADJUNTO_MAX_BYTES', 5 * 1024 * 1024);
+}
+
+if (!function_exists('drive_formatos_permitidos')) {
+/**
+ * Tipos MIME reales que se aceptan como adjunto de un activo.
+ *
+ * La lista estaba escrita sólo dentro de upload_to_drive.php, así que
+ * upload_renamed.php —que también sube a Drive— no validaba nada: subía lo que
+ * le dieran, de cualquier tamaño. Vive acá para que cualquier camino que
+ * escriba en Drive use el mismo criterio.
+ */
+function drive_formatos_permitidos(): array {
+    return [
+        'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ];
+}
+}
+
+if (!function_exists('drive_adjunto_valido')) {
+/**
+ * Valida un archivo subido por tipo MIME **real** y por tamaño.
+ *
+ * El MIME se saca del contenido con mime_content_type(), nunca de
+ * `$_FILES[...]['type']`, que lo manda el navegador y se falsifica solo.
+ *
+ * @param string      $tmpPath Ruta temporal de PHP.
+ * @param string|null $motivo  Se llena con el motivo del rechazo.
+ */
+function drive_adjunto_valido(string $tmpPath, ?string &$motivo = null): bool {
+    $motivo = null;
+
+    if ($tmpPath === '' || !is_file($tmpPath)) {
+        $motivo = 'el archivo no llegó o está vacío';
+        return false;
+    }
+
+    $bytes = @filesize($tmpPath);
+    if (!$bytes) {
+        $motivo = 'el archivo está vacío o no se puede leer';
+        return false;
+    }
+    if ($bytes > DRIVE_ADJUNTO_MAX_BYTES) {
+        $motivo = 'excede ' . (int)(DRIVE_ADJUNTO_MAX_BYTES / 1024 / 1024) . 'MB';
+        return false;
+    }
+
+    $mime = @mime_content_type($tmpPath);
+    if (!$mime || !in_array($mime, drive_formatos_permitidos(), true)) {
+        $motivo = 'formato no permitido (' . ($mime ?: 'desconocido') . ')';
+        return false;
+    }
+
+    return true;
+}
+}
+
+if (!function_exists('drive_nombre_archivo_seguro')) {
+/**
+ * Normaliza un nombre de archivo que viene del usuario.
+ *
+ * Reemplaza al htmlspecialchars() que había en upload_renamed.php: ese escapa
+ * para HTML, que no es el contexto —el nombre va a la API de Drive— y además
+ * ensuciaba el nombre real (un "Remito & factura.pdf" se guardaba como
+ * "Remito &amp; factura.pdf"). Acá se saca lo que rompe una ruta o un nombre
+ * en Drive, y nada más.
+ */
+function drive_nombre_archivo_seguro(string $nombre): string {
+    $nombre = str_replace(["\0", "\r", "\n", '/', '\\'], '', trim($nombre));
+    $nombre = preg_replace('/\s+/u', ' ', $nombre) ?? $nombre;
+    if (mb_strlen($nombre) > 200) {
+        $nombre = mb_substr($nombre, 0, 200);
+    }
+    return $nombre !== '' ? $nombre : 'archivo';
+}
+}
+
 if (!function_exists('drive_q')) {
 /** Escapa un valor para interpolarlo en una query `q` de la API de Drive. */
 function drive_q(string $v): string {

@@ -136,6 +136,23 @@ flowchart TD
 El `company_id` se valida **siempre** contra la lista de empresas activas, tanto si viene por
 querystring como si viene por POST.
 
+### La identidad y la empresa viajan juntas
+
+`user_id` es el id de una fila en la tabla `users` **de una empresa**: el usuario 1 de una
+empresa y el usuario 1 de otra son dos personas distintas. Por eso no basta con validar que el
+`company_id` exista y esté activo —hay que validar que le corresponda a quien está logueado.
+
+- Al autenticar se graba `auth_company_id`, la empresa contra la que se validó la credencial.
+- `backend/db.php` la compara con `company_id` **en cada request**. Si no coinciden, destruye
+  la sesión y manda al login.
+- Elegir empresa descarta la autenticación entera y manda al login de esa empresa. "Tener
+  acceso a dos empresas" son dos cuentas distintas, no una que viaja.
+
+> Esto cierra una escalada de privilegios real: `select_empresa.php` fijaba `company_id` sin
+> tocar `user_id`, así que el `SELECT ... WHERE id = $user_id` de la página siguiente devolvía
+> a otra persona —con su rol— en el tenant nuevo. **La verificación es central y no en los
+> puntos de entrada, porque cualquier código que escriba `company_id` reabriría el agujero.**
+
 ## Autenticación
 
 ```mermaid
@@ -286,6 +303,84 @@ los reportes sin agrupar nada. Ahora son listas gestionadas:
   tocar los históricos.
 - **La validación es del lado del servidor.** El `<select>` es comodidad visual.
 - Al migrar, el catálogo **se sembró con los valores que ya existían**.
+
+
+### Ubicaciones: un árbol, no una lista
+
+"Ubicación" era un valor suelto. La sede, el piso y el depósito eran tres textos sin relación
+entre sí, así que no había forma de preguntar *qué hay en la Sede Centro*. Ahora es un árbol,
+y cada nodo lleva sus datos de dirección.
+
+```mermaid
+flowchart TD
+    R[Sede Centro<br/>Av. Siempreviva 742 · CABA] --> P1[Piso 1]
+    R --> P2[Piso 2]
+    P2 --> DEP[Depósito]
+    P2 --> OF[Oficina 204]
+    P1 --> RACK[Rack A3]
+
+    DEP -. ruta completa .-> RUTA["Sede Centro &gt; Piso 2 &gt; Depósito"]
+    RUTA --> PROD[(productos.ubicacion<br/>texto, para listado y reportes)]
+    DEP  --> PID[(productos.ubicacion_id<br/>enlace, para filtrar por rama)]
+```
+
+- **Renombrar arrastra todo.** Cambiar "Sede Centro" recalcula la ruta de cada descendiente y
+  la propaga a los activos; ninguno queda apuntando a una ruta que ya no existe.
+- **Un nodo no puede colgar de un descendiente suyo**, y no se borra una ubicación que tenga
+  hijos o activos.
+- **Cada nodo tiene dirección**: calle, código postal, localidad, provincia, país, edificio,
+  habitación y coordenadas.
+- `productos.ubicacion` sigue guardando la **ruta completa como texto**, así que el listado,
+  los filtros, los reportes, el CSV y el respaldo no cambiaron.
+
+### Campos específicos por categoría
+
+Un patchcord tiene longitud y tipo; una bobina, categoría de cable; una cinta, generación LTO.
+Eso vivía como **catorce columnas** en la tabla de activos, así que sumar una categoría era
+cambiar el esquema y tocar trece archivos.
+
+```mermaid
+flowchart LR
+    subgraph Definición
+        D[(campos_definicion<br/>clave · etiqueta · tipo<br/>opciones · ámbito)]
+    end
+    subgraph Valor
+        L[(productos.&lt;columna&gt;<br/>los 14 heredados)]
+        V[(campos_valor<br/>los nuevos)]
+    end
+
+    D -- tiene columna_legacy --> L
+    D -- no tiene --> V
+
+    ALTA[Alta / Edición] --> D
+    D --> FORM[Dibuja el campo<br/>según la categoría]
+    EXP[Export · Import · Respaldo] --> L
+```
+
+- **Agregar un campo es una fila**, desde *Campos*. No hay migración ni DDL.
+- **Los catorce heredados siguen en su columna.** Por eso las exportaciones, las importaciones
+  y el respaldo no cambiaron, y por eso esta migración no mueve ni un dato.
+- **La validación es del servidor**: un valor que no está en las opciones se descarta, aunque el
+  `<select>` lo haya ofrecido.
+- Un campo con valores cargados no se puede eliminar; se oculta y los activos lo conservan.
+
+Retirar las catorce columnas es el paso siguiente, cuando esto esté probado en producción.
+Agregar la forma nueva y sacar la vieja en un mismo movimiento es como se pierden datos.
+
+### Información financiera y administrativa
+
+Lo que GLPI llama *Infocom* vive en su propia tabla, una fila por activo: número de pedido,
+remito, factura y número contable; proveedor y presupuesto; fechas de orden, entrega, puesta en
+servicio, último inventario físico y decomiso; datos y valor de extensión de garantía;
+criticidad de negocio.
+
+**La amortización es por activo** —duración, tipo y coeficiente—. Antes el reporte calculaba
+con un valor del querystring, el mismo para todos, porque no había dónde guardarla.
+
+Los seis campos que ya existían en `productos` (valor, cantidad, fecha de compra, fecha y
+período de garantía, fecha de baja) **se quedan ahí**: la tabla nueva no duplica ninguno. Dos
+fuentes para el mismo dato terminan siempre en que no coinciden.
+
 
 ## Papelera
 

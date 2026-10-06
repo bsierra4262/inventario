@@ -54,6 +54,7 @@ $sb_can_trash    = role_can('asset.trash.view', $sb_role);
       <?php endif; ?>
       <?php if ($sb_can_catalog): ?>
         <a href="/inventario/catalogos.php" class="ih-sidebar__link<?= ih_tn_active('catalogos',$page_section) ?>"><i class="bi bi-list-ul"></i> Listas</a>
+        <a href="/inventario/campos.php" class="ih-sidebar__link<?= ih_tn_active('campos',$page_section) ?>"><i class="bi bi-sliders"></i> Campos</a>
       <?php endif; ?>
       <?php if ($sb_can_intedit): ?>
         <a href="/inventario/configurar_integracion.php" class="ih-sidebar__link<?= ih_tn_active('integracion',$page_section) ?>">

@@ -18,18 +18,20 @@ function tenant_conn_for_external(array $ext): mysqli {
  * Si $mode==='prefix': trabaja sobre DB master con prefijo "t{companyId}_"
  * Si $mode==='external': usa conexión externa, sin prefijo.
  */
-function install_tenant_schema(int $companyId, string $mode, array $externalDb): void {
-    $prefix = TENANT_PREFIX_BASE . $companyId . '_';
-
-    if ($mode === 'prefix') {
-        $mdb = new MasterDB();
-        $cx  = $mdb->conn;
-        $pf  = $cx->real_escape_string($prefix);
-    } else {
-        $cx = tenant_conn_for_external($externalDb);
-        $pf = '';
-    }
-
+/**
+ * Sentencias CREATE TABLE del esquema base de un tenant.
+ *
+ * Separado de install_tenant_schema() para que se pueda armar el esquema sin
+ * conexion ni master: es lo que permite que test/integracion.php levante una
+ * base descartable, le aplique las migraciones y verifique el resultado de
+ * verdad, en vez de leer el codigo y suponer.
+ *
+ * El esquema base es el punto de partida; a partir de ahi manda
+ * core/db/migraciones.php.
+ *
+ * @return string[]
+ */
+function tenant_schema_sql(string $pf = ''): array {
     $sql = [];
 
     // === USERS ===
@@ -155,7 +157,25 @@ function install_tenant_schema(int $companyId, string $mode, array $externalDb):
         UNIQUE KEY provider_key (provider, config_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
-    foreach ($sql as $q) {
+    return $sql;
+}
+
+/**
+ * Crea el esquema base del tenant en la base que corresponda segun el modo.
+ */
+function install_tenant_schema(int $companyId, string $mode, array $externalDb): void {
+    $prefix = TENANT_PREFIX_BASE . $companyId . '_';
+
+    if ($mode === 'prefix') {
+        $mdb = new MasterDB();
+        $cx  = $mdb->conn;
+        $pf  = $cx->real_escape_string($prefix);
+    } else {
+        $cx = tenant_conn_for_external($externalDb);
+        $pf = '';
+    }
+
+    foreach (tenant_schema_sql($pf) as $q) {
         if (!$cx->query($q)) {
             throw new Exception('Error instalando schema tenant: ' . $cx->error);
         }

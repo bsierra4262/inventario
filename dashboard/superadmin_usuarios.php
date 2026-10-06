@@ -23,19 +23,23 @@ $db->conn->query("CREATE TABLE IF NOT EXISTS `users_platform` (
     google_pic  VARCHAR(500) DEFAULT NULL,
     ms_sub      VARCHAR(64)  DEFAULT NULL,
     ms_pic      VARCHAR(500) DEFAULT NULL,
-    role        ENUM('superadmin','admin','support','viewer') NOT NULL DEFAULT 'support',
+    -- VARCHAR(40), igual que install.php, superadmin_login.php y migraciones_master().
+    -- `users_platform` se declaraba en TRES archivos y cada uno decía algo
+    -- distinto de `role`: ENUM de 2 valores en install.php y en
+    -- superadmin_login.php, ENUM de 4 acá. Qué roles existían dependía de qué
+    -- archivo hubiera corrido primero. Esa es la causa del bug, no el ENUM.
+    role        VARCHAR(40) NOT NULL DEFAULT 'support',
     active      TINYINT(1)  NOT NULL DEFAULT 1,
     last_login  DATETIME    DEFAULT NULL,
     created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// Ampliar ENUM si la instalación es vieja (silencioso)
-foreach ([
-    "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_sub` VARCHAR(64) DEFAULT NULL",
-    "ALTER TABLE `users_platform` ADD COLUMN IF NOT EXISTS `ms_pic` VARCHAR(500) DEFAULT NULL",
-    "ALTER TABLE `users_platform` MODIFY COLUMN role ENUM('superadmin','admin','support','viewer') NOT NULL DEFAULT 'support'",
-] as $ddl) { try { $db->conn->query($ddl); } catch (Throwable) {} }
+// El ENUM de `role` se ensanchaba acá, en cada carga de esta página. Era el
+// único lugar que lo hacía, así que los roles `admin` y `viewer` recién
+// quedaban asignables después de que alguien abriera esta pantalla —y en una
+// instalación donde nadie la hubiera abierto todavía, no lo estaban.
+// Ahora `role` es VARCHAR(40) desde migraciones_master().
 
 $currentUserId = (int)($_SESSION['superadmin_user_id'] ?? 0);
 
