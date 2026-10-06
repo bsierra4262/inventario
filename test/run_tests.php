@@ -826,9 +826,13 @@ while ($navPendientes !== []) {
     $navVistas[$f] = true;
     $src = leer($f);
     if ($src === '') { continue; }
-    if (preg_match_all('#[\'"](/inventario/([a-z_]+)\.php)#', $src, $mm)) {
+    // Se siguen también las pantallas de backend/: view_details.php y edit.php
+    // son pantallas, no endpoints, y desde ellas se llega a otras — la ficha
+    // técnica, por ejemplo, cuelga del detalle del activo.
+    if (preg_match_all('#/(inventario|backend)/([a-z_]+)\.php#', $src, $mm)) {
         foreach ($mm[2] as $i => $nombre) {
-            $rel = 'inventario/' . $nombre . '.php';
+            $rel = $mm[1][$i] . '/' . $nombre . '.php';
+            if (!is_file(RAIZ . '/' . $rel)) { continue; }
             $navAlcanzadas[$rel] = true;
             $navPendientes[] = $rel;
         }
@@ -878,6 +882,159 @@ chequear('require_tenant_permission_any existe y verifica sesión',
     str_contains(leer('core/security/permissions.php'), 'function require_tenant_permission_any(')
     && preg_match('/function require_tenant_permission_any.*?current_tenant_user\(\)/s',
                   leer('core/security/permissions.php')) === 1);
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('INVENTARIO · el activo por dentro (fase 4)');
+//
+// Sistema operativo, componentes, red y relaciones entre activos. El modelo
+// sale de GLPI; lo que cambia es cuántas tablas hacen falta para guardarlo.
+// Lo que de verdad funciona lo prueba test/integracion.php contra MySQL: acá
+// sólo queda clavado lo que no puede volver atrás.
+
+foreach ([
+    'core/tenants/sistema_operativo.php' => 'so_guardar',
+    'core/tenants/componentes.php'       => 'componente_alta',
+    'core/tenants/red.php'               => 'red_puerto_guardar',
+    'core/tenants/relaciones.php'        => 'relacion_crear',
+] as $arch => $fn) {
+    chequear(basename($arch) . " existe y define {$fn}()",
+        is_file(RAIZ . '/' . $arch) && str_contains(leer($arch), "function {$fn}("));
+}
+
+$mig = leer('core/db/migraciones.php');
+foreach (['activo_so', 'componentes', 'activo_componente', 'puertos_red',
+          'direcciones_ip', 'activo_relacion'] as $t) {
+    chequear("La migración 8 crea `{$t}`",
+        preg_match('/CREATE TABLE IF NOT EXISTS `\{\$p\}' . $t . '`/', $mig) === 1);
+}
+
+// Cada activo tiene su fila de sistema operativo desde la migración, así que
+// guardar es siempre un UPDATE. Es la misma decisión que con activo_infocom.
+chequear('La migración siembra una fila de sistema operativo por activo',
+    str_contains($mig, 'INSERT IGNORE INTO `{$p}activo_so` (producto_id)'));
+
+// Una MAC llega escrita de cuatro maneras. Guardada tal cual, buscar por MAC no
+// encuentra nada.
+$red = leer('core/tenants/red.php');
+chequear('Las MAC se normalizan antes de guardarse',
+    str_contains($red, 'function red_normalizar_mac(')
+    && preg_match('/red_puerto_guardar.*?red_normalizar_mac\(/s', $red) === 1);
+
+// Buscar por MAC devolvía una fila por cada dirección del puerto: un puerto con
+// IPv4 e IPv6 aparecía dos veces, como si fueran dos equipos.
+chequear('La búsqueda por MAC agrupa por puerto, no por dirección',
+    preg_match('/function red_buscar.*?GROUP BY pu\.id/s', $red) === 1);
+
+// Tres errores que se cometen enseguida cargando relaciones a mano.
+$rel = leer('core/tenants/relaciones.php');
+chequear('Un activo no se puede vincular consigo mismo',
+    str_contains($rel, '$origenId === $destinoId'));
+chequear('Una pareja repetida se detecta en los dos sentidos',
+    preg_match('/origen_id=\? AND destino_id=\?\) OR \(origen_id=\? AND destino_id=\?/', $rel) === 1);
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('INVENTARIO · el activo por fuera (fase 5)');
+//
+// Proveedores, contratos, documentos, notas y plantillas de alta.
+
+foreach ([
+    'core/tenants/contratos.php'  => 'contrato_guardar',
+    'core/tenants/documentos.php' => 'documento_guardar',
+] as $arch => $fn) {
+    chequear(basename($arch) . " existe y define {$fn}()",
+        is_file(RAIZ . '/' . $arch) && str_contains(leer($arch), "function {$fn}("));
+}
+
+foreach (['proveedores', 'contratos', 'contrato_activo', 'documentos',
+          'documento_activo', 'notas', 'plantillas'] as $t) {
+    chequear("La migración 9 crea `{$t}`",
+        preg_match('/CREATE TABLE IF NOT EXISTS `\{\$p\}' . $t . '`/', $mig) === 1);
+}
+
+// La fecha de fin se calcula, no se escribe: si se pudiera escribir a mano
+// terminaría no coincidiendo con el inicio más la duración, y no se sabría a
+// cuál de los dos creerle.
+$con = leer('core/tenants/contratos.php');
+chequear('La fecha de fin del contrato se calcula, no se recibe del formulario',
+    str_contains($con, 'function contrato_fecha_fin(')
+    && !preg_match("/\\\$d\\['fin'\\]/", $con));
+
+// Sumarle un mes al 31 de enero da el 3 de marzo si se deja que PHP desborde.
+chequear('El cálculo de la fecha de fin no desborda el mes',
+    str_contains($con, '$dia > $ultimo'));
+
+// El archivo no se guarda acá: ya hay integración con Drive y OneDrive.
+$doc = leer('core/tenants/documentos.php');
+chequear('Un documento tiene que apuntar a algo: enlace o archivo',
+    str_contains($doc, "Poné un enlace o elegí un archivo"));
+chequear('Borrar un documento no borra el archivo de la nube',
+    preg_match('/function documento_borrar.*?No toca el archivo en Drive/s', $doc) === 1
+    || str_contains($doc, 'No toca el archivo en Drive'));
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('MODULOS · el esquema se consulta antes de usarlo');
+//
+// Un tenant puede estar sin migrar. Si un módulo asume que su tabla existe, la
+// pantalla entera se cae en vez de mostrar el resto y omitir ese bloque.
+foreach ([
+    'core/tenants/sistema_operativo.php' => 'so_disponible',
+    'core/tenants/componentes.php'       => 'componentes_disponible',
+    'core/tenants/red.php'               => 'red_disponible',
+    'core/tenants/relaciones.php'        => 'relaciones_disponible',
+    'core/tenants/contratos.php'         => 'contratos_disponible',
+    'core/tenants/documentos.php'        => 'documentos_disponible',
+] as $arch => $fn) {
+    $src = leer($arch);
+    chequear(basename($arch) . " expone {$fn}()", str_contains($src, "function {$fn}("));
+    // Toda función pública tiene que preguntarlo antes de tocar la base.
+    preg_match_all('/function ([a-z_]+)\(mysqli \$conn/', $src, $mm);
+    $delModulo = $mm[1];
+    $sinGuardia = [];
+    foreach ($delModulo as $f) {
+        if ($f === $fn) { continue; }
+        if (!preg_match('/function ' . $f . '\(mysqli \$conn.*?\n}/s', $src, $cuerpo)) { continue; }
+        if (str_contains($cuerpo[0], $fn . '($conn)')) { continue; }
+        // Vale también delegar: si lo único que hace es llamar a otra función
+        // del mismo módulo, que sí consulta el esquema, ya está cubierta.
+        // Exigir la guardia literal sería pedir una línea que no hace falta.
+        $delega = false;
+        foreach ($delModulo as $otra) {
+            if ($otra !== $f && $otra !== $fn && str_contains($cuerpo[0], $otra . '($conn')) {
+                $delega = true;
+                break;
+            }
+        }
+        if (!$delega) { $sinGuardia[] = $f; }
+    }
+    chequear(basename($arch) . ' consulta el esquema en todas sus funciones',
+        $sinGuardia === [], 'sin guardia: ' . implode(', ', $sinGuardia));
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+grupo('TESTS · la batería de integración no toca datos ajenos');
+//
+// Con --prefijo, una sola tabla escrita a mano escribe en las tablas REALES.
+// Pasó: tres activos de prueba terminaron en el inventario de desarrollo.
+$integ = leer('test/integracion.php');
+chequear('La batería de integración acepta un prefijo',
+    str_contains($integ, "--prefijo="));
+chequear('Con prefijo borra sólo sus propias tablas',
+    str_contains($integ, "!str_starts_with((string)\$r[0], \$PREFIJO)"));
+chequear('El segundo prefijo cuelga del principal, para que también se limpie',
+    str_contains($integ, "\$P2 = \$PREFIJO . 'up_';"));
+chequear('Se lee a sí misma y aborta si encuentra una tabla sin prefijar',
+    str_contains($integ, 'esta batería tiene tablas escritas sin prefijo'));
+
+// Y que no haya ninguna, que es lo que ese autocontrol verifica en ejecución.
+$sueltas = [];
+foreach (['productos', 'catalogos', 'activo_infocom', 'campos_definicion',
+          'campos_valor', 'ubicaciones', 'producto_movimientos'] as $t) {
+    if (preg_match_all('/\b(?:FROM|INTO|UPDATE|TABLE|JOIN)\s+`' . $t . '`/i', $integ, $m)) {
+        $sueltas[] = $t . ' (x' . count($m[0]) . ')';
+    }
+}
+chequear('Ninguna tabla del tenant escrita a mano en la batería de integración',
+    $sueltas === [], implode(', ', $sueltas));
 
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('TESTS · batería de integración');

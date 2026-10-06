@@ -502,6 +502,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td>
                   <div class="ih-flex ih-gap-1" style="justify-content:center;">
                     <a href="/backend/view_details.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver detalle"><i class="bi bi-eye"></i></a>
+                    <a href="/inventario/ficha.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ficha técnica"><i class="bi bi-clipboard-data"></i></a>
                     <?php if ($_canEdit): ?>
                       <a href="/backend/edit.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
                     <?php endif; ?>

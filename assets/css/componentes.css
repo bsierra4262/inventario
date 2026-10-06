@@ -548,6 +548,46 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-hub + .ih-hub-grupo { margin-top: 1.6rem; }
 
 /* ---------------------------------------------------------------------------
+   5 quater. Índice de la ficha técnica
+   ---------------------------------------------------------------------------
+   La ficha de un activo es larga a propósito: todo lo que GLPI reparte en siete
+   pestañas va en una sola pantalla, porque lo que se busca casi siempre es
+   «contame todo lo de este equipo» y con pestañas hay que acordarse de ir a
+   mirar cada una. Esto es sólo para saltar: no esconde nada.
+   --------------------------------------------------------------------------- */
+.ficha-indice {
+  display: flex; flex-wrap: wrap; gap: .4rem;
+  padding: .6rem;
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-lg, 15px);
+  position: sticky; top: .5rem; z-index: 5;
+}
+.ficha-indice a {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .4rem .7rem;
+  font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
+  color: var(--ih-gray-600, #5b566a);
+  border-radius: var(--ih-radius-sm, 9px);
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.ficha-indice a:hover {
+  text-decoration: none;
+  background: var(--ih-purple-50, #f2ecf9);
+  color: var(--ih-purple, #663399);
+}
+.ficha-indice .ih-badge { font-size: 10.5px; padding: 1px 6px; }
+@media (max-width: 560px) {
+  .ficha-indice { position: static; }
+  .ficha-indice a { flex: 1 1 auto; justify-content: center; }
+}
+
+/* Un campo que ocupa dos columnas de la grilla del formulario. */
+.ih-col-span-2 { grid-column: span 2; }
+@media (max-width: 860px) { .ih-col-span-2 { grid-column: auto; } }
+
+/* ---------------------------------------------------------------------------
    6. Nota sobre la mejora progresiva
    --------------------------------------------------------------------------- */
 /* Las clases que ocultan el control nativo (`ihc-select__nativo`,

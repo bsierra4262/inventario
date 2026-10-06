@@ -417,6 +417,291 @@ function migraciones_tenant(): array {
             }
         },
 
+
+        8 => function (mysqli $c, string $p): void {
+            // ═══════════════════════════════════════════════════════════════
+            //  Fase 4 — el activo por dentro: sistema operativo, componentes,
+            //  red y relaciones entre activos. Modelo tomado de GLPI.
+            //
+            //  GLPI usa una tabla de catálogo y una de enlace POR CADA tipo de
+            //  componente: glpi_deviceprocessors + glpi_items_deviceprocessors,
+            //  glpi_devicememories + glpi_items_devicememories, y así dieciséis
+            //  veces. Lo mismo con el sistema operativo: siete tablas de
+            //  catálogo (operatingsystems, versions, servicepacks,
+            //  architectures, kernels, kernelversions, editions).
+            //
+            //  Acá se guarda la misma información con muchas menos tablas: una
+            //  sola de componentes con una columna `tipo`, y los catálogos del
+            //  sistema operativo sobre la tabla `catalogos` que ya existe. No es
+            //  simplificar de menos: es que veintitrés tablas para esto sólo se
+            //  justifican si cada tipo tiene columnas propias, y acá no las
+            //  tiene — las que varían (capacidad, frecuencia, núcleos, MAC)
+            //  entran en una sola fila y quedan nulas donde no aplican.
+            // ═══════════════════════════════════════════════════════════════
+
+            // ── Sistema operativo: una fila por activo ──────────────────────
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}activo_so` (
+                producto_id      INT          NOT NULL PRIMARY KEY,
+                so               VARCHAR(120) NULL DEFAULT NULL,
+                version          VARCHAR(80)  NULL DEFAULT NULL,
+                edicion          VARCHAR(80)  NULL DEFAULT NULL,
+                arquitectura     VARCHAR(40)  NULL DEFAULT NULL,
+                kernel           VARCHAR(120) NULL DEFAULT NULL,
+                service_pack     VARCHAR(80)  NULL DEFAULT NULL,
+                clave_producto   VARCHAR(160) NULL DEFAULT NULL,
+                numero_licencia  VARCHAR(160) NULL DEFAULT NULL,
+                instalado_en     DATE         NULL DEFAULT NULL,
+                actualizado_en   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                              ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_so (so)
+            ) ENGINE=InnoDB");
+
+            // ── Componentes: catálogo ───────────────────────────────────────
+            //  `tipo` dice de qué pieza se trata; `designacion` es el nombre
+            //  que ve la gente ("Intel Core i5-1135G7", "Kingston DDR4 8GB").
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}componentes` (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                tipo        VARCHAR(30)  NOT NULL,
+                designacion VARCHAR(180) NOT NULL,
+                fabricante  VARCHAR(120) NULL DEFAULT NULL,
+                nota        VARCHAR(255) NULL DEFAULT NULL,
+                activo      TINYINT(1)   NOT NULL DEFAULT 1,
+                creado_en   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_tipo_desig (tipo, designacion),
+                INDEX idx_tipo (tipo, activo)
+            ) ENGINE=InnoDB");
+
+            // ── Componentes: qué tiene puesto cada activo ───────────────────
+            //  Las columnas que varían según el tipo quedan nulas donde no
+            //  aplican. Un disco usa `capacidad_mb`; un procesador, `frecuencia_mhz`,
+            //  `nucleos` e `hilos`; una placa de red, `mac`.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}activo_componente` (
+                id              INT AUTO_INCREMENT PRIMARY KEY,
+                producto_id     INT          NOT NULL,
+                componente_id   INT          NOT NULL,
+                cantidad        INT          NOT NULL DEFAULT 1,
+                numero_serie    VARCHAR(120) NULL DEFAULT NULL,
+                capacidad_mb    BIGINT       NULL DEFAULT NULL,
+                frecuencia_mhz  INT          NULL DEFAULT NULL,
+                nucleos         INT          NULL DEFAULT NULL,
+                hilos           INT          NULL DEFAULT NULL,
+                mac             VARCHAR(32)  NULL DEFAULT NULL,
+                nota            VARCHAR(255) NULL DEFAULT NULL,
+                creado_en       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_producto (producto_id),
+                INDEX idx_componente (componente_id)
+            ) ENGINE=InnoDB");
+
+            // ── Red: un puerto por interfaz ─────────────────────────────────
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}puertos_red` (
+                id             INT AUTO_INCREMENT PRIMARY KEY,
+                producto_id    INT          NOT NULL,
+                numero         INT          NULL DEFAULT NULL,
+                nombre         VARCHAR(80)  NULL DEFAULT NULL,
+                tipo           VARCHAR(30)  NOT NULL DEFAULT 'ethernet',
+                mac            VARCHAR(32)  NULL DEFAULT NULL,
+                velocidad_mbps INT          NULL DEFAULT NULL,
+                mtu            INT          NULL DEFAULT NULL,
+                vlan           VARCHAR(40)  NULL DEFAULT NULL,
+                estado         VARCHAR(20)  NOT NULL DEFAULT 'activo',
+                nota           VARCHAR(255) NULL DEFAULT NULL,
+                creado_en      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_producto (producto_id),
+                INDEX idx_mac (mac)
+            ) ENGINE=InnoDB");
+
+            // ── Red: las direcciones de cada puerto ─────────────────────────
+            //  Un puerto puede tener más de una (IPv4 + IPv6, o varias IPv4).
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}direcciones_ip` (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                puerto_id   INT          NOT NULL,
+                ip          VARCHAR(45)  NOT NULL,
+                version_ip  TINYINT      NOT NULL DEFAULT 4,
+                mascara     VARCHAR(45)  NULL DEFAULT NULL,
+                gateway     VARCHAR(45)  NULL DEFAULT NULL,
+                asignacion  VARCHAR(20)  NOT NULL DEFAULT 'fija',
+                nombre_dns  VARCHAR(190) NULL DEFAULT NULL,
+                creado_en   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_puerto (puerto_id),
+                INDEX idx_ip (ip)
+            ) ENGINE=InnoDB");
+
+            // ── Relaciones entre activos ────────────────────────────────────
+            //  El monitor que cuelga de una notebook, el disco externo de un
+            //  servidor, el equipo que reemplazó a otro. GLPI lo resuelve con
+            //  Asset_PeripheralAsset y con Item_Item; acá es una sola tabla con
+            //  el tipo de vínculo adentro.
+            //
+            //  La pareja es única sin importar el orden en que se cargó: la
+            //  migración no puede imponerlo con un índice (MySQL no tiene
+            //  índices sobre expresiones en todas las versiones), así que lo
+            //  valida el código al guardar.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}activo_relacion` (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                origen_id  INT          NOT NULL,
+                destino_id INT          NOT NULL,
+                tipo       VARCHAR(30)  NOT NULL DEFAULT 'conectado',
+                nota       VARCHAR(255) NULL DEFAULT NULL,
+                creado_en  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_rel (origen_id, destino_id, tipo),
+                INDEX idx_destino (destino_id)
+            ) ENGINE=InnoDB");
+
+            // Una fila de sistema operativo por activo existente, para que
+            // guardar sea siempre un UPDATE y ninguna pantalla tenga que
+            // decidir entre INSERT y UPDATE. Es la misma decisión que se tomó
+            // con activo_infocom en la migración 6.
+            @$c->query("INSERT IGNORE INTO `{$p}activo_so` (producto_id)
+                        SELECT id FROM `{$p}productos`");
+        },
+        9 => function (mysqli $c, string $p): void {
+            // ═══════════════════════════════════════════════════════════════
+            //  Fase 5 — el activo por fuera: proveedores, contratos,
+            //  documentos, notas y plantillas de alta. Modelo tomado de GLPI.
+            //
+            //  Lo que cambia de verdad: hasta acá, «¿hasta cuándo tenemos
+            //  soporte de este servidor?» no tenía dónde contestarse. El
+            //  proveedor era un texto suelto en Infocom, el contrato no existía
+            //  y el PDF de la garantía, si estaba, era un archivo más en Drive
+            //  sin nada que dijera qué era.
+            // ═══════════════════════════════════════════════════════════════
+
+            // ── Proveedores ─────────────────────────────────────────────────
+            //  `proveedor` ya existía en activo_infocom como texto y sigue ahí:
+            //  lo usan el detalle, los reportes y el respaldo. Esta tabla es
+            //  para los datos del proveedor —CUIT, contacto, teléfono—, que en
+            //  una columna de texto no entran.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}proveedores` (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                nombre     VARCHAR(160) NOT NULL,
+                cuit       VARCHAR(20)  NULL DEFAULT NULL,
+                contacto   VARCHAR(160) NULL DEFAULT NULL,
+                telefono   VARCHAR(60)  NULL DEFAULT NULL,
+                email      VARCHAR(190) NULL DEFAULT NULL,
+                web        VARCHAR(255) NULL DEFAULT NULL,
+                direccion  VARCHAR(255) NULL DEFAULT NULL,
+                nota       TEXT         NULL,
+                activo     TINYINT(1)   NOT NULL DEFAULT 1,
+                creado_en  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_nombre (nombre),
+                INDEX idx_activo (activo)
+            ) ENGINE=InnoDB");
+
+            // ── Contratos ───────────────────────────────────────────────────
+            //  Los campos salen de glpi_contracts: num, begin_date, duration,
+            //  notice, periodicity, billing, accounting_number, renewal.
+            //
+            //  `fin` se guarda calculada en vez de derivarla en cada consulta.
+            //  Es desnormalizar a propósito: la pantalla que importa es «qué se
+            //  vence en los próximos noventa días», y eso con la fecha guardada
+            //  es un índice y sin ella es recorrer la tabla entera.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}contratos` (
+                id               INT AUTO_INCREMENT PRIMARY KEY,
+                numero           VARCHAR(80)  NULL DEFAULT NULL,
+                nombre           VARCHAR(190) NOT NULL,
+                tipo             VARCHAR(60)  NULL DEFAULT NULL,
+                proveedor_id     INT          NULL DEFAULT NULL,
+                inicio           DATE         NULL DEFAULT NULL,
+                duracion_meses   INT          NOT NULL DEFAULT 0,
+                fin              DATE         NULL DEFAULT NULL,
+                preaviso_dias    INT          NOT NULL DEFAULT 0,
+                periodicidad_meses INT        NOT NULL DEFAULT 0,
+                facturacion_meses  INT        NOT NULL DEFAULT 0,
+                renovacion       VARCHAR(30)  NOT NULL DEFAULT 'ninguna',
+                numero_contable  VARCHAR(80)  NULL DEFAULT NULL,
+                costo            DECIMAL(14,2) NULL DEFAULT NULL,
+                moneda           VARCHAR(8)   NOT NULL DEFAULT 'USD',
+                nota             TEXT         NULL,
+                activo           TINYINT(1)   NOT NULL DEFAULT 1,
+                creado_en        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_fin (fin),
+                INDEX idx_proveedor (proveedor_id),
+                INDEX idx_activo (activo)
+            ) ENGINE=InnoDB");
+
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}contrato_activo` (
+                contrato_id INT      NOT NULL,
+                producto_id INT      NOT NULL,
+                creado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (contrato_id, producto_id),
+                INDEX idx_producto (producto_id)
+            ) ENGINE=InnoDB");
+
+            // ── Documentos ──────────────────────────────────────────────────
+            //  Un documento puede ser un archivo en Drive o un enlace externo.
+            //  No se guarda el archivo acá: ya hay integración con Drive y
+            //  OneDrive, y duplicar el almacenamiento sería pelearse con ella.
+            //  Lo que se guarda es QUÉ es ese archivo —factura, manual,
+            //  garantía, remito— que es justo lo que hoy no se puede saber.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}documentos` (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                nombre      VARCHAR(190) NOT NULL,
+                tipo        VARCHAR(60)  NOT NULL DEFAULT 'otro',
+                enlace      VARCHAR(500) NULL DEFAULT NULL,
+                drive_id    VARCHAR(255) NULL DEFAULT NULL,
+                nombre_archivo VARCHAR(255) NULL DEFAULT NULL,
+                mime        VARCHAR(120) NULL DEFAULT NULL,
+                tamano      BIGINT       NULL DEFAULT NULL,
+                etiqueta    VARCHAR(60)  NULL DEFAULT NULL,
+                nota        TEXT         NULL,
+                subido_por  VARCHAR(190) NULL DEFAULT NULL,
+                creado_en   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_tipo (tipo),
+                INDEX idx_drive (drive_id)
+            ) ENGINE=InnoDB");
+
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}documento_activo` (
+                documento_id INT      NOT NULL,
+                producto_id  INT      NOT NULL,
+                creado_en    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (documento_id, producto_id),
+                INDEX idx_producto (producto_id)
+            ) ENGINE=InnoDB");
+
+            // ── Notas ───────────────────────────────────────────────────────
+            //  El historial (`producto_movimientos`) dice qué cambió y cuándo.
+            //  Esto es lo otro: lo que una persona quiere dejar escrito y que
+            //  no es un cambio de ningún campo —«la fuente hace ruido desde
+            //  marzo», «lo usa Contaduría aunque figure en Sistemas»—.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}notas` (
+                id             INT AUTO_INCREMENT PRIMARY KEY,
+                producto_id    INT      NOT NULL,
+                texto          TEXT     NOT NULL,
+                autor          VARCHAR(190) NULL DEFAULT NULL,
+                creado_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_producto (producto_id, creado_en)
+            ) ENGINE=InnoDB");
+
+            // ── Plantillas de alta ──────────────────────────────────────────
+            //  Cargar veinte notebooks iguales es llenar veinte veces los
+            //  mismos ocho campos. Una plantilla guarda esos valores y el alta
+            //  los precarga. Los valores van en JSON porque son los campos del
+            //  formulario, que cambian: desde la migración 7 los campos por
+            //  categoría se definen desde la aplicación, así que una columna
+            //  por campo volvería a ser lo que esa migración vino a sacar.
+            $c->query("CREATE TABLE IF NOT EXISTS `{$p}plantillas` (
+                id           INT AUTO_INCREMENT PRIMARY KEY,
+                nombre       VARCHAR(160) NOT NULL,
+                descripcion  VARCHAR(255) NULL DEFAULT NULL,
+                categoria    VARCHAR(100) NULL DEFAULT NULL,
+                subcategoria VARCHAR(100) NULL DEFAULT NULL,
+                valores      LONGTEXT     NULL,
+                activo       TINYINT(1)   NOT NULL DEFAULT 1,
+                creado_por   VARCHAR(190) NULL DEFAULT NULL,
+                creado_en    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_nombre (nombre),
+                INDEX idx_activo (activo)
+            ) ENGINE=InnoDB");
+
+            // Los proveedores que ya estaban cargados como texto en Infocom
+            // pasan a tener ficha propia. No se borra el texto: lo siguen
+            // usando el detalle, los reportes y el respaldo.
+            @$c->query("INSERT IGNORE INTO `{$p}proveedores` (nombre)
+                        SELECT DISTINCT TRIM(proveedor) FROM `{$p}activo_infocom`
+                        WHERE proveedor IS NOT NULL AND TRIM(proveedor) <> ''");
+        },
     ];
 }
 }

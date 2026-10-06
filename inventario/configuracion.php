@@ -31,13 +31,14 @@ if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/l
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
 $user = require_tenant_permission_any([
-    'catalog.manage', 'integration.edit', 'user.view', 'user.edit',
+    'catalog.manage', 'integration.edit', 'user.view', 'user.edit', 'asset.view',
 ]);
 $rol = (string)($user['role'] ?? 'viewer');
 
 $puedeCatalogos = role_can('catalog.manage', $rol);
 $puedeIntegra   = role_can('integration.edit', $rol);
 $puedeUsuarios  = role_can('user.view', $rol) || role_can('user.edit', $rol);
+$puedeContratos = role_can('asset.view', $rol);
 
 // El proveedor configurado decide el nombre: decir «Drive» cuando la empresa
 // usa OneDrive confunde más de lo que ayuda.
@@ -93,6 +94,18 @@ require __DIR__ . '/../includes/layout/topbar.php';
           'desc'   => 'Qué datos se le piden a cada tipo de activo. Una notebook y una bobina '
                     . 'de cable no necesitan lo mismo.',
           'puede'  => $puedeCatalogos,
+      ],
+  ]); ?>
+
+  <?php hub_grupo('Compras y cobertura'); ?>
+  <?php hub_tarjetas([
+      [
+          'url'    => '/inventario/contratos.php',
+          'icono'  => 'bi-file-earmark-text',
+          'titulo' => 'Proveedores y contratos',
+          'desc'   => 'A quién le compramos y hasta cuándo tenemos soporte. Avisa lo que vence '
+                    . 'en los próximos noventa días.',
+          'puede'  => $puedeContratos,
       ],
   ]); ?>
 

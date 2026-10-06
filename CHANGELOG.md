@@ -4,6 +4,102 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.7.0] — 2026-10-06
+
+Fases 4 y 5 del modelo de inventario, tomadas de GLPI: el activo por dentro —sistema operativo,
+componentes, red y relaciones— y por fuera —proveedores, contratos, documentos, notas y
+plantillas—. Migraciones 8 y 9.
+
+### Agregado
+
+- **Sistema operativo por activo** (`activo_so`): nombre, versión, edición, arquitectura, kernel,
+  service pack, clave de producto, número de licencia y fecha de instalación. Con esto, «cuántas
+  máquinas siguen en Windows 10» es una consulta y no una revisión equipo por equipo.
+
+- **Componentes internos** (`componentes` + `activo_componente`): procesador, memoria, disco,
+  placa de red, video, fuente, placa madre y firmware. El catálogo es compartido —«Intel Core
+  i5-1135G7» se carga una vez y se usa en los cuarenta equipos que lo tienen—, que es lo que
+  permite preguntar «cuántas máquinas tienen menos de 8 GB» antes de comprar memoria.
+
+  GLPI usa una tabla de catálogo y una de enlace **por cada tipo**: dieciséis veces el mismo par.
+  Acá son dos tablas con una columna `tipo`, porque los campos que varían entre tipos son cuatro
+  —capacidad, frecuencia, núcleos, MAC— y entran en la misma fila quedando nulos donde no aplican.
+
+- **Puertos de red y direcciones IP** (`puertos_red` + `direcciones_ip`): un activo tiene varios
+  puertos —un switch tiene veinticuatro— y un puerto varias direcciones, IPv4 e IPv6. La MAC se
+  guarda normalizada: llegan escritas con guiones, con puntos, pegadas y en minúscula, y guardadas
+  tal cual no se podía buscar por MAC. Se puede preguntar «qué equipo tiene la 10.0.0.47».
+
+- **Relaciones entre activos** (`activo_relacion`): conectado a, parte de, reemplaza a, depende de,
+  es respaldo de. La relación se ve desde los dos activos, con la etiqueta que corresponde a cada
+  lado. Sirve para saber qué se cae con qué antes de dar algo de baja.
+
+- **Proveedores y contratos** (`proveedores`, `contratos`, `contrato_activo`): hasta acá, «¿hasta
+  cuándo tenemos soporte de este servidor?» no tenía dónde contestarse —el proveedor era un texto
+  suelto en los datos de compra y el contrato no existía—. Incluye la pantalla de lo que vence en
+  los próximos noventa días, con el preaviso de cada contrato.
+
+- **Documentos y notas** (`documentos`, `documento_activo`, `notas`): el archivo sigue viviendo en
+  Drive o en OneDrive; lo que se guarda es **qué es** —factura, remito, garantía, manual—, que es
+  justo lo que no se podía saber: en la carpeta de un activo hay seis PDF y ninguno dice cuál es
+  cuál. Las notas son lo que alguien quiere dejar escrito y no es el cambio de ningún campo.
+
+- **Plantillas de alta** (`plantillas`): cargar veinte notebooks iguales es llenar veinte veces los
+  mismos ocho campos.
+
+- **`inventario/ficha.php`**, la ficha técnica y administrativa de un activo: las siete secciones en
+  **una sola pantalla**, una debajo de la otra, con un índice arriba para saltar. GLPI reparte esto
+  en siete pestañas; lo que se busca casi siempre es «contame todo lo de este equipo», y con
+  pestañas hay que acordarse de ir a mirar cada una.
+
+- **`inventario/contratos.php`**, proveedores y contratos en una pantalla, con lo que vence arriba.
+
+- **La batería de integración acepta `--prefijo=`**: trabaja en sus propias tablas y borra sólo
+  ésas, así que corre contra una base compartida sin tocar un dato. De paso ejercita el modo
+  `prefix` de la plataforma, soportado desde el principio y que hasta ahora no probaba nadie.
+  234 chequeos contra MySQL real.
+
+### Corregido
+
+- **Sumarle un mes al 31 de enero daba el 3 de marzo.** PHP desborda el 31 de febrero hacia marzo.
+  El cálculo de la fecha de fin de un contrato ahora cuenta el mes a mano: cuando el día no existe
+  en el mes destino, el contrato termina el último día de ese mes.
+
+- **Buscar por MAC devolvía una fila por cada dirección del puerto**: un puerto con IPv4 e IPv6
+  aparecía dos veces, como si fueran dos equipos distintos.
+
+- **La batería de integración tenía dieciocho tablas escritas a mano.** Con `--prefijo` eso
+  escribía en las tablas **reales**: tres activos de prueba terminaron en el inventario de
+  desarrollo. Todo su SQL pasa ahora por `$T['tabla']`, el segundo prefijo cuelga del principal
+  para que la limpieza también lo alcance, y la batería **se lee a sí misma y aborta** si vuelve a
+  aparecer una sin prefijar.
+
+- **El test de migraciones fijaba la lista `[6, 7]`.** Había que editarlo cada vez que se sumaba
+  una migración, y un test que hay que tocar para que siga pasando deja de servir como red. Ahora
+  calcula lo que está pendiente.
+
+### Cambiado
+
+- **El rastreo de alcance de las pantallas sigue también `backend/`.** `view_details.php` y
+  `edit.php` son pantallas, no endpoints, y desde ellas se llega a otras: la ficha técnica cuelga
+  del detalle del activo.
+
+- **El detalle del activo muestra un resumen de la ficha** —qué sistema operativo, cuántos
+  componentes, cuántos contratos— y el acceso para cargarla. Sigue siendo la vista de lectura.
+
+- **El listado tiene acceso directo a la ficha**, al lado de ver y editar.
+
+### Seguridad
+
+- **`backend/ficha_crud.php` y `backend/contratos_crud.php` exigen `asset.edit`**, no sólo sesión.
+  Un endpoint por sección habría sido repetir siete veces la misma guardia de sesión, permiso y
+  CSRF — y ya pasó que a cinco endpoints se les olvidara una de las tres.
+
+- **El activo tiene que ser de este tenant.** Sin esa verificación, un id de otra empresa escrito a
+  mano dejaría colgar componentes de un activo ajeno. Lo mismo con el puerto al agregarle una IP.
+
+---
+
 ## [1.6.0] — 2026-10-06
 
 Rediseño de los dos portales: capa propia para los controles que dibuja el navegador,

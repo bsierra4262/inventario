@@ -72,6 +72,48 @@ Tomado de lo que GLPI llama *Infocom*.
 | F7 | El reporte de amortización usa el plazo guardado por activo, con el del reporte como respaldo | ✅ |
 | F8 | El alta de activos carga también estos campos | ✅ |
 
+## 3c. El activo por dentro (fase 4)
+
+Modelo tomado de GLPI. Donde GLPI usa veintitrés tablas —una de catálogo y una de enlace por
+cada tipo de componente, más siete para el sistema operativo— acá son seis: los campos que
+varían entre tipos son cuatro y entran en la misma fila, quedando nulos donde no aplican.
+
+| # | Requerimiento | Estado |
+| --- | --- | :-: |
+| T1 | Sistema operativo por activo: nombre, versión, edición, arquitectura, kernel, service pack | ✅ |
+| T2 | Licencia del sistema operativo: clave de producto, número y fecha de instalación | ✅ |
+| T3 | «Cuántas máquinas siguen en Windows 10» es una consulta, no una revisión equipo por equipo | ✅ |
+| T4 | Componentes internos con catálogo compartido: procesador, memoria, disco, red, video, fuente, placa, firmware | ✅ |
+| T5 | Cada componente puesto guarda lo suyo: cantidad, serie, capacidad, frecuencia, núcleos, hilos, MAC | ✅ |
+| T6 | Un componente en uso no se puede eliminar: se desactiva y los activos lo conservan | ✅ |
+| T7 | Puertos de red por activo, con número, nombre, tipo, MAC, velocidad, MTU y VLAN | ✅ |
+| T8 | Varias direcciones IP por puerto, IPv4 e IPv6, con máscara, gateway, asignación y nombre DNS | ✅ |
+| T9 | La MAC se guarda en un solo formato, se escriba con guiones, con puntos o pegada | ✅ |
+| T10 | Buscar qué activo tiene una IP o una MAC | ✅ |
+| T11 | Relaciones entre activos: conectado a, parte de, reemplaza, depende de, es respaldo de | ✅ |
+| T12 | La relación se ve desde los dos activos, con la etiqueta que corresponde a cada lado | ✅ |
+| T13 | No se vincula un activo consigo mismo ni se repite una pareja, en ningún sentido | ✅ |
+
+## 3d. El activo por fuera (fase 5)
+
+| # | Requerimiento | Estado |
+| --- | --- | :-: |
+| X1 | Proveedores con CUIT, contacto, teléfono, email, web y dirección | ✅ |
+| X2 | Los proveedores que ya figuraban como texto en los datos de compra se trajeron al migrar | ✅ |
+| X3 | Un proveedor con contratos no se elimina: se desactiva | ✅ |
+| X4 | Contratos con número, tipo, proveedor, inicio, duración, preaviso, renovación, costo y número contable | ✅ |
+| X5 | La fecha de fin se calcula con el inicio y la duración, no se escribe a mano | ✅ |
+| X6 | El cálculo no desborda el mes: un mes desde el 31 de enero termina el 28 de febrero | ✅ |
+| X7 | Un contrato cubre varios activos y un activo puede estar cubierto por varios contratos | ✅ |
+| X8 | «Qué vence en los próximos noventa días», con el preaviso de cada contrato | ✅ |
+| X9 | Documentos por activo, con tipo: factura, remito, garantía, manual, foto, certificado | ✅ |
+| X10 | El archivo sigue en Drive o en OneDrive: acá se guarda qué es, que es lo que no se podía saber | ✅ |
+| X11 | Borrar un documento no borra el archivo de la nube | ✅ |
+| X12 | El mismo documento cubre varios activos: una factura, diez monitores | ✅ |
+| X13 | Notas por activo, con autor y fecha, aparte del historial de cambios | ✅ |
+| X14 | Plantillas de alta, para no llenar veinte veces los mismos ocho campos | ✅ |
+| X15 | Todo esto en una sola pantalla por activo, no en siete pestañas | ✅ |
+
 ## 4. Usuarios y permisos
 
 | # | Requerimiento | Estado |

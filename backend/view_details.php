@@ -410,6 +410,47 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
       </div>
     </div>
 
+    <?php
+    // ── Ficha técnica ────────────────────────────────────────────────────
+    //   Un resumen de lo que hay cargado y la puerta para cargarlo. El detalle
+    //   es la vista de lectura; inventario/ficha.php es donde se edita.
+    require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
+    require_once __DIR__ . '/../core/tenants/componentes.php';
+    require_once __DIR__ . '/../core/tenants/red.php';
+    require_once __DIR__ . '/../core/tenants/relaciones.php';
+    require_once __DIR__ . '/../core/tenants/contratos.php';
+    require_once __DIR__ . '/../core/tenants/documentos.php';
+
+    $fSo    = so_disponible($conn)        ? so_de($conn, $producto_id) : [];
+    $fComp  = componentes_disponible($conn) ? componentes_de_activo($conn, $producto_id) : [];
+    $fRed   = red_disponible($conn)       ? red_puertos_de($conn, $producto_id) : [];
+    $fRel   = relaciones_disponible($conn) ? relaciones_cuantas($conn, $producto_id) : 0;
+    $fCon   = contratos_disponible($conn) ? contratos_de_activo($conn, $producto_id) : [];
+    $fDoc   = documentos_disponible($conn) ? documentos_de_activo($conn, $producto_id) : [];
+    $fNot   = documentos_disponible($conn) ? notas_de_activo($conn, $producto_id) : [];
+    $fResumenSo = so_resumen($fSo);
+    ?>
+    <div class="ih-card vd-section">
+      <div class="ih-card__body" style="padding:1rem;">
+        <div class="vd-section-title"><i class="bi bi-clipboard-data"></i> Ficha técnica</div>
+        <div class="vd-grid">
+          <?php
+            vd_row('Sistema operativo', $fResumenSo !== '' ? $fResumenSo : '—', 'dot');
+            vd_row('Componentes', count($fComp) > 0 ? count($fComp) . ' cargados' : '—', 'dot');
+            vd_row('Puertos de red', count($fRed) > 0 ? count($fRed) . ' con dirección' : '—', 'dot');
+            vd_row('Relaciones', $fRel > 0 ? $fRel . ' activos vinculados' : '—', 'dot');
+            vd_row('Contratos', count($fCon) > 0 ? count($fCon) . ' que lo cubren' : '—', 'dot');
+            vd_row('Documentos', count($fDoc) > 0 ? count($fDoc) : '—', 'dot');
+            vd_row('Notas', count($fNot) > 0 ? count($fNot) : '—', 'dot');
+          ?>
+        </div>
+        <a href="/inventario/ficha.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--outline ih-btn--block"
+           style="margin-top:12px">
+          <i class="bi bi-clipboard-data"></i> Ver y cargar la ficha completa
+        </a>
+      </div>
+    </div>
+
     <!-- Acciones -->
     <div class="ih-card vd-section">
       <div class="ih-card__body" style="padding:1rem;display:flex;flex-direction:column;gap:10px;">
