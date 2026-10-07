@@ -2005,6 +2005,25 @@ chequear('Todos los campos de formulario tienen un ejemplo o una explicación',
     $cuantosSin . ' sin ejemplo en: ' . implode(', ', array_keys($sinAyuda))
     . ' — correr `php test/ayudas.php` para ver cuáles');
 // ───────────────────────────────────────────────────────────────────────────
+grupo('REQUIRES');
+//
+// Una función que se llama y no está cargada es un fatal, y un fatal a mitad de
+// una tabla no se ve: el encabezado, el menú y el contador ya se imprimieron, y
+// lo que llega al navegador es media pantalla sin ningún mensaje de error.
+//
+// Pasó con `volver_aqui()` en la papelera. Lo tapaba que la línea del fatal
+// vivía dentro del `foreach` de las filas: con la papelera vacía la pantalla
+// salía entera, y el defecto sólo aparecía con un activo archivado — que es
+// justo el estado que nadie mira dos veces.
+//
+// El detalle se ve con `php test/requires.php`.
+require_once RAIZ . '/test/requires.php';
+[$reqFalta, $reqPantallas] = requires_faltantes();
+chequear("Las {$reqPantallas} pantallas traen el archivo de cada función que llaman",
+    $reqFalta === [],
+    count($reqFalta) . ' sin resolver: ' . implode(' · ', array_slice($reqFalta, 0, 3))
+    . ' — correr `php test/requires.php` para ver todas');
+// ───────────────────────────────────────────────────────────────────────────
 grupo('ORTOGRAFIA');
 //
 // La revisión vive en test/ortografia.php, que también se puede correr sola

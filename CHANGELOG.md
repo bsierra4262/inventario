@@ -12,6 +12,19 @@ pantallas para cargar una computadora.
 
 ### Corregido
 
+- **La papelera se cortaba a la mitad en cuanto tenía un activo.** El botón
+  «Ver el detalle» de cada fila pasó a llevar `volver_aqui()` —para que
+  «Cancelar» devuelva ahí— y faltó el `require_once` de
+  `includes/volver.php`. PHP no avisa hasta que ejecuta esa línea, y esa línea
+  sólo se ejecuta si hay filas: con la papelera vacía la pantalla salía
+  perfecta. Con un activo archivado el HTML se cortaba a mitad del primer
+  `<a href=`, sin encabezado roto, sin menú roto y sin ningún mensaje —y, como
+  la tabla quedaba sin el formulario de eliminar, el POST siguiente salía sin
+  token y volvía 419, que parece un problema de permisos y no un `require`
+  que falta.
+
+  Lo cubre `test/requires.php`, abajo.
+
 - **El PDF de reportes salía con el encabezado y ninguna fila.** Las filas se
   pintaban con `color: var(--ink)` y `fillColor: var(--soft)` — variables CSS
   pasadas a pdfMake, que no es un navegador y no sabe resolverlas. El encabezado
@@ -120,6 +133,31 @@ motivos que se tapaban entre sí:
 
 Y el desplegable propio del sistema dibujaba también las opciones con `hidden`,
 que es lo que usa Versión para esconder lo que no es del sistema elegido.
+
+### Agregado en los auditores
+
+`test/requires.php` — para cada pantalla junta todo lo que llama, ella y sus
+parciales, y exige que la función esté definida en algún archivo de su cadena de
+`require`. Encuentra el caso de la papelera sin tener que acertar con los datos
+que hacen entrar al `if`, que es la razón de que se haya desplegado roto.
+
+Reconoce los tres modismos del proyecto que SÍ son correctos y no los reporta:
+la carga diferida (`$p = __DIR__ . '/x.php'; if (is_file($p)) require_once $p`),
+la llamada protegida con `function_exists()` —el logger es opcional a
+propósito— y la que vive dentro de un `try` con `catch (Throwable)`, porque una
+función que no existe lanza `Error` y `Error` es un `Throwable`.
+
+Sobre ese último: detectar los `try` obligó a contar llaves bien. La
+interpolación de `"SELECT ... FROM `{$tabla}`"` abre con un token propio
+(`T_CURLY_OPEN`) y cierra con una `}` suelta, así que contando sólo las llaves
+literales el contador se iba a negativo en la primera consulta y el bloque
+parecía terminar ahí. Pasó: con el contador ingenuo se detectaban 2 `try` en un
+archivo que tiene once.
+
+Lo único que encontró, además de la papelera: `core/tenants/infocom.php` llama a
+`catalogo_normalizar()` y no traía `catalogos.php`. No estaba dando un fatal
+porque las dos pantallas que lo incluyen sin el otro —el detalle y reportes—
+nada más leen; el día que una guardara, se caía. Ahora lo trae él.
 
 ---
 

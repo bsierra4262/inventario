@@ -33,6 +33,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
+require_once __DIR__ . '/../includes/volver.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 

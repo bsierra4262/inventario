@@ -26,6 +26,13 @@
 
 declare(strict_types=1);
 
+/* Proveedor, Presupuesto y Criticidad son catálogos: `infocom_guardar` los pasa
+   por `catalogo_normalizar()`, que vive en el otro archivo. Se trae acá y no se
+   confía en que lo haya traído la pantalla: `view_details.php` y `reportes.php`
+   incluyen este archivo y NO incluyen `catalogos.php`, así que hoy el guardado
+   sólo funciona porque esas dos pantallas nada más leen. */
+require_once __DIR__ . '/catalogos.php';
+
 if (!defined('INFOCOM_CAMPOS_TEXTO')) {
     define('INFOCOM_CAMPOS_TEXTO', [
         'numero_pedido', 'numero_remito', 'numero_factura', 'numero_contable',

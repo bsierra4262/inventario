@@ -791,16 +791,17 @@ Detalle completo, permisos de directorios y configuración de Drive en [INSTALL.
 
 ## Tests
 
-Seis baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
+Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 405 chequeos — análisis estático del árbol
+php test/run_tests.php            # 406 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible
 php test/ayudas.php               # campos de formulario sin un ejemplo que guíe
 php test/colores.php              # colores escritos a mano fuera de la identidad visual
 php test/tokens.php               # tokens que valen distinto en cada portal
+php test/requires.php             # funciones que se llaman sin traer el archivo que las define
 
 node test/componentes.js          # 147 chequeos — los componentes, ejecutados en jsdom
 
@@ -809,8 +810,14 @@ AV_TEST_DB_USER=root AV_TEST_DB_NAME=av_tenant \
 php test/integracion.php          # 260 chequeos — contra una base descartable
 ```
 
-`run_tests.php` incluye a las cuatro del medio, así que correrla sola ya las cubre; se invocan
+`run_tests.php` incluye a las cinco del medio, así que correrla sola ya las cubre; se invocan
 aparte cuando hace falta ver *cuáles* son los hallazgos y no sólo que hay.
+
+`requires.php` existe por un fatal que se desplegó: una función nueva en una fila de la papelera
+sin su `require`. El HTML se cortaba a mitad de la tabla —encabezado y menú ya impresos, ningún
+mensaje— y sólo pasaba con la papelera cargada. Reconoce los tres modismos que sí son correctos:
+la carga diferida, la llamada protegida con `function_exists()` y la que vive dentro de un `try`
+con `catch (Throwable)`.
 
 Qué verifica la estática: sintaxis, tipos de `bind_param`, uso de la API de Drive, exposición y
 permisos, catálogos, papelera, migraciones, identidad visual, que ninguna pantalla del cliente
