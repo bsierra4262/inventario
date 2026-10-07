@@ -699,6 +699,18 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   border-radius: var(--ih-radius-md, 10px);
 }
 .ih-filtros__acciones { display: flex; gap: .5rem; flex-wrap: wrap; align-items: end; }
+
+/* Dentro de una tarjeta, los filtros no dibujan su propia caja: ya están en
+   una. Con las dos quedaba un recuadro gris adentro de la tarjeta blanca y los
+   botones de exportar flotando entre los dos bordes, como si no fueran de
+   ninguno de los dos bloques. */
+.ih-card__body > .ih-filtros {
+  padding: 0;
+  margin-bottom: .75rem;
+  background: transparent;
+  border: 0;
+}
+.ih-card__body > .ih-filtros__acciones { margin: 0; }
 @media (max-width: 640px) {
   .ih-filtros { grid-template-columns: 1fr; }
   .ih-filtros__acciones > * { flex: 1 1 auto; }
