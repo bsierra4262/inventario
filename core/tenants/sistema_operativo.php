@@ -29,6 +29,36 @@ if (!defined('SO_CAMPOS_FECHA')) {
     define('SO_CAMPOS_FECHA', ['instalado_en']);
 }
 
+if (!function_exists('so_campos_del_post')) {
+/**
+ * Los campos del sistema operativo que vienen en un POST.
+ *
+ * Existe porque el formulario y la base no se llaman igual, y eso costaba
+ * datos. Las columnas son `version`, `edicion` y `arquitectura`; los campos del
+ * formulario se llaman `so_version`, `so_edicion` y `so_arquitectura`, porque
+ * el nombre lo pone el tipo de catálogo (`campo_catalogo($conn, 'so_version',
+ * …)`) y ese tipo tiene que seguir siendo ése para que el botón `+` sepa a
+ * qué lista agregar.
+ *
+ * Las dos pantallas que guardaban el sistema operativo buscaban las columnas a
+ * secas, así que `so` y `kernel` entraban —se llaman igual en los dos lados— y
+ * la versión, la edición y la arquitectura se perdían en silencio: se elegían
+ * en la pantalla, se enviaba el formulario, y el campo volvía vacío.
+ *
+ * Se aceptan los dos nombres: el de la columna y el del catálogo.
+ */
+function so_campos_del_post(array $post): array
+{
+    $datos = [];
+    foreach (array_merge(SO_CAMPOS_TEXTO, SO_CAMPOS_FECHA) as $col) {
+        foreach ([$col, 'so_' . $col] as $clave) {
+            if (isset($post[$clave])) { $datos[$col] = (string)$post[$clave]; break; }
+        }
+    }
+    return $datos;
+}
+}
+
 /** Arquitecturas que se ofrecen. No es un catálogo: son éstas y no cambian. */
 if (!defined('SO_ARQUITECTURAS')) {
     define('SO_ARQUITECTURAS', ['x86_64', 'x86', 'ARM64', 'ARM', 'Otra']);

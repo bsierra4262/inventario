@@ -233,10 +233,7 @@ try {
     require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
     if (so_disponible($conn)) {
         so_asegurar_fila($conn, (int)$producto_id);
-        $datosSo = [];
-        foreach (array_merge(SO_CAMPOS_TEXTO, SO_CAMPOS_FECHA) as $cSo) {
-            if (isset($_POST[$cSo])) { $datosSo[$cSo] = (string)$_POST[$cSo]; }
-        }
+        $datosSo = so_campos_del_post($_POST);
         if ($datosSo !== []) { so_guardar($conn, (int)$producto_id, $datosSo); }
     }
 

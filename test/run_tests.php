@@ -1152,6 +1152,35 @@ chequear('asset.delete no lo tiene un rol que no sea admin',
 chequear('El diálogo del sistema sabe pedir una confirmación escrita',
     str_contains(leer('assets/js/componentes.js'), 'op.esperado'));
 
+/* El sistema operativo: el formulario y la base no se llaman igual.
+   Las columnas son `version`, `edicion` y `arquitectura`; los campos del
+   formulario se llaman `so_version`, `so_edicion` y `so_arquitectura`, porque
+   el nombre lo pone el tipo de catalogo y ese tipo tiene que seguir siendo ese
+   para que el boton `+` sepa a que lista agregar.
+
+   Las dos pantallas que guardaban buscaban la columna a secas, asi que `so` y
+   `kernel` entraban —se llaman igual de los dos lados— y la version, la
+   edicion y la arquitectura se perdian EN SILENCIO: se elegian, se enviaba el
+   formulario, y el campo volvia vacio. */
+require_once RAIZ . '/core/tenants/sistema_operativo.php';
+chequear('Los campos del sistema operativo se leen con el traductor de nombres',
+    str_contains(leer('backend/ficha_crud.php'), 'so_campos_del_post')
+ && str_contains(leer('backend/upload_to_drive.php'), 'so_campos_del_post'));
+chequear('Y ese traductor acepta los dos nombres',
+    so_campos_del_post(['so_version' => '24H2', 'edicion' => 'Pro'])
+    === ['version' => '24H2', 'edicion' => 'Pro'],
+    json_encode(so_campos_del_post(['so_version' => '24H2', 'edicion' => 'Pro'])));
+chequear('El catalogo de versiones cubre todos los sistemas que se siembran',
+    (function (): bool {
+        require_once RAIZ . '/core/tenants/so_versiones.php';
+        $mig = leer('core/db/migraciones.php');
+        $ini = strpos($mig, '$semilla = [');
+        $bloque = substr($mig, $ini, (int)strpos($mig, '];', $ini) - $ini);
+        preg_match_all("/'([^']+)'/", $bloque, $m);
+        return array_diff($m[1], array_keys(SO_CATALOGO)) === [];
+    })(),
+    'hay sistemas sembrados sin entrada en SO_CATALOGO');
+
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('ESQUEMA · migraciones');
 // ═══════════════════════════════════════════════════════════════════════════

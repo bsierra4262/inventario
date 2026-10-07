@@ -72,11 +72,10 @@ switch ($accion) {
 
     // ── Sistema operativo ───────────────────────────────────────────────────
     case 'so_guardar':
-        $datos = [];
-        foreach (array_merge(SO_CAMPOS_TEXTO, SO_CAMPOS_FECHA) as $c) {
-            if (isset($_POST[$c])) { $datos[$c] = (string)$_POST[$c]; }
-        }
-        $ok = so_guardar($conn, $productoId, $datos);
+        /* Por `so_campos_del_post` y no leyendo las columnas a secas: el
+           formulario manda `so_version` y la columna se llama `version`, asi
+           que la version, la edicion y la arquitectura se perdian en silencio. */
+        $ok = so_guardar($conn, $productoId, so_campos_del_post($_POST));
         log_event((string)$userId, 'FICHA_SO', "Activo {$productoId}", 'inventario');
         ficha_responder($productoId, $ok,
             $ok ? 'Sistema operativo guardado.' : 'No se pudo guardar el sistema operativo.', 'so');
