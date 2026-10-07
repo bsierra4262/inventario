@@ -412,7 +412,6 @@ select::-ms-expand{display:none}
 /* ------------------------------------------------------------------
    13. UTILIDADES
    ------------------------------------------------------------------ */
-.ih-flex{display:flex}
 .ih-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(12,minmax(0,1fr))}
 .ih-col-1{grid-column:span 1} .ih-col-2{grid-column:span 2} .ih-col-3{grid-column:span 3}
 .ih-col-4{grid-column:span 4} .ih-col-5{grid-column:span 5} .ih-col-6{grid-column:span 6}
@@ -425,20 +424,11 @@ select::-ms-expand{display:none}
 /* Los modales <dialog> (.ih-modal) se fueron a componentes.css: los usan los
    dos portales y mientras vivieran sólo acá, el panel los quedaba sin estilo.
    Ver assets/css/componentes.css, seccion 4. */
-.ih-items-center{align-items:center}
-.ih-items-start{align-items:flex-start}
-.ih-items-end{align-items:flex-end}
-.ih-justify-between{justify-content:space-between}
-.ih-justify-center{justify-content:center}
-.ih-justify-end{justify-content:flex-end}
-.ih-fw{flex-wrap:wrap}
-.ih-col{display:flex;flex-direction:column}
-.ih-gap-1{gap:.25rem} .ih-gap-2{gap:.5rem} .ih-gap-3{gap:.75rem}
-.ih-gap-4{gap:1rem}   .ih-gap-5{gap:1.25rem} .ih-gap-6{gap:1.5rem}
-.ih-mt-1{margin-top:.25rem} .ih-mt-2{margin-top:.5rem} .ih-mt-3{margin-top:.75rem}
-.ih-mt-4{margin-top:1rem}   .ih-mt-5{margin-top:1.25rem} .ih-mt-6{margin-top:1.5rem}
-.ih-mb-1{margin-bottom:.25rem} .ih-mb-2{margin-bottom:.5rem} .ih-mb-3{margin-bottom:.75rem}
-.ih-mb-4{margin-bottom:1rem}   .ih-mb-5{margin-bottom:1.25rem} .ih-mb-6{margin-bottom:1.5rem}
+/* Las utilidades de disposicion --filas, separaciones, margenes, alineacion--
+   se fueron a componentes.css. Estaban escritas en las dos hojas de portal y
+   con distinto alcance: aca la escala de margenes iba de 1 a 6 y en el panel
+   solo estaban los pares, asi que una pantalla compartida usaba una clase que
+   en el otro portal no existia. Ver componentes.css, seccion 7 sexies. */
 
 .ih-text-xs{font-size:11.5px} .ih-text-sm{font-size:12.5px} .ih-text-base{font-size:14px}
 .ih-text-md{font-size:15px}   .ih-text-lg{font-size:17px}    .ih-text-xl{font-size:20px}
@@ -450,9 +440,6 @@ select::-ms-expand{display:none}
 .ih-text-danger{color:var(--danger)}
 .ih-text-info{color:var(--info)}
 .ih-text-white{color:#fff}
-.ih-text-center{text-align:center} .ih-text-right{text-align:right} .ih-text-left{text-align:left}
-.ih-text-bold{font-weight:700} .ih-text-semibold{font-weight:600}
-.ih-text-nowrap{white-space:nowrap}
 
 .ih-spinner{
   display:inline-block;width:16px;height:16px;border:2px solid var(--primary-100);
@@ -512,7 +499,6 @@ select::-ms-expand{display:none}
 .ih-sidebar__brand-text{display:flex;flex-direction:column;min-width:0;line-height:1.15}
 
 /* Utilidad de layout usada por el markup del tenant. */
-.ih-flex-col{display:flex;flex-direction:column}
 
 /* ===========================================================================
    ESCALA RESPONSIVE

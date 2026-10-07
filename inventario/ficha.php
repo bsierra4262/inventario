@@ -125,7 +125,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
 /** Una fila de la tabla de una sección, con su botón de quitar. */
 function ficha_quitar(string $accion, array $campos, int $productoId, string $csrf, string $texto): void { ?>
-    <form method="post" action="/backend/ficha_crud.php" style="display:inline"
+    <form method="post" action="/backend/ficha_crud.php"
           onsubmit="return confirm('<?= htmlspecialchars($texto, ENT_QUOTES) ?>')">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
       <input type="hidden" name="accion" value="<?= htmlspecialchars($accion, ENT_QUOTES) ?>">
@@ -266,7 +266,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <?php if ($puedeEditar): ?>
-        <div class="ih-field" style="grid-column:1/-1">
+        <div class="ih-field ih-field--ancho">
           <button type="submit" class="ih-btn ih-btn--accent"><i class="bi bi-check-lg"></i> Guardar sistema operativo</button>
         </div>
         <?php endif; ?>
@@ -391,7 +391,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <label class="ih-label" for="co-serie">Número de serie</label>
             <input class="ih-input" id="co-serie" name="numero_serie" placeholder="Ej: S4A2NX0T901234">
           </div>
-          <div class="ih-field" style="grid-column:1/-1">
+          <div class="ih-field ih-field--ancho">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar componente</button>
           </div>
         </form>
@@ -419,10 +419,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <?php endif; ?>
 
         <?php foreach ($puertos as $p): ?>
-        <div class="ih-card ih-mb-3" style="box-shadow:none">
+        <div class="ih-card ih-card--anidada ih-mb-3">
           <div class="ih-card__header">
             <div>
-              <h3 class="ih-card__title" style="font-size:var(--ih-text-base)">
+              <h3 class="ih-card__title">
                 <i class="bi bi-ethernet"></i>
                 <?= htmlspecialchars(trim((string)($p['nombre'] ?? '')) ?: ('Puerto ' . (int)$p['numero'])) ?>
                 <span class="ih-badge ih-badge--neutral"><?= htmlspecialchars(RED_TIPOS_PUERTO[(string)$p['tipo']] ?? (string)$p['tipo']) ?></span>
@@ -496,7 +496,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 <label class="ih-label">Nombre DNS</label>
                 <input class="ih-input" name="nombre_dns" placeholder="srv-01.empresa.local">
               </div>
-              <div class="ih-field" style="align-self:end">
+              <div class="ih-field ih-field--al-pie">
                 <button type="submit" class="ih-btn ih-btn--ghost"><i class="bi bi-plus-lg"></i> Agregar dirección</button>
               </div>
             </form>
@@ -540,7 +540,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <label class="ih-label" for="pu-vlan">VLAN</label>
             <input class="ih-input" id="pu-vlan" name="vlan" placeholder="Ej: 120">
           </div>
-          <div class="ih-field" style="grid-column:1/-1">
+          <div class="ih-field ih-field--ancho">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar puerto</button>
           </div>
         </form>
@@ -625,7 +625,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <label class="ih-label" for="re-nota">Nota</label>
             <input class="ih-input" id="re-nota" name="nota" placeholder="Ej: alimentación principal">
           </div>
-          <div class="ih-field" style="align-self:end">
+          <div class="ih-field ih-field--al-pie">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-link-45deg"></i> Vincular</button>
           </div>
         </form>
@@ -711,7 +711,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="ih-field" style="align-self:end">
+          <div class="ih-field ih-field--al-pie">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-link-45deg"></i> Asociar</button>
           </div>
         </form>
@@ -802,7 +802,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <label class="ih-label" for="do-nota">Nota</label>
             <input class="ih-input" id="do-nota" name="nota" placeholder="Ej: incluye la extensión de garantía a 3 años">
           </div>
-          <div class="ih-field" style="grid-column:1/-1">
+          <div class="ih-field ih-field--ancho">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar documento</button>
           </div>
         </form>
@@ -826,14 +826,14 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <p class="ih-text-muted">Falta migrar la base.</p>
       <?php else: ?>
         <?php foreach ($notas as $n): ?>
-          <div class="ih-alert ih-alert--info ih-mb-3" style="align-items:flex-start">
+          <div class="ih-nota">
             <i class="bi bi-sticky"></i>
-            <div style="flex:1 1 auto;min-width:0">
-              <div style="white-space:pre-wrap"><?= htmlspecialchars((string)$n['texto']) ?></div>
-              <div class="ih-text-xs ih-text-muted" style="margin-top:4px">
+            <div class="ih-nota__cuerpo">
+              <p class="ih-nota__texto"><?= htmlspecialchars((string)$n['texto']) ?></p>
+              <p class="ih-nota__firma">
                 <?= htmlspecialchars((string)($n['autor'] ?? 'Alguien')) ?> ·
                 <?= htmlspecialchars(date('d/m/Y H:i', strtotime((string)$n['creado_en']))) ?>
-              </div>
+              </p>
             </div>
             <?php if ($puedeEditar) {
               ficha_quitar('nota_borrar', ['nota_id' => (int)$n['id']], $productoId, $csrf, '¿Eliminar esta nota?');

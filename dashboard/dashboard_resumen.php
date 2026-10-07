@@ -74,7 +74,7 @@ $topbar_title  = 'Resumen';
 $topbar_subtitle = 'Estado general de la plataforma';
 $topbar_user   = $_SESSION['superadmin_name']  ?? 'SuperAdmin';
 $topbar_email  = $_SESSION['superadmin_email'] ?? '';
-$topbar_actions = '<a href="/dashboard/dashboard_empresas.php" class="ih-btn ih-btn--accent ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nueva empresa</span></a>';
+$topbar_actions = '<a href="/dashboard/dashboard_empresas.php" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nueva empresa</span></a>';
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>

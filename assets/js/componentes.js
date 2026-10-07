@@ -778,9 +778,44 @@
     return (b / 1048576).toFixed(1) + ' MB';
   }
 
+  /**
+   * Los tipos que el campo acepta, leídos de su propio `accept`.
+   *
+   * Se usa para avisar ANTES de enviar. Sin esto, elegir un .zip de 40 MB se
+   * acepta sin decir nada, se sube, y el servidor contesta un error genérico
+   * cuando la persona ya se fue a hacer otra cosa.
+   */
+  function aceptados(nativo) {
+    var crudo = (nativo.getAttribute('accept') || '').toLowerCase();
+    if (crudo === '') { return null; }   // sin `accept`: entra cualquier cosa
+    return crudo.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  /** Si el archivo entra en lo que el campo acepta. */
+  function entraEnAccept(f, reglas) {
+    if (reglas === null) { return true; }
+    var nombre = (f.name || '').toLowerCase();
+    var tipo   = (f.type || '').toLowerCase();
+    for (var i = 0; i < reglas.length; i++) {
+      var r = reglas[i];
+      if (r.charAt(0) === '.') {
+        if (nombre.slice(-r.length) === r) { return true; }
+      } else if (r.slice(-2) === '/*') {
+        if (tipo.indexOf(r.slice(0, -1)) === 0) { return true; }
+      } else if (tipo === r) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function mejorarArchivo(nativo) {
     if (nativo.dataset.ihc === '1') { return; }
     nativo.dataset.ihc = '1';
+
+    var maxMb   = parseFloat(nativo.dataset.maxMb || '5');
+    var reglas  = aceptados(nativo);
+    var varios  = nativo.multiple;
 
     var envoltorio = el('div', 'ihc-archivo');
     nativo.parentNode.insertBefore(envoltorio, nativo);
@@ -795,24 +830,102 @@
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">' +
         '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>' +
       '</span>' +
-      '<span class="ihc-archivo__cta">Arrastrá los archivos o hacé clic para elegirlos</span>' +
-      '<span class="ihc-archivo__ayuda">' + (nativo.dataset.ayuda || 'JPG, PNG, PDF, Word, Excel o PowerPoint · hasta 5 MB cada uno') + '</span>';
+      '<span class="ihc-archivo__cta">' +
+        (varios ? 'Arrastrá los archivos o hacé clic para elegirlos'
+                : 'Arrastrá el archivo o hacé clic para elegirlo') +
+      '</span>' +
+      '<span class="ihc-archivo__ayuda">' +
+        (nativo.dataset.ayuda || 'JPG, PNG, PDF, Word, Excel o PowerPoint · hasta ' + maxMb + ' MB cada uno') +
+      '</span>';
     envoltorio.appendChild(zona);
 
     var lista = el('ul', 'ihc-archivo__lista');
     envoltorio.appendChild(lista);
+    var aviso = el('p', 'ihc-archivo__error');
+    aviso.setAttribute('role', 'alert');
+    aviso.hidden = true;
+    envoltorio.appendChild(aviso);
+
+    /* La lista que la persona ve y la que se va a enviar son la misma: se
+       guarda acá y se escribe en el input con un DataTransfer. Hace falta
+       porque el `files` de un input es de sólo lectura para agregar o quitar de
+       a uno, y porque elegir archivos dos veces REEMPLAZA la selección
+       anterior en lugar de sumarla — que no es lo que espera nadie que acaba de
+       elegir tres fotos y después se acuerda de la cuarta. */
+    var elegidos = [];
+
+    function sincronizar() {
+      try {
+        var dt = new DataTransfer();
+        elegidos.forEach(function (f) { dt.items.add(f); });
+        nativo.files = dt.files;
+      } catch (e) {
+        /* Algún navegador viejo no deja escribir `files`. Entonces se deja la
+           última selección nativa tal cual: se pierde el poder quitar uno,
+           pero el formulario sigue enviando archivos. */
+      }
+    }
+
+    function decir(msg) {
+      aviso.textContent = msg;
+      aviso.hidden = (msg === '');
+    }
 
     function pintar() {
       lista.innerHTML = '';
-      Array.prototype.forEach.call(nativo.files || [], function (f) {
+      elegidos.forEach(function (f, i) {
         var li = el('li', 'ihc-archivo__item');
         li.appendChild(el('span', 'ihc-archivo__item-nombre', f.name));
         li.appendChild(el('span', 'ihc-archivo__item-peso', pesoLegible(f.size)));
+        var quitar = el('button', 'ihc-archivo__quitar');
+        quitar.type = 'button';
+        quitar.innerHTML = '&times;';
+        quitar.setAttribute('aria-label', 'Quitar ' + f.name);
+        quitar.addEventListener('click', function () {
+          elegidos.splice(i, 1);
+          sincronizar();
+          pintar();
+          decir('');
+        });
+        li.appendChild(quitar);
         lista.appendChild(li);
       });
     }
 
-    nativo.addEventListener('change', pintar);
+    /** Suma archivos a la selección, avisando de los que no entran. */
+    function sumar(archivos) {
+      var rechazados = [];
+      Array.prototype.forEach.call(archivos || [], function (f) {
+        if (f.size > maxMb * 1024 * 1024) {
+          rechazados.push(f.name + ' (' + pesoLegible(f.size) + ', el límite es ' + maxMb + ' MB)');
+          return;
+        }
+        if (!entraEnAccept(f, reglas)) {
+          rechazados.push(f.name + ' (no es uno de los formatos que se aceptan)');
+          return;
+        }
+        var repetido = elegidos.some(function (a) { return a.name === f.name && a.size === f.size; });
+        if (repetido) { return; }
+        if (varios) { elegidos.push(f); } else { elegidos = [f]; }
+      });
+      sincronizar();
+      pintar();
+      decir(rechazados.length === 0 ? ''
+          : (rechazados.length === 1 ? 'No se pudo agregar ' : 'No se pudieron agregar ')
+            + rechazados.join('; ') + '.');
+    }
+
+    nativo.addEventListener('change', function () {
+      // Lo que el navegador acaba de poner en `files` todavía no pasó por el
+      // control, así que se lo saca de ahí y se vuelve a escribir.
+      var nuevos = Array.prototype.slice.call(nativo.files || []);
+      var yaEstaban = nuevos.length === elegidos.length && nuevos.every(function (f, i) {
+        return elegidos[i] && f.name === elegidos[i].name && f.size === elegidos[i].size;
+      });
+      if (yaEstaban) { pintar(); return; }   // es el `change` que disparó sincronizar()
+      sumar(nuevos);
+    });
+
     ['dragenter', 'dragover'].forEach(function (ev) {
       zona.addEventListener(ev, function (e) { e.preventDefault(); envoltorio.classList.add('is-arrastrando'); });
     });
@@ -820,11 +933,14 @@
       zona.addEventListener(ev, function (e) { e.preventDefault(); envoltorio.classList.remove('is-arrastrando'); });
     });
     zona.addEventListener('drop', function (e) {
-      if (e.dataTransfer && e.dataTransfer.files.length) {
-        nativo.files = e.dataTransfer.files;
-        nativo.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      if (e.dataTransfer && e.dataTransfer.files.length) { sumar(e.dataTransfer.files); }
     });
+
+    // Si la página llegó con archivos ya puestos (poco común, pero pasa al
+    // volver atrás en el navegador), se toman como la selección inicial.
+    if (nativo.files && nativo.files.length) {
+      elegidos = Array.prototype.slice.call(nativo.files);
+    }
     pintar();
   }
 

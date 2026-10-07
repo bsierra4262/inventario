@@ -134,7 +134,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <input type="text" id="n-subcategoria" name="subcategoria" class="ih-input" maxlength="100"
                  placeholder="(todas)">
         </div>
-        <div class="ih-field" style="align-self:end">
+        <div class="ih-field ih-field--al-pie">
           <button type="submit" class="ih-btn ih-btn--accent ih-btn--block">
             <i class="bi bi-plus-lg"></i> Agregar campo
           </button>
@@ -152,10 +152,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <thead>
               <tr>
                 <th>Campo</th>
-                <th style="width:150px">Tipo</th>
-                <th style="width:230px">Se muestra en</th>
-                <th style="width:100px">En uso</th>
-                <th style="width:220px">Acciones</th>
+                <th class="ih-table__angosta">Tipo</th>
+                <th>Se muestra en</th>
+                <th class="ih-table__angosta">En uso</th>
+                <th class="ih-table__acciones">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -165,7 +165,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
               $activo   = (int)$d['activo'] === 1;
               $ambito   = trim((string)($d['categoria'] ?? '') . ' › ' . (string)($d['subcategoria'] ?? ''), ' ›');
             ?>
-              <tr<?= $activo ? '' : ' style="opacity:.55"' ?>>
+              <tr<?= $activo ? '' : ' class="es-inactiva"' ?>>
                 <td>
                   <strong><?= htmlspecialchars((string)$d['etiqueta'], ENT_QUOTES, 'UTF-8') ?></strong>
                   <div class="ih-text-sm ih-text-muted"><code><?= htmlspecialchars((string)$d['clave']) ?></code></div>

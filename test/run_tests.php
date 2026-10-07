@@ -1641,7 +1641,10 @@ chequear('La etiqueta del campo apunta al campo',
 // Las dos secciones nuevas quedaron metidas DENTRO del `ih-card__header` de otra
 // tarjeta: en pantalla salían como una columna angosta con media tarjeta vacía.
 $ag = leer('inventario/agregar.php');
-preg_match_all('/<div class="ih-card"[^>]*>\s*<div class="ih-card__header">/', $ag, $mCards);
+// `class="ih-card ..."` y no `class="ih-card"` exacto: las tarjetas llevan
+// además su clase de separación, y con el patrón literal la prueba pasaba a
+// contar cero cabeceras y fallaba por no encontrar nada, no por estar mal.
+preg_match_all('/<div class="ih-card[ "][^>]*>\s*<div class="ih-card__header">/', $ag, $mCards);
 preg_match_all('/<div class="ih-card__body">/', $ag, $mBodies);
 chequear('Cada tarjeta del alta tiene cabecera y cuerpo propios',
     count($mCards[0]) === count($mBodies[0]) && count($mCards[0]) >= 6,
@@ -1854,19 +1857,54 @@ chequear('Ningún color escrito a mano fuera de la identidad visual',
     $cuantosColores . ' en: ' . implode(', ', array_keys($fueraPaleta))
     . ' — correr `php test/colores.php` para ver cuáles');
 
-// El acento es el que más se presta: queda bien en cualquier botón. Por eso
-// se cuenta — en APP Tickets se usa tres veces, siempre para confirmar una
-// creación o una aprobación.
-$conAcento = [];
+/* El verde es el color que más se presta: queda bien en cualquier botón, y por
+   eso se escapa. La regla que lo mantiene en su lugar sale de APP Tickets, que
+   es de donde viene el sistema visual: `btn-accent` está tres veces en todo el
+   proyecto y las tres son el botón que GUARDA —«Verificar», «Guardar gasto»,
+   «Guardar como pendiente»—. Nunca un enlace, nunca un filtro, nunca «Volver».
+
+   Dicho de otro modo: el violeta es el color de hacer algo y el verde el de
+   haber salido bien. Un enlace pintado de verde promete un resultado antes de
+   que pase nada.
+
+   La mitad mecánica de esa regla —y la que se rompía de verdad— es que el
+   acento no va en un `<a>`. Dos pantallas del panel tenían «Ir a Empresas»
+   pintado de verde, al lado de un «Guardar» del mismo color: el mismo verde
+   significaba dos cosas distintas en la misma pantalla. */
+$acentoEnEnlace = [];
 foreach (archivos_php() as $f) {
     $rel = substr($f, strlen(RAIZ) + 1);
-    if (str_starts_with($rel, 'test') || str_starts_with($rel, 'dashboard')) { continue; }
-    $n = substr_count((string)file_get_contents($f), 'ih-btn--accent');
-    if ($n > 0) { $conAcento[$rel] = $n; }
+    if (str_starts_with($rel, 'test')) { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (preg_match_all('/<a\b[^>]*ih-btn--(?:accent|success)[^>]*>/is', $src, $m)) {
+        $acentoEnEnlace[] = $rel . ' (x' . count($m[0]) . ')';
+    }
 }
-chequear('El acento verde queda para los botones que confirman, no para cualquiera',
-    array_sum($conAcento) <= 10,
-    array_sum($conAcento) . ' usos: ' . implode(', ', array_keys($conAcento)));
+chequear('El acento verde no pinta enlaces: es el color del botón que guarda',
+    $acentoEnEnlace === [], implode(', ', $acentoEnEnlace));
+
+/* Los tokens que componentes.css usa, resueltos en cada hoja.
+   La hoja es compartida, pero los tokens los define cada portal por separado:
+   si valen distinto, el componente compartido no comparte nada. Hoy difieren
+   36 — nueve a propósito (los `--ih-ctl-*`, porque el panel es más compacto) y
+   veintisiete que son deuda: el panel todavía corre con la escala de grises de
+   Tailwind y con un verde de estado que no es el de la marca.
+
+   Esta prueba no exige que la deuda esté pagada: exige que no crezca. Cada
+   diferencia está anotada una por una en test/tokens.php, y cuando se unifique
+   la paleta del panel se van saliendo de esa lista.
+
+   El detalle se ve con `php test/tokens.php`. */
+require_once RAIZ . '/test/tokens.php';
+$tokDiv    = tokens_divergentes();
+$tokNuevos = array_diff_key($tokDiv, TOKENS_QUE_DIFIEREN);
+$tokViejos = array_diff_key(TOKENS_QUE_DIFIEREN, $tokDiv);
+chequear('Ninguna diferencia NUEVA entre los tokens de los dos portales',
+    $tokNuevos === [],
+    implode(', ', array_keys($tokNuevos)) . ' — correr `php test/tokens.php`');
+chequear('La lista de diferencias no nombra tokens que ya coinciden',
+    $tokViejos === [],
+    'ya coinciden, sacarlos de TOKENS_QUE_DIFIEREN: ' . implode(', ', array_keys($tokViejos)));
 // ───────────────────────────────────────────────────────────────────────────
 grupo('FORMULARIOS · ejemplos');
 //

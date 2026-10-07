@@ -430,6 +430,31 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 }
 .ihc-archivo__item-nombre { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ihc-archivo__item-peso { flex: none; font-size: 11.5px; color: var(--ih-gray-400, #a7a3b4); font-variant-numeric: tabular-nums; }
+/* Quitar uno de la lista. Antes no se podía: elegir cuatro archivos y
+   arrepentirse del tercero obligaba a volver a elegir los cuatro. */
+.ihc-archivo__quitar {
+  flex: none;
+  width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; font-size: 16px; line-height: 1;
+  color: var(--ih-gray-400, #a7a3b4);
+  background: transparent; border: 0; border-radius: 6px;
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.ihc-archivo__quitar:hover {
+  color: var(--ih-danger, #a12a1e);
+  background: var(--ih-danger-bg, #fdeceb);
+}
+.ihc-archivo__quitar:focus-visible {
+  outline: 2px solid var(--ih-purple, #663399); outline-offset: 1px;
+}
+/* Lo que no se pudo agregar y por qué. Va acá y no en un alert() del
+   navegador: un alert() tapa la pantalla, se cierra y no queda nada escrito. */
+.ihc-archivo__error {
+  margin: .5rem 0 0;
+  font-size: var(--ih-text-sm, 12.5px); line-height: 1.5;
+  color: var(--ih-danger, #a12a1e);
+}
 
 /* ---------------------------------------------------------------------------
    5 bis. Piezas de las pantallas compartidas
@@ -744,10 +769,22 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   overflow-wrap: anywhere;
 }
 .ih-dato__valor.es-vacio { color: var(--ih-gray-300, #cfcbd8); font-weight: 400; }
+/* Dos columnas cuando los datos son muchos y cortos: el detalle de un activo
+   tiene treinta campos, y en una sola columna son treinta renglones de scroll
+   con media pantalla vacía a la derecha. */
+.ih-datos--dos-columnas { grid-template-columns: 1fr 1fr; column-gap: 1.75rem; }
+@media (max-width: 720px) {
+  .ih-datos--dos-columnas { grid-template-columns: 1fr; }
+}
 @media (max-width: 480px) {
   .ih-dato { flex-direction: column; gap: .15rem; }
   .ih-dato__valor { text-align: left; }
 }
+
+/* El cuerpo de una tarjeta chica, de las que van varias por fila. El relleno
+   grande de una tarjeta sola deja poco lugar para el contenido cuando la
+   tarjeta mide un tercio del ancho. */
+.ih-card__body--compacto { padding: 1rem; }
 
    7. Barra de título de una sección
    ---------------------------------------------------------------------------
@@ -766,6 +803,10 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-barra__titulo { margin: 0; font-size: var(--ih-text-lg, 16px); font-weight: 700; color: var(--ih-gray-800, #2b2836); }
 .ih-barra__ayuda { margin: .25rem 0 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d); }
 .ih-barra__acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
+/* El lado del texto. Hace falta nombrarlo cuando el título lleva insignias al
+   lado: sin él, el bloque no se encoge y las insignias empujan los botones
+   fuera de la fila. */
+.ih-barra__texto { flex: 1 1 18rem; min-width: 0; }
 @media (max-width: 640px) {
   .ih-barra__acciones { width: 100%; }
   .ih-barra__acciones > * { flex: 1 1 auto; justify-content: center; }
@@ -967,6 +1008,263 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   background: var(--ih-purple-50, #f2ecf9);
   border-radius: 50%;
 }
+
+/* ---------------------------------------------------------------------------
+   7 quinquies. Los patrones que se repetían en todas las pantallas
+   ---------------------------------------------------------------------------
+   Nada de acá es un componente nuevo: son las cinco o seis cosas que cada
+   pantalla volvía a escribir en un atributo `style`, con valores parecidos y
+   nunca iguales. Juntarlas no es sólo prolijidad — mientras cada pantalla
+   elegía su propio número, dos tablas vecinas tenían la columna de acciones de
+   distinto ancho y nadie lo notaba al leer el código de una sola.
+   --------------------------------------------------------------------------- */
+
+/* Un formulario que envuelve un solo botón, dentro de una fila de acciones.
+   Se escribía `style="display:inline"` para que no cortara la línea; adentro de
+   un contenedor flex eso no alcanza, porque el form sigue siendo una caja con
+   su propio margen. */
+.ih-acciones form,
+.ih-barra__acciones form,
+.ih-modal__footer form,
+.ih-alert__accion { display: flex; margin: 0; }
+
+/* Columnas de tabla que guardan un valor corto: una cantidad, un estado, un
+   tipo. Se les ponía un ancho fijo en píxeles, que con otra tipografía o en
+   otro idioma queda corto o sobra. «Lo que ocupe el contenido, sin partirlo»
+   dice lo mismo y no deja de ser cierto cuando algo cambia. */
+.ih-table__angosta { width: 1%; white-space: nowrap; }
+
+/* Una fila dada de baja. Sigue estando porque todavía se usa en activos
+   viejos, pero no es una de las opciones vigentes. */
+.ih-table tr.es-inactiva > td { opacity: .55; }
+
+/* Un campo que ocupa toda la fila de una grilla de formulario: la descripción
+   larga, las observaciones. */
+.ih-field--ancho { grid-column: 1 / -1; }
+/* Y uno que se alinea con el borde de abajo de sus vecinos — el botón que
+   acompaña a dos campos de distinta altura. */
+.ih-field--al-pie { align-self: end; }
+
+/* La sangría de un árbol (las ubicaciones). El nivel viaja en el HTML porque
+   es un dato, pero cuánto sangra cada nivel es una decisión de diseño y vive
+   acá: antes estaba como `padding-left:<?= $nivel * 22 ?>px` en el medio de
+   una celda. */
+.ih-arbol__nombre { padding-left: calc(var(--nivel, 0) * 1.4rem); }
+
+/* Un modal de confirmación, más angosto que uno con un formulario adentro. */
+dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
+
+/* Un enlace dentro de un aviso o de una ayuda. Heredaba el color del texto y
+   no se veía como enlace, así que cada pantalla le escribía el color a mano. */
+.ih-alert a,
+.ih-field__hint a,
+.ih-barra__ayuda a {
+  color: var(--ih-purple, #663399);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ih-alert a:hover,
+.ih-field__hint a:hover,
+.ih-barra__ayuda a:hover { text-decoration: none; }
+
+/* El asterisco de un campo obligatorio. Estaba escrito como
+   `<span style="color:var(--ih-danger)">*</span>` en nueve lugares de la misma
+   pantalla. Además del color, le faltaba lo que importa: un asterisco rojo no
+   le dice nada a quien usa un lector de pantalla, y «*» se lee «asterisco». */
+.ih-field__req { color: var(--ih-danger, #a12a1e); font-weight: 700; }
+/* Y su contrario: decir que un campo se puede dejar vacío. Va en peso normal
+   adentro de un rótulo que es negrita, porque es una aclaración y no parte del
+   nombre del campo. */
+.ih-field__opcional {
+  font-weight: 400;
+  color: var(--ih-gray-500, #6f6a7d);
+}
+/* El icono que acompaña al rótulo de un campo y cambia con lo que la persona
+   elige —la carpeta de la categoría en el alta de un activo—. */
+.ih-label__icono {
+  margin-left: .4rem;
+  color: var(--ih-purple, #663399);
+}
+
+/* Una tarjeta que hay que mirar antes que las de al lado: el aviso de que el
+   acceso con contraseña está deshabilitado, por ejemplo. La barra de color a
+   la izquierda la distingue sin cambiarle el fondo, que es lo que haría que
+   dejara de parecer una tarjeta. */
+.ih-card--destacada { border-left: 4px solid var(--ih-purple, #663399); }
+
+/* Un campo donde se pega algo que no es prosa: un JSON de credenciales, una
+   clave. En tipografía proporcional, «lI1» y «O0» son indistinguibles, y acá
+   un carácter de más rompe la conexión sin decir por qué. */
+.ih-input--codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px; line-height: 1.5;
+}
+
+/* La cajita gris que resume lo que ya está configurado. Tres pantallas la
+   armaban con cinco declaraciones cada una (fondo, borde, radio, relleno,
+   margen) y un título con otras cuatro. */
+.ih-resumen {
+  background: var(--ih-gray-50, #faf9fc);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-md, 10px);
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+}
+/* Dentro de la caja de resumen el fileteado no hace falta: el fondo gris ya
+   separa el bloque de lo que hay arriba. */
+.ih-resumen .ih-seccion__titulo { margin-top: 0; padding-bottom: 0; border-bottom: 0; }
+.ih-resumen__fila {
+  font-size: var(--ih-text-sm, 12.5px);
+  color: var(--ih-gray-700, #434050);
+  display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+}
+.ih-resumen__fila + .ih-resumen__fila { margin-top: .3rem; }
+
+/* Una tarjeta adentro de otra: cada puerto de red dentro del bloque de red,
+   cada componente dentro del de componentes. Sin sombra y con el título más
+   chico, porque si se ve igual que la que la contiene se pierde la jerarquía y
+   la pantalla parece una lista de secciones sueltas. */
+.ih-card--anidada { box-shadow: none; }
+.ih-card--anidada .ih-card__title { font-size: var(--ih-text-base, 14px); }
+
+/* Una nota que alguien escribió sobre un activo.
+   Estaba dibujada como `.ih-alert--info`, que es el aviso celeste del sistema:
+   «la columna role es de tipo ENUM», «el archivo se genera en UTF-8». Una nota
+   que escribió una persona —«la fuente hace ruido desde marzo»— no es un
+   mensaje del sistema, y pintarla igual hace que se lea como si lo fuera.
+   Por eso tiene su propia forma, y el texto respeta los renglones que quien la
+   escribió puso a mano. */
+.ih-nota {
+  display: flex; align-items: flex-start; gap: .65rem;
+  padding: .8rem 1rem;
+  background: var(--ih-gray-50, #faf9fc);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-left: 3px solid var(--ih-purple-200, #d0bfea);
+  border-radius: var(--ih-radius-md, 10px);
+  margin-bottom: .75rem;
+}
+.ih-nota > .bi { flex: none; margin-top: .1rem; color: var(--ih-gray-400, #a7a3b4); }
+.ih-nota__cuerpo { flex: 1 1 auto; min-width: 0; }
+/* `pre-wrap`: si alguien escribió una lista con saltos de línea, se respeta.
+   Sin esto, cuatro renglones se ven como un párrafo corrido. */
+.ih-nota__texto {
+  margin: 0;
+  font-size: var(--ih-text-base, 14px); line-height: 1.55;
+  color: var(--ih-gray-800, #2b2836);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.ih-nota__firma {
+  margin: .3rem 0 0;
+  font-size: var(--ih-text-xs, 11px);
+  color: var(--ih-gray-500, #6f6a7d);
+}
+
+/* Dos columnas de tarjetas que en pantalla angosta pasan a una. Es la misma
+   idea que `.ih-opciones`, pero para bloques que no son una elección: el
+   detalle de un activo, que tiene datos a la izquierda y accesos a la derecha.
+   El corte es por ancho y no por cantidad de columnas, así que no hay que
+   acordarse de cambiarlo si mañana se agrega una tercera. */
+.ih-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Una aclaración chica debajo de un botón ancho, centrada con él. */
+.ih-pie-centrado {
+  margin: .4rem 0 0;
+  text-align: center;
+  font-size: var(--ih-text-xs, 11px);
+  color: var(--ih-gray-400, #a7a3b4);
+}
+
+/* «Acá no hay nada» dentro de una tarjeta chica —distinto de `.ih-empty`, que
+   es el vacío de una pantalla entera y ocupa mucho más. */
+.ih-vacio-chico {
+  padding: .5rem 0;
+  text-align: center;
+  font-size: var(--ih-text-sm, 12.5px);
+  color: var(--ih-gray-400, #a7a3b4);
+}
+.ih-vacio-chico > .bi {
+  display: block;
+  margin-bottom: .4rem;
+  font-size: 1.75rem;
+}
+
+/* ── El rótulo de una sección ────────────────────────────────────────────────
+   Una línea en mayúsculas chicas con un filete abajo, para partir una pantalla
+   larga en bloques: «Datos principales», «Garantía y fechas», «Lo que ya está
+   configurado».
+
+   Estaba escrito tres veces, con los mismos valores y tres nombres distintos:
+   `.edit-section-title` en backend/edit.php, `.vd-section-title` en
+   backend/view_details.php y `.ih-resumen__titulo` en componentes.css. Las dos
+   primeras, además, dentro de pantallas COMPARTIDAS por los dos portales, así
+   que en el panel se apoyaban en tokens que valen otra cosa. ─────────────── */
+.ih-seccion__titulo {
+  margin: 1.25rem 0 .75rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  font-size: var(--ih-text-xs, 11px); font-weight: 800;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ih-gray-500, #6f6a7d);
+}
+.ih-seccion__titulo:first-child { margin-top: 0; }
+
+/* ---------------------------------------------------------------------------
+   7 sexies. Utilidades de disposición
+   ---------------------------------------------------------------------------
+   Poner algo en fila, separarlo, centrarlo, darle aire arriba o abajo. Nada de
+   esto depende del portal: una fila es una fila, y 8 px son 8 px en los dos.
+
+   Estaban escritas en las DOS hojas, y no con el mismo alcance: app.css tenía
+   la escala de márgenes completa (1 a 6) y el panel sólo los pares; app.css
+   tenía `.ih-justify-center` y `.ih-gap-1` y el panel no. Eso no se nota
+   mientras cada pantalla vive en un portal, pero hay pantallas compartidas
+   —backend/view_details.php, backend/edit.php— y ahí una clase que existe en
+   una sola hoja simplemente no hace nada en el otro portal: la misma pantalla,
+   con los bloques pegados o sin centrar, y sin ningún error que lo diga.
+
+   Lo que NO está acá, a propósito: los tamaños de texto y los colores. Esos sí
+   difieren entre portales —el panel todavía arrastra otra escala— y mientras
+   difieran tienen que seguir viniendo de la hoja de cada uno. Ver
+   test/tokens.php, que lleva la cuenta.
+   --------------------------------------------------------------------------- */
+.ih-flex        { display: flex; }
+.ih-flex-col    { flex-direction: column; }
+.ih-col         { display: flex; flex-direction: column; }
+.ih-fw          { flex-wrap: wrap; }
+
+.ih-items-center { align-items: center; }
+.ih-items-start  { align-items: flex-start; }
+.ih-items-end    { align-items: flex-end; }
+
+.ih-justify-between { justify-content: space-between; }
+.ih-justify-center  { justify-content: center; }
+.ih-justify-end     { justify-content: flex-end; }
+
+.ih-gap-1 { gap: .25rem; }  .ih-gap-2 { gap: .5rem; }   .ih-gap-3 { gap: .75rem; }
+.ih-gap-4 { gap: 1rem; }    .ih-gap-5 { gap: 1.25rem; } .ih-gap-6 { gap: 1.5rem; }
+
+.ih-mt-0 { margin-top: 0 !important; }
+.ih-mt-1 { margin-top: .25rem; }  .ih-mt-2 { margin-top: .5rem; }   .ih-mt-3 { margin-top: .75rem; }
+.ih-mt-4 { margin-top: 1rem; }    .ih-mt-5 { margin-top: 1.25rem; } .ih-mt-6 { margin-top: 1.5rem; }
+
+.ih-mb-0 { margin-bottom: 0 !important; }
+.ih-mb-1 { margin-bottom: .25rem; }  .ih-mb-2 { margin-bottom: .5rem; }   .ih-mb-3 { margin-bottom: .75rem; }
+.ih-mb-4 { margin-bottom: 1rem; }    .ih-mb-5 { margin-bottom: 1.25rem; } .ih-mb-6 { margin-bottom: 1.5rem; }
+
+.ih-text-center { text-align: center; }
+.ih-text-right  { text-align: right; }
+.ih-text-left   { text-align: left; }
+.ih-text-nowrap { white-space: nowrap; }
+
+.ih-text-bold     { font-weight: 700; }
+.ih-text-semibold { font-weight: 600; }
+.ih-fw-600 { font-weight: 600; }
+.ih-fw-700 { font-weight: 700; }
 
 /* ---------------------------------------------------------------------------
    8. Pastillas de selección y lista de permisos

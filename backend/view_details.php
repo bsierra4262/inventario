@@ -104,8 +104,9 @@ if (!function_exists('vd_row')) {
 function vd_row(string $label, mixed $valor, string $icon = ''): void {
     $v = vd_val($valor);
     if ($v === '') return;
-    $ic = $icon ? "<i class=\"bi bi-{$icon} me-1\"></i>" : '';
-    echo "<div class=\"vd-row\"><span class=\"vd-label\">{$ic}{$label}</span><span class=\"vd-value\">" . htmlspecialchars($v, ENT_QUOTES) . "</span></div>\n";
+    $ic = $icon ? "<i class=\"bi bi-{$icon}\"></i> " : '';
+    echo "<div class=\"ih-dato\"><span class=\"ih-dato__label\">{$ic}{$label}</span>"
+       . "<span class=\"ih-dato__valor\">" . htmlspecialchars($v, ENT_QUOTES) . "</span></div>\n";
 }
 }
 
@@ -119,70 +120,15 @@ $estadoBadge = match($estado) {
 $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1;
 ?>
 
-<style>
-.vd-section { margin-bottom: 1.5rem; }
-.vd-section-title {
-    font-size: var(--ih-text-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--ih-gray-500);
-    margin-bottom: .75rem;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid var(--ih-gray-100);
-}
-.vd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-@media(max-width:640px){ .vd-grid { grid-template-columns: 1fr; } }
-.vd-row {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: .6rem .75rem;
-    border-bottom: 1px solid var(--ih-gray-100);
-}
-.vd-row:nth-child(odd)  { background: transparent; }
-.vd-row:nth-child(even) { background: var(--ih-gray-50); }
-.vd-label {
-    font-size: var(--ih-text-xs);
-    font-weight: 600;
-    color: var(--ih-gray-500);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-.vd-value {
-    font-size: var(--ih-text-sm);
-    color: var(--ih-gray-800);
-    word-break: break-word;
-}
-.vd-drive-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    background: #fff;
-    border: 2px solid var(--ih-gray-200);
-    color: var(--ih-gray-800);
-    border-radius: var(--ih-radius-full);
-    font-weight: 600;
-    font-size: var(--ih-text-sm);
-    text-decoration: none;
-    transition: border-color .15s, box-shadow .15s, transform .05s;
-}
-.vd-drive-btn:hover {
-    border-color: var(--ih-primary);
-    box-shadow: 0 4px 12px rgba(102, 51, 153, .15);
-    color: var(--ih-gray-800);
-    text-decoration: none;
-}
-.vd-drive-btn:active { transform: translateY(1px); }
-</style>
+
 
 <!-- Encabezado del activo -->
-<div class="ih-card" style="margin-bottom:1.5rem;">
-  <div class="ih-card__body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:0;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-        <h2 style="margin:0;font-size:var(--ih-text-xl);font-weight:700;color:var(--ih-gray-800);">
+<div class="ih-card ih-mb-5">
+  <div class="ih-card__body">
+    <div class="ih-barra">
+    <div class="ih-barra__texto">
+      <div class="ih-flex ih-gap-2 ih-items-center ih-fw ih-mb-1">
+        <h2 class="ih-barra__titulo">
           <?= htmlspecialchars($nombreModelo, ENT_QUOTES) ?>
         </h2>
         <?php if ($estado): ?>
@@ -192,7 +138,7 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
           <span class="ih-badge ih-badge--neutral"><i class="bi bi-archive"></i> Archivado</span>
         <?php endif; ?>
       </div>
-      <p style="margin:0;color:var(--ih-gray-500);font-size:var(--ih-text-sm);">
+      <p class="ih-barra__ayuda">
         <?php if ($producto['marca']): ?>
           <i class="bi bi-tag"></i> <?= htmlspecialchars($producto['marca'], ENT_QUOTES) ?> &nbsp;·&nbsp;
         <?php endif; ?>
@@ -208,23 +154,28 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
 
     <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
       <?php $cloudProv = cloud_provider_actual($conn); ?>
-      <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
-         target="_blank" rel="noopener" class="vd-drive-btn">
-        <?= cloud_icon_svg($cloudProv, 18) ?> Ver archivos en Drive
-      </a>
+      <div class="ih-barra__acciones">
+        <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
+           target="_blank" rel="noopener" class="ih-btn ih-btn--google">
+          <?= cloud_icon_svg($cloudProv, 18) ?> Ver archivos en Drive
+        </a>
+      </div>
     <?php endif; ?>
+    </div>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+<?php /* Dos columnas de tarjetas, que en pantalla angosta pasan a una.
+         Es la misma grilla que usan las tarjetas de accion. */ ?>
+<div class="ih-columnas">
 
   <!-- Columna izquierda -->
   <div>
     <!-- Datos principales -->
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-info-circle"></i> Datos principales</div>
-        <div class="vd-grid">
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-info-circle"></i> Datos principales</h3>
+        <div class="ih-datos ih-datos--dos-columnas">
           <?php
           vd_row('Asignado a',   $producto['asignado_a'],  'person');
           vd_row('Descripción',  $producto['descripcion'], 'text-paragraph');
@@ -237,14 +188,14 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     </div>
 
     <!-- Estado y valores -->
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
-        <div class="vd-grid">
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-currency-dollar"></i> Estado y valores</h3>
+        <div class="ih-datos ih-datos--dos-columnas">
           <?php
           vd_row('Cantidad',   $producto['cantidad'],  'boxes');
           if (!empty($producto['valor_usd']) && (float)$producto['valor_usd'] > 0) {
-              echo "<div class=\"vd-row\"><span class=\"vd-label\"><i class=\"bi bi-currency-dollar me-1\"></i>Valor USD</span><span class=\"vd-value\">\$" . number_format((float)$producto['valor_usd'], 2) . "</span></div>\n";
+              vd_row('Valor USD', '$' . number_format((float)$producto['valor_usd'], 2), 'currency-dollar');
           }
           ?>
         </div>
@@ -265,10 +216,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     vd_row('Fecha egreso',     $producto['fecha_egreso'],     'calendar-minus');
     $htmlGarantia = trim(ob_get_clean());
     if ($htmlGarantia !== ''): ?>
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
-        <div class="vd-grid"><?= $htmlGarantia ?></div>
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-calendar3"></i> Garantía y fechas</h3>
+        <div class="ih-datos ih-datos--dos-columnas"><?= $htmlGarantia ?></div>
       </div>
     </div>
     <?php endif; ?>
@@ -304,10 +255,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     vd_row('Comentarios',         $ic['comentarios'] ?? null, 'chat-left-text');
     $htmlInfocom = trim(ob_get_clean());
     if ($htmlInfocom !== ''): ?>
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-receipt"></i> Compra y administración</div>
-        <div class="vd-grid"><?= $htmlInfocom ?></div>
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-receipt"></i> Compra y administración</h3>
+        <div class="ih-datos ih-datos--dos-columnas"><?= $htmlInfocom ?></div>
       </div>
     </div>
     <?php endif; ?>
@@ -335,10 +286,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     ], fn($v) => $v !== '');
 
     if ($hayExtras): ?>
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-sliders"></i> Detalles específicos</div>
-        <div class="vd-grid">
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-sliders"></i> Detalles específicos</h3>
+        <div class="ih-datos ih-datos--dos-columnas">
           <?php
           vd_row('Tipo Patchcord',      $producto['patchcord_tipo'],     'ethernet');
           vd_row('Longitud Patchcord',  $producto['patchcord_longitud'],  'rulers');
@@ -375,10 +326,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
         if ($v !== '') { $propios[] = [$dc, $v]; }
     }
     if ($propios): ?>
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-sliders"></i> Detalles de la categoría</div>
-        <div class="vd-grid">
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-sliders"></i> Detalles de la categoría</h3>
+        <div class="ih-datos ih-datos--dos-columnas">
           <?php foreach ($propios as [$dc, $v]) {
               $mostrar = (string)$dc['tipo'] === 'booleano' ? ($v === '1' ? 'Sí' : 'No') : $v;
               vd_row((string)$dc['etiqueta'], $mostrar, 'dot');
@@ -389,22 +340,22 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     <?php endif; ?>
 
     <!-- Drive -->
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-cloud"></i> Archivos adjuntos</div>
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-cloud"></i> Archivos adjuntos</div>
         <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
           <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
-             target="_blank" rel="noopener" class="vd-drive-btn" style="width:100%;justify-content:center;">
+             target="_blank" rel="noopener" class="ih-btn ih-btn--google ih-btn--block">
             <?= cloud_icon_svg($cloudProv ?? cloud_provider_actual($conn), 22) ?>
             Ver archivos de este activo en Drive
           </a>
-          <div style="font-size:var(--ih-text-xs);color:var(--ih-gray-400);text-align:center;margin-top:6px;">
-            Abre la carpeta específica de este activo (<?= htmlspecialchars($producto['servis_tag'] ?: 'activo_'.$producto_id, ENT_QUOTES) ?>)
-          </div>
+          <p class="ih-pie-centrado">
+            Abre la carpeta de este activo (<?= htmlspecialchars($producto['servis_tag'] ?: 'activo_' . $producto_id, ENT_QUOTES) ?>)
+          </p>
         <?php else: ?>
-          <div style="color:var(--ih-gray-400);font-size:var(--ih-text-sm);text-align:center;padding:.5rem 0;">
-            <i class="bi bi-cloud-slash" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
-            Sin carpeta Drive asignada
+          <div class="ih-vacio-chico">
+            <i class="bi bi-cloud-slash"></i>
+            Todavía no tiene una carpeta de Drive
           </div>
         <?php endif; ?>
       </div>
@@ -430,10 +381,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     $fNot   = documentos_disponible($conn) ? notas_de_activo($conn, $producto_id) : [];
     $fResumenSo = so_resumen($fSo);
     ?>
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;">
-        <div class="vd-section-title"><i class="bi bi-clipboard-data"></i> Ficha técnica</div>
-        <div class="vd-grid">
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-clipboard-data"></i> Ficha técnica</h3>
+        <div class="ih-datos ih-datos--dos-columnas">
           <?php
             vd_row('Sistema operativo', $fResumenSo !== '' ? $fResumenSo : '—', 'dot');
             vd_row('Componentes', count($fComp) > 0 ? count($fComp) . ' cargados' : '—', 'dot');
@@ -444,17 +395,16 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
             vd_row('Notas', count($fNot) > 0 ? count($fNot) : '—', 'dot');
           ?>
         </div>
-        <a href="/inventario/ficha.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--outline ih-btn--block"
-           style="margin-top:12px">
+        <a href="/inventario/ficha.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--outline ih-btn--block ih-mt-3">
           <i class="bi bi-clipboard-data"></i> Ver y cargar la ficha completa
         </a>
       </div>
     </div>
 
     <!-- Acciones -->
-    <div class="ih-card vd-section">
-      <div class="ih-card__body" style="padding:1rem;display:flex;flex-direction:column;gap:10px;">
-        <div class="vd-section-title"><i class="bi bi-lightning"></i> Acciones</div>
+    <div class="ih-card ih-mb-5">
+      <div class="ih-card__body ih-card__body--compacto ih-col ih-gap-2">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-lightning"></i> Acciones</div>
         <?php if ($_canEdit): ?>
         <a href="/backend/edit.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--primary ih-btn--block">
           <i class="bi bi-pencil-square"></i> Editar activo

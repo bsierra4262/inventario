@@ -121,16 +121,16 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card__body">
 
         <!-- Alta -->
-        <form method="post" action="/backend/catalogos_crud.php" class="ih-flex ih-gap-2 ih-fw ih-mb-5">
+        <form method="post" action="/backend/catalogos_crud.php" class="ih-buscador ih-mb-5">
           <?php csrfInput('catalogos_abm'); ?>
           <input type="hidden" name="accion" value="agregar">
           <input type="hidden" name="tipo" value="<?= htmlspecialchars($tipo) ?>">
           <input type="text" name="valor" class="ih-input" required maxlength="255"
-                 style="flex:1 1 260px"
                  placeholder="<?= $tipo === 'ubicacion' ? 'Ej: Depósito Central, Oficina 2, Rack A3…' : 'Ej: Soporte Técnico, Brian Sierra, Administración…' ?>">
           <?php if (catalogo_es_arbol($tipo)): ?>
             <?php /* Un árbol necesita saber de quién cuelga el nodo nuevo. */ ?>
-            <select name="padre_id" class="ih-input" style="flex:0 1 260px" title="Dentro de qué ubicación">
+            <label class="ih-sr-only" for="padre_id">Dentro de qué ubicación</label>
+            <select name="padre_id" id="padre_id" class="ih-select">
               <option value="">— Como ubicación principal —</option>
               <?php foreach ($filas as $op): ?>
                 <option value="<?= (int)$op['id'] ?>">
@@ -159,9 +159,9 @@ require __DIR__ . '/../includes/layout/head.php';
               <thead>
                 <tr>
                   <th>Valor</th>
-                  <th style="width:110px">En uso</th>
-                  <th style="width:110px">Estado</th>
-                  <th style="width:300px">Acciones</th>
+                  <th class="ih-table__angosta">En uso</th>
+                  <th class="ih-table__angosta">Estado</th>
+                  <th class="ih-table__acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,8 +174,9 @@ require __DIR__ . '/../includes/layout/head.php';
                     $nivel  = (int)($f['nivel'] ?? 0); ?>
                 <tr>
                   <td>
-                    <form method="post" action="/backend/catalogos_crud.php" class="ih-flex ih-gap-2 ih-items-center"
-                          style="padding-left:<?= $nivel * 22 ?>px">
+                    <form method="post" action="/backend/catalogos_crud.php"
+                          class="ih-flex ih-gap-2 ih-items-center ih-arbol__nombre"
+                          style="--nivel: <?= $nivel ?>">
                       <?php csrfInput('catalogos_abm'); ?>
                       <input type="hidden" name="accion" value="renombrar">
                       <input type="hidden" name="tipo" value="<?= htmlspecialchars($tipo) ?>">
@@ -183,9 +184,10 @@ require __DIR__ . '/../includes/layout/head.php';
                       <?php if ($nivel > 0): ?>
                         <i class="bi bi-arrow-return-right ih-text-muted" title="<?= htmlspecialchars((string)($f['ruta'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"></i>
                       <?php endif; ?>
-                      <input type="text" name="valor" class="ih-input" maxlength="255"
-                             value="<?= htmlspecialchars((string)$f['valor'], ENT_QUOTES, 'UTF-8') ?>"
-                             style="min-width:180px">
+                      <label class="ih-sr-only" for="valor-<?= (int)$f['id'] ?>">Nombre</label>
+                      <input type="text" name="valor" id="valor-<?= (int)$f['id'] ?>" class="ih-input"
+                             maxlength="255"
+                             value="<?= htmlspecialchars((string)$f['valor'], ENT_QUOTES, 'UTF-8') ?>">
                       <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Guardar el nuevo nombre">
                         <i class="bi bi-check-lg"></i>
                       </button>
@@ -203,9 +205,9 @@ require __DIR__ . '/../includes/layout/head.php';
                       <?= $activo ? 'Activo' : 'De baja' ?>
                     </span>
                   </td>
-                  <td>
-                    <div class="ih-flex ih-gap-2 ih-fw">
-                      <form method="post" action="/backend/catalogos_crud.php" style="display:inline">
+                  <td class="ih-table__acciones">
+                    <div class="ih-acciones">
+                      <form method="post" action="/backend/catalogos_crud.php">
                         <?php csrfInput('catalogos_abm'); ?>
                         <input type="hidden" name="accion" value="<?= $activo ? 'desactivar' : 'activar' ?>">
                         <input type="hidden" name="tipo" value="<?= htmlspecialchars($tipo) ?>">
@@ -217,7 +219,7 @@ require __DIR__ . '/../includes/layout/head.php';
                       </form>
 
                       <?php if ($usos === 0): ?>
-                        <form method="post" action="/backend/catalogos_crud.php" style="display:inline"
+                        <form method="post" action="/backend/catalogos_crud.php"
                               onsubmit="return confirm('¿Eliminar «<?= htmlspecialchars(addslashes((string)$f['valor'])) ?>» definitivamente?')">
                           <?php csrfInput('catalogos_abm'); ?>
                           <input type="hidden" name="accion" value="eliminar">
@@ -228,7 +230,7 @@ require __DIR__ . '/../includes/layout/head.php';
                           </button>
                         </form>
                       <?php else: ?>
-                        <span class="ih-text-xs ih-text-muted" style="align-self:center">
+                        <span class="ih-text-xs ih-text-muted">
                           No se puede eliminar mientras haya activos usándolo
                         </span>
                       <?php endif; ?>

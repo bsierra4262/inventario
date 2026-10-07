@@ -773,29 +773,15 @@ input:disabled, select:disabled, textarea:disabled {
 /* ---------------------------------------------------------------------
    16. UTILITIES
    --------------------------------------------------------------------- */
-.ih-mt-0  { margin-top: 0 !important; }
-.ih-mt-2  { margin-top: var(--ih-space-2); }
-.ih-mt-4  { margin-top: var(--ih-space-4); }
-.ih-mt-6  { margin-top: var(--ih-space-6); }
-.ih-mb-0  { margin-bottom: 0 !important; }
-.ih-mb-2  { margin-bottom: var(--ih-space-2); }
-.ih-mb-4  { margin-bottom: var(--ih-space-4); }
-.ih-mb-6  { margin-bottom: var(--ih-space-6); }
-.ih-text-center { text-align: center; }
+/* Las utilidades de disposicion se fueron a componentes.css: estaban aca y en
+   app.css, y con distinto alcance. Ver componentes.css, seccion 7 sexies.
+   Lo que queda aca es lo que SI depende del portal: los tamaños de texto y los
+   colores, que el panel todavia resuelve con otra escala. */
 .ih-text-muted  { color: var(--ih-gray-500); }
 .ih-text-purple { color: var(--ih-purple); }
 .ih-text-green  { color: var(--ih-green); }
 .ih-text-sm     { font-size: var(--ih-text-sm); }
 .ih-text-xs     { font-size: var(--ih-text-xs); }
-.ih-fw-600      { font-weight: 600; }
-.ih-fw-700      { font-weight: 700; }
-.ih-flex        { display: flex; }
-.ih-flex-col    { flex-direction: column; }
-.ih-items-center{ align-items: center; }
-.ih-justify-between { justify-content: space-between; }
-.ih-gap-2 { gap: var(--ih-space-2); }
-.ih-gap-3 { gap: var(--ih-space-3); }
-.ih-gap-4 { gap: var(--ih-space-4); }
 .ih-hidden-mobile { display: inherit; }
 .ih-hidden-desktop { display: none; }
 @media (max-width: 767px) {

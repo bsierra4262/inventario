@@ -163,8 +163,16 @@ function texto_visible(string $src): array {
                 foreach (preg_split('/\R/', strip_tags($parte)) ?: [] as $l) {
                     $l = trim(html_entity_decode($l, ENT_QUOTES, 'UTF-8'));
                     // Un atributo partido por una etiqueta PHP llega hasta aca
-                    // como si fuera texto: " href="?tab=amortizacion">
+                    // como si fuera texto. Pasa de dos formas:
+                    //
+                    //   el principio   " href="?tab=amortizacion">
+                    //   y el final     ih-alert--accion">
+                    //
+                    // La segunda es la que se escapaba. Un nombre de clase no
+                    // es texto que alguien lea, pero «accion» se parece a una
+                    // palabra sin acento y se reportaba como falta de ortografia.
                     if ($l === '' || preg_match('/\w+\s*=\s*["\']/', $l)) { continue; }
+                    if (preg_match('/["\']\s*\/?>$/', $l)) { continue; }
                     $frag[] = $l;
                 }
             }

@@ -178,8 +178,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
                       ? htmlspecialchars((string)$c['moneda'] . ' ' . number_format((float)$c['costo'], 2, ',', '.'))
                       : '—' ?></td>
               <?php if ($puedeEditar): ?>
-              <td class="ih-text-right">
-                <form method="post" action="/backend/contratos_crud.php" style="display:inline"
+              <td class="ih-table__acciones">
+                <form method="post" action="/backend/contratos_crud.php"
                       onsubmit="return confirm('¿Dar de baja el contrato «<?= htmlspecialchars(addslashes((string)$c['nombre']), ENT_QUOTES) ?>»? Queda guardado, sale de la lista.')">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
                   <input type="hidden" name="accion" value="contrato_baja">
@@ -266,8 +266,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <label class="ih-label" for="ct-nota">Nota</label>
           <input class="ih-input" id="ct-nota" name="nota" placeholder="Ej: cubre los dos servidores del rack A3">
         </div>
-        <div class="ih-field" style="grid-column:1/-1">
-          <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar contrato</button>
+        <div class="ih-field ih-field--ancho">
+          <button type="submit" class="ih-btn ih-btn--accent"><i class="bi bi-plus-lg"></i> Agregar contrato</button>
         </div>
       </form>
       <?php endif; ?>
@@ -301,8 +301,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
               <td class="ih-text-sm"><?= htmlspecialchars((string)($p['telefono'] ?? '')) ?></td>
               <td class="ih-text-sm"><?= htmlspecialchars((string)($p['email'] ?? '')) ?></td>
               <?php if ($puedeEditar): ?>
-              <td class="ih-text-right">
-                <form method="post" action="/backend/contratos_crud.php" style="display:inline"
+              <td class="ih-table__acciones">
+                <form method="post" action="/backend/contratos_crud.php"
                       onsubmit="return confirm('¿Dar de baja a «<?= htmlspecialchars(addslashes((string)$p['nombre']), ENT_QUOTES) ?>»?')">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
                   <input type="hidden" name="accion" value="proveedor_baja">
@@ -352,8 +352,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <label class="ih-label" for="pv-dir">Dirección</label>
           <input class="ih-input" id="pv-dir" name="direccion" placeholder="Ej: Av. Corrientes 1234, CABA">
         </div>
-        <div class="ih-field" style="grid-column:1/-1">
-          <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar proveedor</button>
+        <div class="ih-field ih-field--ancho">
+          <button type="submit" class="ih-btn ih-btn--accent"><i class="bi bi-plus-lg"></i> Agregar proveedor</button>
         </div>
       </form>
       <?php endif; ?>

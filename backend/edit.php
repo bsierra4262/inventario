@@ -709,23 +709,7 @@ $topbar_actions  =
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
-<style>
-/* .ih-edit-grid y .ih-edit-grid-3 viven en assets/css/app.css, con la escala
-   responsive completa: 3 -> 2 columnas en notebooks y tablets, y 1 en telefono.
-   Antes estaban aca y saltaban de 3 a 1 de golpe recien en 640px. */
-.edit-full { grid-column: 1 / -1; }
-.edit-section-title {
-    font-size: var(--ih-text-xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--ih-gray-500);
-    margin: 1.25rem 0 .75rem;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid var(--ih-gray-100);
-}
-.edit-section-title:first-child { margin-top: 0; }
-</style>
+
 <div class="ih-app">
 <?php
 require __DIR__ . '/../includes/layout/sidebar_tenant.php';
@@ -739,7 +723,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token_edit, ENT_QUOTES, 'UTF-8') ?>">
 
         <!-- ── Datos principales ─────────────────────────────────────── -->
-        <div class="edit-section-title"><i class="bi bi-person-badge"></i> Datos principales</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-person-badge"></i> Datos principales</div>
         <div class="ih-edit-grid">
           <div class="ih-field">
             <label class="ih-field__label" for="f-asignado_a">Asignado a</label>
@@ -760,7 +744,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
             <input type="text" class="ih-input" name="servis_tag" id="servis_tag"
                    value="<?= htmlspecialchars($producto['servis_tag'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
           </div>
-          <div class="ih-field edit-full">
+          <div class="ih-field ih-field--ancho">
             <label class="ih-field__label">Descripción</label>
             <textarea class="ih-input" name="descripcion" rows="3"
                       placeholder="Ej: Notebook de la gerencia. Tiene la batería cambiada en 2025."><?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
@@ -768,7 +752,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- ── Categorización ────────────────────────────────────────── -->
-        <div class="edit-section-title"><i class="bi bi-folder2-open"></i> Categorización</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-folder2-open"></i> Categorización</div>
         <div class="ih-edit-grid">
           <div class="ih-field">
             <label class="ih-field__label">Categoría <span class="req">*</span> <i id="icon-categoria" class="bi bi-folder"></i></label>
@@ -782,19 +766,19 @@ require __DIR__ . '/../includes/layout/topbar.php';
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="ih-field" id="subcategoria-container" style="display:none;">
+          <div class="ih-field" id="subcategoria-container" hidden>
             <label class="ih-field__label">Subcategoría <i id="icon-subcategoria" class="bi bi-folder"></i></label>
             <select id="subcategoria-select" name="subcategoria" class="ih-select">
               <option value="">Seleccione...</option>
             </select>
           </div>
-          <div class="ih-field" id="subsoftware-container" style="display:none;">
+          <div class="ih-field" id="subsoftware-container" hidden>
             <label class="ih-field__label">Detalle Licencia/Plataforma</label>
             <select id="subsoftware-select" name="subsoftware" class="ih-select">
               <option value="">Seleccione...</option>
             </select>
           </div>
-          <div class="ih-field" id="subsoftware-otros-container" style="display:none;">
+          <div class="ih-field" id="subsoftware-otros-container" hidden>
             <label class="ih-field__label">Detalle "Otros"</label>
             <input type="text" name="subsoftware_otros" id="subsoftware-otros-input" class="ih-input"
                    value="<?= htmlspecialchars($producto['subsoftware_otros'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
@@ -810,7 +794,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- ── Extras por subcategoría ─────────────────────────────── -->
-        <div id="patchcord-extra" style="display:none;">
+        <div id="patchcord-extra" hidden>
           <div class="ih-edit-grid">
             <div class="ih-field" id="patchcord-categoria">
               <label class="ih-field__label">Tipo de Patchcord</label>
@@ -821,7 +805,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 <option value="FTP" <?= ($producto['patchcord_tipo']??'')==='FTP'?'selected':'';?>>FTP</option>
               </select>
             </div>
-            <div class="ih-field" id="patchcord-longitud" style="display:none;">
+            <div class="ih-field" id="patchcord-longitud" hidden>
               <label class="ih-field__label">Longitud</label>
               <select name="patchcord_longitud" id="patchcord-longitud-select" class="ih-select">
                 <option value="">— Longitud —</option>
@@ -835,7 +819,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="switch-extra" style="display:none;">
+        <div id="switch-extra" hidden>
           <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Gestión del Switch</label>
@@ -848,7 +832,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="antenas-extra" style="display:none;">
+        <div id="antenas-extra" hidden>
           <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Tipo de Antena</label>
@@ -861,7 +845,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="bobina-extra" style="display:none;">
+        <div id="bobina-extra" hidden>
           <div class="ih-edit-grid-3">
             <div class="ih-field" id="bobina-categoria">
               <label class="ih-field__label">Categoría cable</label>
@@ -871,7 +855,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 <option value="CAT6e" <?= ($producto['bobina_categoria']??'')==='CAT6e'?'selected':'';?>>CAT6e</option>
               </select>
             </div>
-            <div class="ih-field" id="bobina-ubicacion" style="display:none;">
+            <div class="ih-field" id="bobina-ubicacion" hidden>
               <label class="ih-field__label">Tipo (Interior/Exterior)</label>
               <select name="bobina_ubicacion" id="bobina-ubicacion-select" class="ih-select">
                 <option value="">— Tipo —</option>
@@ -879,7 +863,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 <option value="Exterior" <?= ($producto['bobina_ubicacion']??'')==='Exterior'?'selected':'';?>>Exterior</option>
               </select>
             </div>
-            <div class="ih-field" id="bobina-longitud" style="display:none;">
+            <div class="ih-field" id="bobina-longitud" hidden>
               <label class="ih-field__label">Longitud</label>
               <select name="bobina_longitud" id="bobina-longitud-select" class="ih-select">
                 <option value="">— Longitud —</option>
@@ -893,7 +877,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="conectores-extra" style="display:none;">
+        <div id="conectores-extra" hidden>
           <div class="ih-edit-grid">
             <div class="ih-field">
               <label class="ih-field__label">Tipo de Conector</label>
@@ -905,7 +889,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 <option value="Otros"<?= ($producto['conectores_tipo']??'')==='Otros'?'selected':'';?>>Otros</option>
               </select>
             </div>
-            <div class="ih-field" id="conectores-otros" style="display:none;">
+            <div class="ih-field" id="conectores-otros" hidden>
               <label class="ih-field__label">Especifique conector</label>
               <input type="text" name="detalle_conectores" class="ih-input"
                      value="<?= htmlspecialchars($producto['detalle_conectores'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
@@ -914,9 +898,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="cintas-extra" style="display:none;">
+        <div id="cintas-extra" hidden>
           <div class="ih-edit-grid">
-            <div class="ih-field" id="cintas-generacion" style="display:none;">
+            <div class="ih-field" id="cintas-generacion" hidden>
               <label class="ih-field__label">Generación LTO</label>
               <select name="cintas_generacion" class="ih-select">
                 <option value="">Seleccione...</option>
@@ -928,7 +912,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="subcategoria-repuestos" style="display:none;">
+        <div id="subcategoria-repuestos" hidden>
           <div class="ih-field">
             <label class="ih-field__label">Detalle Repuesto</label>
             <input type="text" name="detalle_repuesto" class="ih-input"
@@ -936,7 +920,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="subcategoria-otros" style="display:none;">
+        <div id="subcategoria-otros" hidden>
           <div class="ih-field">
             <label class="ih-field__label">Detalle "Otros"</label>
             <input type="text" name="detalle_otros" class="ih-input"
@@ -945,7 +929,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div id="detalle-otros-categoria" style="display:none;">
+        <div id="detalle-otros-categoria" hidden>
           <div class="ih-field">
             <label class="ih-field__label">
               <?php
@@ -961,7 +945,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- ── Estado y valores ──────────────────────────────────────── -->
-        <div class="edit-section-title"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-currency-dollar"></i> Estado y valores</div>
         <div class="ih-edit-grid">
           <div class="ih-field">
             <?php /* Estaba fijo en Nuevo/Usado. Ahora es catálogo: cada empresa
@@ -981,7 +965,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- ── Garantía y fechas ─────────────────────────────────────── -->
-        <div class="edit-section-title"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-calendar3"></i> Garantía y fechas</div>
         <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">Período garantía (meses)</label>
@@ -1013,11 +997,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <?php /* Campos especificos de la categoria definidos en datos. */ ?>
         <?php ob_start(); campos_dinamicos_render($conn, campos_valores_de($conn, $producto_id, $producto)); $camposHtml = ob_get_clean(); ?>
         <?php if (str_contains($camposHtml, 'campos-dinamicos__grupo')): ?>
-          <div class="edit-section-title"><i class="bi bi-sliders"></i> Detalles de la categoría</div>
+          <div class="ih-seccion__titulo"><i class="bi bi-sliders"></i> Detalles de la categoría</div>
           <?= $camposHtml ?>
         <?php endif; ?>
 
-        <div class="edit-section-title"><i class="bi bi-receipt"></i> Compra y administración</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-receipt"></i> Compra y administración</div>
         <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">N.º de pedido</label>
@@ -1081,7 +1065,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-        <div class="edit-section-title"><i class="bi bi-graph-down-arrow"></i> Garantía extendida y amortización</div>
+        <div class="ih-seccion__titulo"><i class="bi bi-graph-down-arrow"></i> Garantía extendida y amortización</div>
         <div class="ih-edit-grid-3">
           <div class="ih-field">
             <label class="ih-field__label">Datos de la garantía</label>
@@ -1122,7 +1106,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
         </div>
 
-<div class="edit-section-title"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
+<div class="ih-seccion__titulo"><i class="bi bi-paperclip"></i> Archivos adjuntos</div>
         <?php if (!$cloudUploadOk): ?>
           <?= cloud_upload_disabled_notice($_SESSION['role'] ?? '') ?>
         <?php else: ?>
@@ -1134,7 +1118,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <?php endif; ?>
 
         <!-- ── Botón submit ──────────────────────────────────────────── -->
-        <div style="display:flex;gap:12px;justify-content:center;margin-top:1.5rem;flex-wrap:wrap;">
+        <div class="ih-barra__acciones ih-justify-center ih-mt-6">
           <button type="submit" class="ih-btn ih-btn--primary ih-btn--lg">
             <i class="bi bi-check-circle"></i> Guardar cambios
           </button>
@@ -1173,33 +1157,33 @@ const subSoftwareOtrosInput = document.getElementById('subsoftware-otros-input')
 
 function mostrarSubOpcionesSoftware(subcat, selected) {
     if (catSel.value === 'Software y licencias' && subOpcionesSoftware[subcat]) {
-        subSoftwareContainer.style.display = 'block';
+        subSoftwareContainer.hidden = false;
         subSoftwareSelect.innerHTML = '<option value="">Seleccione...</option>';
         subOpcionesSoftware[subcat].forEach(opt => {
             subSoftwareSelect.innerHTML += `<option value="${opt}"${selected===opt?' selected':''}>${opt}</option>`;
         });
         if (selected === "Otro") {
-            subSoftwareOtrosContainer.style.display = 'block';
+            subSoftwareOtrosContainer.hidden = false;
             subSoftwareOtrosInput.value = producto.subsoftware_otros || '';
         } else {
-            subSoftwareOtrosContainer.style.display = 'none';
+            subSoftwareOtrosContainer.hidden = true;
             subSoftwareOtrosInput.value = '';
         }
     } else {
-        subSoftwareContainer.style.display = 'none';
+        subSoftwareContainer.hidden = true;
         subSoftwareSelect.value = '';
-        subSoftwareOtrosContainer.style.display = 'none';
+        subSoftwareOtrosContainer.hidden = true;
         subSoftwareOtrosInput.value = '';
     }
 }
 
 subSoftwareSelect.addEventListener('change', function() {
     if (subSoftwareSelect.value === "Otro") {
-        subSoftwareOtrosContainer.style.display = 'block';
+        subSoftwareOtrosContainer.hidden = false;
         subSoftwareOtrosInput.value = '';
         subSoftwareOtrosInput.focus();
     } else {
-        subSoftwareOtrosContainer.style.display = 'none';
+        subSoftwareOtrosContainer.hidden = true;
         subSoftwareOtrosInput.value = '';
     }
 });
@@ -1255,13 +1239,13 @@ document.getElementById('form-editar').addEventListener('submit', function(e){
 document.addEventListener('DOMContentLoaded', function() {
     function checkDetalleOtros() {
         if (catSel.value === 'Otros' || catSel.value === 'Stock de Repuestos') {
-            detalleOtrosCategoria.style.display = 'block';
-            subCont.style.display = 'none';
-            subcategoriaOtros.style.display = 'none';
+            detalleOtrosCategoria.hidden = false;
+            subCont.hidden = true;
+            subcategoriaOtros.hidden = true;
         } else {
-            detalleOtrosCategoria.style.display = 'none';
+            detalleOtrosCategoria.hidden = true;
             const lista = opcionesPorCategoria[catSel.value] || [];
-            subCont.style.display = lista.length ? 'block' : 'none';
+            subCont.hidden = !(lista.length);
         }
     }
 
@@ -1271,7 +1255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         subSel.innerHTML = '<option value="">Seleccione…</option>';
         lista.forEach(opt => subSel.append(new Option(opt, opt)));
 
-        subCont.style.display = lista.length ? 'block' : 'none';
+        subCont.hidden = !(lista.length);
 
         if (producto.subcategoria) {
             subSel.value = producto.subcategoria;
@@ -1289,9 +1273,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function toggleCantidad() {
         if (servisTagInput.value.trim()) {
-            cantidadContainer.style.display = 'none';
+            cantidadContainer.hidden = true;
         } else {
-            cantidadContainer.style.display = 'block';
+            cantidadContainer.hidden = false;
         }
     }
     servisTagInput.addEventListener('input', toggleCantidad);
@@ -1306,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         subSel.value = '';
         iconCat.className = iconMapJS[catSel.value] || 'bi bi-folder ms-2';
         iconSub.className = 'bi bi-folder ms-2';
-        subcategoriaOtros.style.display = 'none';
+        subcategoriaOtros.hidden = true;
         checkDetalleOtros();
         mostrarExtras('');
 
@@ -1326,84 +1310,84 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarSubOpcionesSoftware(subSel.value, selected);
 
         if (subSel.value === 'Otros') {
-            subcategoriaOtros.style.display = 'flex';
+            subcategoriaOtros.hidden = false;
         } else {
-            subcategoriaOtros.style.display = 'none';
+            subcategoriaOtros.hidden = true;
         }
         checkDetalleOtros();
     });
 
     function mostrarExtras(subcat) {
-        document.getElementById('patchcord-extra').style.display     = (subcat==='Patchcord') ? 'flex' : 'none';
-        document.getElementById('switch-extra').style.display        = (subcat==='Switch') ? 'flex' : 'none';
-        document.getElementById('antenas-extra').style.display       = (subcat==='Antenas') ? 'flex' : 'none';
-        document.getElementById('bobina-extra').style.display        = (subcat==='Bobina UTP') ? 'flex' : 'none';
-        document.getElementById('conectores-extra').style.display    = (subcat==='Conectores') ? 'flex' : 'none';
-        document.getElementById('cintas-extra').style.display        = (subcat==='Cintas de respaldo') ? 'flex' : 'none';
-        document.getElementById('subcategoria-repuestos').style.display = (subcat==='Repuestos') ? 'flex' : 'none';
+        document.getElementById('patchcord-extra').hidden = !((subcat==='Patchcord'));
+        document.getElementById('switch-extra').hidden = !((subcat==='Switch'));
+        document.getElementById('antenas-extra').hidden = !((subcat==='Antenas'));
+        document.getElementById('bobina-extra').hidden = !((subcat==='Bobina UTP'));
+        document.getElementById('conectores-extra').hidden = !((subcat==='Conectores'));
+        document.getElementById('cintas-extra').hidden = !((subcat==='Cintas de respaldo'));
+        document.getElementById('subcategoria-repuestos').hidden = !((subcat==='Repuestos'));
 
         if (subcat==='Patchcord') {
-            document.getElementById('patchcord-categoria').style.display = 'block';
+            document.getElementById('patchcord-categoria').hidden = false;
             let patchcordTipo = document.getElementById('patchcord-categoria-select').value;
             if (!patchcordTipo && producto.patchcord_tipo) patchcordTipo = producto.patchcord_tipo;
-            document.getElementById('patchcord-longitud').style.display = patchcordTipo ? 'block' : 'none';
+            document.getElementById('patchcord-longitud').hidden = !(patchcordTipo);
         }
 
         if (subcat==='Bobina UTP') {
-            document.getElementById('bobina-categoria').style.display = 'block';
+            document.getElementById('bobina-categoria').hidden = false;
             let cat = document.getElementById('bobina-categoria-select').value;
             let ubi = document.getElementById('bobina-ubicacion-select').value;
             if (!cat && producto.bobina_categoria)   cat = producto.bobina_categoria;
             if (!ubi && producto.bobina_ubicacion)   ubi = producto.bobina_ubicacion;
-            document.getElementById('bobina-ubicacion').style.display = cat ? 'block' : 'none';
-            document.getElementById('bobina-longitud').style.display  = ubi ? 'block' : 'none';
+            document.getElementById('bobina-ubicacion').hidden = !(cat);
+            document.getElementById('bobina-longitud').hidden = !(ubi);
         }
 
         if (subcat==='Conectores') {
             let tipoConector = document.getElementById('conectores-tipo-select').value;
             if (!tipoConector && producto.conectores_tipo) tipoConector = producto.conectores_tipo;
-            document.getElementById('conectores-otros').style.display = (tipoConector === 'Otros') ? 'block' : 'none';
+            document.getElementById('conectores-otros').hidden = !((tipoConector === 'Otros'));
         }
 
         if (subcat==='Cintas de respaldo') {
-            document.getElementById('cintas-generacion').style.display = 'block';
+            document.getElementById('cintas-generacion').hidden = false;
         }
     }
 
     document.getElementById('patchcord-categoria-select')
         ?.addEventListener('change', function(e){
-            document.getElementById('patchcord-longitud').style.display = e.target.value ? 'block' : 'none';
+            document.getElementById('patchcord-longitud').hidden = !(e.target.value);
         });
 
     document.getElementById('conectores-tipo-select')
         ?.addEventListener('change', function(e){
-            document.getElementById('conectores-otros').style.display = (e.target.value === 'Otros') ? 'block' : 'none';
+            document.getElementById('conectores-otros').hidden = !((e.target.value === 'Otros'));
         });
 
     document.getElementById('bobina-categoria-select')
         ?.addEventListener('change', function(e){
-            document.getElementById('bobina-ubicacion').style.display = e.target.value ? 'block' : 'none';
+            document.getElementById('bobina-ubicacion').hidden = !(e.target.value);
             if (!e.target.value) {
-                document.getElementById('bobina-longitud').style.display = 'none';
+                document.getElementById('bobina-longitud').hidden = true;
             }
         });
 
     document.getElementById('bobina-ubicacion-select')
         ?.addEventListener('change', function(e){
-            document.getElementById('bobina-longitud').style.display = e.target.value ? 'block' : 'none';
+            document.getElementById('bobina-longitud').hidden = !(e.target.value);
         });
 
     setTimeout(function(){
         if (producto.subcategoria === 'Patchcord' && producto.patchcord_tipo)
-            document.getElementById('patchcord-longitud').style.display = 'block';
+            document.getElementById('patchcord-longitud').hidden = false;
         if (producto.subcategoria === 'Bobina UTP' && producto.bobina_categoria)
-            document.getElementById('bobina-ubicacion').style.display = 'block';
+            document.getElementById('bobina-ubicacion').hidden = false;
         if (producto.subcategoria === 'Bobina UTP' && producto.bobina_ubicacion)
-            document.getElementById('bobina-longitud').style.display = 'block';
+            document.getElementById('bobina-longitud').hidden = false;
         if (producto.subcategoria === 'Conectores' && producto.conectores_tipo === 'Otros')
-            document.getElementById('conectores-otros').style.display = 'block';
+            document.getElementById('conectores-otros').hidden = false;
         if (producto.subcategoria === 'Cintas de respaldo')
-            document.getElementById('cintas-generacion').style.display = 'block';
+            document.getElementById('cintas-generacion').hidden = false;
     }, 200);
 });
 </script>

@@ -191,7 +191,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
 
       <!-- ── Bloque 1: Datos principales ──────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-box-seam"></i> Datos principales</h3>
         </div>
@@ -256,7 +256,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
           </div><!-- .ih-form-grid -->
 
-          <div class="ih-field" style="margin-top:4px;">
+          <div class="ih-field">
             <label class="ih-label" for="f-descripcion">Descripción</label>
             <textarea id="f-descripcion" name="descripcion" class="ih-input" rows="3"
                       placeholder="Notas adicionales, especificaciones técnicas…"><?= htmlspecialchars((string)$fv('descripcion')) ?></textarea>
@@ -265,7 +265,7 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Bloque 2: Categoría ────────────────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-folder2-open"></i> Categorización</h3>
         </div>
@@ -274,7 +274,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
             <div class="ih-field ih-field--required">
               <label class="ih-label" for="f-categoria">
-                Categoría <i id="iconCat" class="bi bi-folder" style="margin-left:6px;color:var(--ih-primary);"></i>
+                Categoría <i id="iconCat" class="bi bi-folder ih-label__icono"></i>
               </label>
               <select id="f-categoria" name="categoria" class="ih-select" required>
                 <option value="">Seleccioná…</option>
@@ -292,7 +292,7 @@ require __DIR__ . '/../includes/layout/head.php';
                      dice por qué no se puede usar todavía. */ ?>
             <div class="ih-field" id="campo-subcategoria">
               <label class="ih-label" for="f-subcategoria">
-                Subcategoría <i id="iconSub" class="bi bi-folder" style="margin-left:6px;color:var(--ih-primary);"></i>
+                Subcategoría <i id="iconSub" class="bi bi-folder ih-label__icono"></i>
               </label>
               <select id="f-subcategoria" name="subcategoria" class="ih-select" disabled>
                 <option value="">Elegí primero una categoría</option>
@@ -300,14 +300,14 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
 
             <!-- Software: detalle de licencia -->
-            <div class="ih-field" id="campo-subsoftware" style="display:none;">
+            <div class="ih-field" id="campo-subsoftware" hidden>
               <label class="ih-label" for="f-subsoftware">Plataforma / Licencia</label>
               <select id="f-subsoftware" name="subsoftware" class="ih-select">
                 <option value="">Seleccioná…</option>
               </select>
             </div>
 
-            <div class="ih-field" id="campo-subsoftware-otros" style="display:none;">
+            <div class="ih-field" id="campo-subsoftware-otros" hidden>
               <label class="ih-label" for="f-subsoftware-otros">Detalle "Otros"</label>
               <input type="text" id="f-subsoftware-otros" name="subsoftware_otros" class="ih-input"
                      placeholder="Describí la plataforma…"
@@ -319,7 +319,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <!-- ── Extras por subcategoría ─────────────────────────── -->
 
           <!-- Patchcord -->
-          <div id="extra-patchcord" style="display:none;" class="ih-form-grid" style="margin-top:12px;">
+          <div id="extra-patchcord" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Tipo de patchcord</label>
               <select name="patchcord_tipo" id="f-patchcord-tipo" class="ih-select">
@@ -329,7 +329,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="ih-field" id="campo-patchcord-long" style="display:none;">
+            <div class="ih-field" id="campo-patchcord-long" hidden>
               <label class="ih-label">Longitud</label>
               <select name="patchcord_longitud" id="f-patchcord-long" class="ih-select">
                 <option value="">— Seleccioná —</option>
@@ -341,7 +341,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Switch -->
-          <div id="extra-switch" style="display:none;" class="ih-form-grid">
+          <div id="extra-switch" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Gestión</label>
               <select name="switch_gestion" id="f-switch-gestion" class="ih-select">
@@ -353,7 +353,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Antenas -->
-          <div id="extra-antenas" style="display:none;" class="ih-form-grid">
+          <div id="extra-antenas" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Tipo de antena</label>
               <select name="antenas_tipo" id="f-antenas-tipo" class="ih-select">
@@ -365,7 +365,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Bobina UTP -->
-          <div id="extra-bobina" style="display:none;" class="ih-form-grid">
+          <div id="extra-bobina" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Categoría cable</label>
               <select name="bobina_categoria" id="f-bobina-cat" class="ih-select">
@@ -374,7 +374,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <option value="CAT6e" <?= $fv('bobina_categoria') === 'CAT6e' ? 'selected' : '' ?>>CAT6e</option>
               </select>
             </div>
-            <div class="ih-field" id="campo-bobina-ubi" style="display:none;">
+            <div class="ih-field" id="campo-bobina-ubi" hidden>
               <label class="ih-label">Interior / Exterior</label>
               <select name="bobina_ubicacion" id="f-bobina-ubi" class="ih-select">
                 <option value="">— Seleccioná —</option>
@@ -382,7 +382,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <option value="Exterior" <?= $fv('bobina_ubicacion') === 'Exterior' ? 'selected' : '' ?>>Exterior</option>
               </select>
             </div>
-            <div class="ih-field" id="campo-bobina-long" style="display:none;">
+            <div class="ih-field" id="campo-bobina-long" hidden>
               <label class="ih-label">Longitud (m)</label>
               <select name="bobina_longitud" id="f-bobina-long" class="ih-select">
                 <option value="">— Seleccioná —</option>
@@ -394,7 +394,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Conectores -->
-          <div id="extra-conectores" style="display:none;" class="ih-form-grid">
+          <div id="extra-conectores" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Tipo de conector</label>
               <select name="conectores_tipo" id="f-conectores-tipo" class="ih-select">
@@ -404,7 +404,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="ih-field" id="campo-conectores-otros" style="display:none;">
+            <div class="ih-field" id="campo-conectores-otros" hidden>
               <label class="ih-label">Especificá el conector</label>
               <input type="text" name="detalle_conectores" class="ih-input"
                      placeholder="Describí aquí…"
@@ -413,7 +413,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Cintas de respaldo -->
-          <div id="extra-cintas" style="display:none;" class="ih-form-grid">
+          <div id="extra-cintas" class="ih-form-grid" hidden>
             <div class="ih-field">
               <label class="ih-label">Generación LTO</label>
               <select name="cintas_generacion" id="f-cintas-gen" class="ih-select">
@@ -426,7 +426,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Repuestos -->
-          <div id="extra-repuestos" style="display:none;" class="ih-field">
+          <div id="extra-repuestos" class="ih-field" hidden>
             <label class="ih-label">Detalle del repuesto</label>
             <input type="text" name="detalle_repuesto" class="ih-input"
                    placeholder="Describí el repuesto…"
@@ -434,7 +434,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Otros (subcategoría o categoría) -->
-          <div id="extra-otros" style="display:none;" class="ih-field">
+          <div id="extra-otros" class="ih-field" hidden>
             <label class="ih-label" id="label-otros">Detalle</label>
             <input type="text" name="detalle_otros" class="ih-input"
                    placeholder="Describí el activo…"
@@ -450,7 +450,7 @@ require __DIR__ . '/../includes/layout/head.php';
                esquema. Si no hay ninguno, la tarjeta entera no se dibuja. */ ?>
       <?php ob_start(); campos_dinamicos_render($conn); $camposHtml = ob_get_clean(); ?>
       <?php if (str_contains($camposHtml, 'campos-dinamicos__grupo')): ?>
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-sliders"></i> Detalles de la categoría</h3>
         </div>
@@ -466,7 +466,7 @@ require __DIR__ . '/../includes/layout/head.php';
                necesita que el activo ya exista —componentes, puertos de red,
                relaciones, contratos— se carga en la ficha, y el alta termina
                llevando ahí directamente. */ ?>
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <div>
             <h3 class="ih-card__title"><i class="bi bi-windows"></i> Sistema operativo</h3>
@@ -517,7 +517,7 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Bloque 3: Garantía y fechas ───────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-shield-check"></i> Garantía y fechas</h3>
         </div>
@@ -558,7 +558,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <?php /* Datos financieros y administrativos. Todos opcionales: el alta no
                se traba por no tener la factura a mano y se completan despues
                desde la edicion del activo. */ ?>
-      <div class="ih-card" style="margin-bottom:16px;">
+      <div class="ih-card ih-mb-4">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-receipt"></i> Compra y administración</h3>
         </div>
@@ -622,7 +622,7 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Bloque 5: Adjuntos ──────────────────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:24px;">
+      <div class="ih-card ih-mb-5">
         <div class="ih-card__header">
           <h3 class="ih-card__title"><i class="bi bi-paperclip"></i> Archivos adjuntos</h3>
         </div>
@@ -630,24 +630,26 @@ require __DIR__ . '/../includes/layout/head.php';
         <?php if (!$cloudUploadOk): ?>
           <?= cloud_upload_disabled_notice($user['role'] ?? '') ?>
         <?php else: ?>
+          <?php /* El campo de archivo es el del sistema: arrastrar, la lista de
+                   lo elegido con su peso, quitar uno, y el aviso de lo que no
+                   entra por tamaño o por formato. Lo único que pone esta
+                   pantalla es cuánto pesa el límite y qué formatos acepta. */ ?>
           <div class="ih-field">
-            <label class="ih-label" for="f-archivo">Subir archivos a <?= strtolower(cloud_provider_actual($conn)) === 'microsoft' ? 'OneDrive' : 'Google Drive' ?></label>
-            <div class="ih-dropzone" id="dropzone">
-              <i class="bi bi-cloud-upload" style="font-size:2rem;color:var(--ih-gray-400);display:block;margin-bottom:8px;"></i>
-              <p style="color:var(--ih-gray-500);margin:0 0 8px;">Arrastrá archivos acá o hacé click para seleccionar</p>
-              <p class="ih-text-sm ih-text-muted">Formatos: JPG, PNG, PDF, Word, Excel, PowerPoint · Máximo 5 MB por archivo</p>
-              <input type="file" id="f-archivo" name="archivo[]" multiple
-                     accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                     style="position:absolute;inset:0;opacity:0;cursor:pointer;">
-            </div>
-            <div id="lista-archivos" style="margin-top:8px;"></div>
+            <label class="ih-label" for="f-archivo">
+              Archivos para subir a
+              <?= strtolower(cloud_provider_actual($conn)) === 'microsoft' ? 'OneDrive' : 'Google Drive' ?>
+            </label>
+            <input type="file" id="f-archivo" name="archivo[]" multiple
+                   accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                   data-max-mb="5"
+                   data-ayuda="Fotos, PDF, Word, Excel o PowerPoint · hasta 5 MB cada uno">
           </div>
         <?php endif; ?>
         </div>
       </div>
 
       <!-- ── Acciones ─────────────────────────────────────────────────── -->
-      <div style="display:flex;gap:12px;justify-content:flex-end;margin-bottom:40px;">
+      <div class="ih-barra__acciones ih-justify-end ih-mb-6">
         <a href="/inventario/index.php" class="ih-btn ih-btn--ghost">Cancelar</a>
         <button type="submit" class="ih-btn ih-btn--accent" id="btn-guardar">
           <i class="bi bi-check-lg"></i> Guardar activo
@@ -657,30 +659,6 @@ require __DIR__ . '/../includes/layout/head.php';
     </form>
   </main>
 </div>
-
-<style>
-/* .ih-form-grid vive en assets/css/app.css */
-.ih-field { display: flex; flex-direction: column; gap: 4px; }
-.ih-field--required .ih-label::after { content: ' *'; color: var(--ih-danger); }
-.ih-field__hint { font-size: 11px; color: var(--ih-gray-400); }
-.ih-label { font-size: 13px; font-weight: 600; color: var(--ih-gray-700); }
-.ih-alert {
-  padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
-}
-.ih-alert--danger { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-line); }
-.ih-dropzone {
-  border: 2px dashed var(--ih-gray-300); border-radius: 10px;
-  padding: 32px 24px; text-align: center; cursor: pointer; position: relative;
-  transition: border-color .2s, background .2s;
-}
-.ih-dropzone:hover, .ih-dropzone.is-over { border-color: var(--ih-green); background: var(--accent-050); }
-.file-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--ih-gray-100); border-radius: 20px;
-  padding: 4px 10px; font-size: 12px; margin: 4px 2px;
-}
-.file-chip__remove { cursor: pointer; color: var(--ih-danger); font-size: 14px; }
-</style>
 
 <script>
 const opcionesPorCategoria = <?= json_encode($opcionesPorCategoria, JSON_UNESCAPED_UNICODE) ?>;
@@ -709,9 +687,15 @@ function setIcon(el, claseBi) {
   el.className = claseBi || fallback;
 }
 
+/* Mostrar y esconder va por el atributo `hidden` y no por `style.display`.
+   Los dos funcionan, pero mezclarlos no: el HTML trae los bloques con
+   `hidden`, y un `style.display = ''` no limpia ese atributo —la hoja del
+   sistema declara `[hidden] { display: none !important }`—, asi que el bloque
+   se quedaba escondido y la seccion de campos por categoria no aparecia nunca. */
+
 // ── Cantidad oculta si hay S/N ────────────────────────────
 function toggleCantidad() {
-  cantCont.style.display = servisTag.value.trim() ? 'none' : '';
+  cantCont.hidden = !!(servisTag.value.trim());
 }
 servisTag.addEventListener('input', toggleCantidad);
 toggleCantidad();
@@ -730,14 +714,14 @@ function mostrarExtras(subcat) {
   // Ocultar todos primero
   ['extra-patchcord','extra-switch','extra-antenas','extra-bobina','extra-conectores','extra-cintas','extra-repuestos','extra-otros'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    if (el) el.hidden = true;
   });
 
   if (extras[subcat]) {
-    document.getElementById(extras[subcat]).style.display = '';
+    document.getElementById(extras[subcat]).hidden = false;
   } else if (subcat === 'Otros' || catSel.value === 'Otros' || catSel.value === 'Stock de Repuestos') {
     const el = document.getElementById('extra-otros');
-    el.style.display = '';
+    el.hidden = false;
     const lbl = document.getElementById('label-otros');
     if (catSel.value === 'Stock de Repuestos') lbl.textContent = 'Detalle de repuesto';
     else if (catSel.value === 'Otros') lbl.textContent = 'Detalle del activo (Otros)';
@@ -747,15 +731,15 @@ function mostrarExtras(subcat) {
 
 function mostrarSubSoftware(subcat, selectedValue) {
   if (catSel.value === 'Software y licencias' && subOpcionesSoftware[subcat]) {
-    subSwCont.style.display = '';
+    subSwCont.hidden = false;
     subSwSel.innerHTML = '<option value="">Seleccioná…</option>';
     subOpcionesSoftware[subcat].forEach(opt => {
       subSwSel.innerHTML += `<option value="${opt}"${opt === selectedValue ? ' selected' : ''}>${opt}</option>`;
     });
-    subSwOtros.style.display = selectedValue === 'Otro' ? '' : 'none';
+    subSwOtros.hidden = !(selectedValue === 'Otro');
   } else {
-    subSwCont.style.display = 'none';
-    subSwOtros.style.display = 'none';
+    subSwCont.hidden = true;
+    subSwOtros.hidden = true;
   }
 }
 
@@ -779,7 +763,7 @@ function actualizarSubcategorias(catValue, subcatValue, preserveSubcat) {
 
   if (esOtros) {
     mostrarExtras('');
-    document.getElementById('extra-otros').style.display = '';
+    document.getElementById('extra-otros').hidden = false;
     const lbl = document.getElementById('label-otros');
     lbl.textContent = catValue === 'Stock de Repuestos' ? 'Detalle de repuesto' : 'Detalle del activo';
   } else {
@@ -802,26 +786,26 @@ subSel.addEventListener('change', () => {
 });
 
 subSwSel.addEventListener('change', () => {
-  subSwOtros.style.display = subSwSel.value === 'Otro' ? '' : 'none';
+  subSwOtros.hidden = !(subSwSel.value === 'Otro');
 });
 
 // ── Cascada de Patchcord ──────────────────────────────────
 document.getElementById('f-patchcord-tipo')?.addEventListener('change', function() {
-  document.getElementById('campo-patchcord-long').style.display = this.value ? '' : 'none';
+  document.getElementById('campo-patchcord-long').hidden = !(this.value);
 });
 
 // ── Cascada de Bobina ─────────────────────────────────────
 document.getElementById('f-bobina-cat')?.addEventListener('change', function() {
-  document.getElementById('campo-bobina-ubi').style.display = this.value ? '' : 'none';
-  document.getElementById('campo-bobina-long').style.display = 'none';
+  document.getElementById('campo-bobina-ubi').hidden = !(this.value);
+  document.getElementById('campo-bobina-long').hidden = true;
 });
 document.getElementById('f-bobina-ubi')?.addEventListener('change', function() {
-  document.getElementById('campo-bobina-long').style.display = this.value ? '' : 'none';
+  document.getElementById('campo-bobina-long').hidden = !(this.value);
 });
 
 // ── Conectores Otros ──────────────────────────────────────
 document.getElementById('f-conectores-tipo')?.addEventListener('change', function() {
-  document.getElementById('campo-conectores-otros').style.display = this.value === 'Otros' ? '' : 'none';
+  document.getElementById('campo-conectores-otros').hidden = !(this.value === 'Otros');
 });
 
 // ── Pre-cargar valores tras error de formulario ───────────
@@ -833,67 +817,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Esperar a que el DOM esté listo para activar cascadas
     setTimeout(() => {
       const patchTipo = document.getElementById('f-patchcord-tipo');
-      if (patchTipo?.value) document.getElementById('campo-patchcord-long').style.display = '';
+      if (patchTipo?.value) document.getElementById('campo-patchcord-long').hidden = false;
       const bobCat = document.getElementById('f-bobina-cat');
       if (bobCat?.value) {
-        document.getElementById('campo-bobina-ubi').style.display = '';
+        document.getElementById('campo-bobina-ubi').hidden = false;
         if (document.getElementById('f-bobina-ubi')?.value)
-          document.getElementById('campo-bobina-long').style.display = '';
+          document.getElementById('campo-bobina-long').hidden = false;
       }
       const conTipo = document.getElementById('f-conectores-tipo');
-      if (conTipo?.value === 'Otros') document.getElementById('campo-conectores-otros').style.display = '';
+      if (conTipo?.value === 'Otros') document.getElementById('campo-conectores-otros').hidden = false;
     }, 50);
   }
   toggleCantidad();
 });
-
-// ── Dropzone ──────────────────────────────────────────────
-const dropzone   = document.getElementById('dropzone');
-const fileInput  = document.getElementById('f-archivo');
-const listaFiles = document.getElementById('lista-archivos');
-const tiposOK    = ['image/jpeg','image/png','image/webp','image/gif','application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-];
-
-let archivosSel = [];
-
-function renderChips() {
-  listaFiles.innerHTML = '';
-  archivosSel.forEach((f, i) => {
-    const chip = document.createElement('span');
-    chip.className = 'file-chip';
-    chip.innerHTML = `<i class="bi bi-file-earmark"></i> ${f.name} <span class="file-chip__remove" data-i="${i}">✕</span>`;
-    listaFiles.appendChild(chip);
-  });
-  listaFiles.querySelectorAll('.file-chip__remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      archivosSel.splice(+btn.dataset.i, 1);
-      renderChips();
-    });
-  });
-}
-
-function agregarArchivos(files) {
-  for (const f of files) {
-    if (f.size > 5 * 1024 * 1024) { alert(`"${f.name}" excede 5 MB.`); continue; }
-    if (!tiposOK.includes(f.type)) { alert(`Formato de "${f.name}" no permitido.`); continue; }
-    if (!archivosSel.find(a => a.name === f.name && a.size === f.size)) archivosSel.push(f);
-  }
-  renderChips();
-}
-
-dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('is-over'); });
-dropzone.addEventListener('dragleave', ()  => dropzone.classList.remove('is-over'));
-dropzone.addEventListener('drop',      e  => {
-  e.preventDefault(); dropzone.classList.remove('is-over');
-  agregarArchivos(e.dataTransfer.files);
-});
-fileInput.addEventListener('change', () => { agregarArchivos(fileInput.files); fileInput.value = ''; });
 
 // ── Submit ─────────────────────────────────────────────────
 document.getElementById('form-agregar').addEventListener('submit', function(e) {
@@ -904,13 +840,6 @@ document.getElementById('form-agregar').addEventListener('submit', function(e) {
     const el = document.getElementById(id);
     if (el) el.disabled = false;
   });
-
-  // Inyectar archivos seleccionados en el input real
-  if (archivosSel.length) {
-    const dt = new DataTransfer();
-    archivosSel.forEach(f => dt.items.add(f));
-    fileInput.files = dt.files;
-  }
 
   // Deshabilitar botón para evitar doble submit
   const btn = document.getElementById('btn-guardar');

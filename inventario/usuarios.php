@@ -135,7 +135,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <?php endforeach; ?>
               </select>
               <div class="ih-field__hint">
-                Crea roles personalizados desde <a href="/inventario/roles.php" style="color:var(--ih-primary);">Roles y permisos</a>.
+                Los roles propios se crean en <a href="/inventario/roles.php">Roles y permisos</a>.
               </div>
             </div>
           </div>
@@ -181,7 +181,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td>
                   <strong><?= htmlspecialchars($u['username']) ?></strong>
                   <?php if ((int)$u['id'] === $user_id): ?>
-                    <span class="ih-badge ih-badge--purple" style="margin-left:6px">VOS</span>
+                    <span class="ih-badge ih-badge--purple">Sos vos</span>
                   <?php endif; ?>
                 </td>
                 <td class="ih-text-sm"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
@@ -262,8 +262,8 @@ require __DIR__ . '/../includes/layout/head.php';
 </dialog>
 
 <!-- Modal Eliminar -->
-<dialog class="ih-modal" id="modalEliminar" style="width:min(420px,calc(100vw - 2rem))">
-      <div class="ih-modal__header" style="background:var(--danger)">
+<dialog class="ih-modal ih-modal--angosta" id="modalEliminar">
+      <div class="ih-modal__header ih-modal__header--peligro">
         <h5 class="ih-modal__title"><i class="bi bi-trash"></i> Eliminar usuario</h5>
         <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
       </div>
@@ -273,7 +273,7 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
       <div class="ih-modal__footer">
         <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
-        <form method="POST" action="/backend/users_crud.php" style="display:inline">
+        <form method="POST" action="/backend/users_crud.php">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="target_id" id="deleteTargetId">
