@@ -13,7 +13,7 @@ function cloud_icon_svg(string $provider = 'google', int $size = 20): string {
     if (strtolower($provider) === 'microsoft' || strtolower($provider) === 'onedrive') {
         // OneDrive — nube azul oficial Microsoft
         return <<<SVG
-<svg width="{$w}" height="{$h}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;display:inline-block;">
+<svg width="{$w}" height="{$h}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" class="ih-logo-inline">
   <path fill="#0364B8" d="M12.236 16.231l5.027-4.81 5.36 4.027 3.187-1.341a5.726 5.726 0 0 0-.71-.077 5.727 5.727 0 0 0-4.69-4.926A7.643 7.643 0 0 0 12.236 16.231z"/>
   <path fill="#0078D4" d="M17.263 11.421l-5.027 4.81-1.83 2.353 9.21 1.135 4.193-1.815 1.165-2.456-5.36-4.027z"/>
   <path fill="#1490DF" d="M9.464 14.85a4.583 4.583 0 0 0-2.79.952 4.581 4.581 0 0 0-1.674 2.43l4.945 1.351 4.444-1.92 1.83-2.352-5.282-.401a4.582 4.582 0 0 0-1.473-.06z"/>
@@ -25,7 +25,7 @@ SVG;
 
     // Google Drive — logo oficial 6-segmentos a color
     return <<<SVG
-<svg width="{$w}" height="{$h}" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;display:inline-block;">
+<svg width="{$w}" height="{$h}" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" class="ih-logo-inline">
   <path fill="#0066da" d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"/>
   <path fill="#00ac47" d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z"/>
   <path fill="#ea4335" d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z"/>
@@ -88,22 +88,24 @@ function cloud_upload_disponible(mysqli $conn): bool {
 if (!function_exists('cloud_upload_disabled_notice')) {
 function cloud_upload_disabled_notice(string $rol = ''): string {
     $isAdmin = ($rol === 'admin');
+    /* Para quien puede resolverlo, el boton que lo resuelve. Para quien no, a
+       quien pedirselo —un aviso que dice «no se puede» y no dice quien puede
+       destrabarlo deja a la persona sin salida. */
     $cta = $isAdmin
-        ? '<a href="/inventario/configurar_integracion.php" class="ih-btn ih-btn--primary ih-btn--sm" style="margin-top:10px;"><i class="bi bi-gear"></i> Configurar Drive / OneDrive</a>'
-        : '<div style="margin-top:8px;font-size:var(--ih-text-xs);color:var(--ih-gray-500);">Pedile al administrador que configure la integración con Google Drive o Microsoft OneDrive.</div>';
+        ? '<a href="/inventario/configurar_integracion.php" class="ih-btn ih-btn--primary ih-btn--sm">'
+          . '<i class="bi bi-gear"></i> Conectar Google Drive o OneDrive</a>'
+        : '<p class="ih-nota__firma">Pedíselo a quien administra el inventario: se conecta una vez '
+          . 'y queda andando para todos.</p>';
     return <<<HTML
-<div class="ih-alert ih-alert--info" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <i class="bi bi-cloud-slash" style="font-size:1.4rem;color:var(--ih-gray-500);"></i>
-    <div>
-      <strong>Subida de archivos no disponible</strong><br>
-      <span style="font-size:var(--ih-text-sm);color:var(--ih-gray-600);">
-        Para adjuntar archivos al activo necesitás iniciar sesión con Google o Microsoft.
-        Los archivos se guardan en tu nube (Drive / OneDrive), no en nuestro servidor.
-      </span>
-    </div>
+<div class="ih-alert ih-alert--info ih-alert--accion">
+  <i class="bi bi-cloud-slash"></i>
+  <div class="ih-alert__cuerpo">
+    <strong>Por ahora no se pueden adjuntar archivos</strong><br>
+    Los archivos de cada activo se guardan en la nube de la empresa —Google Drive o
+    OneDrive— y no en este servidor. Hasta que se conecte una de las dos, el activo se puede
+    cargar igual: lo único que falta es poder adjuntarle archivos.
+    {$cta}
   </div>
-  {$cta}
 </div>
 HTML;
 }

@@ -64,6 +64,7 @@ const TOKENS_QUE_DIFIEREN = [
     // cliente. Convive con el #9CC930 de la marca en la misma interfaz.
     '--ih-danger'      => 'deuda',   // #a12a1e  contra #dc2626
     '--ih-danger-bg'   => 'deuda',   // #fdeceb  contra #fee2e2
+    '--ih-danger-line' => 'deuda',   // #f3c9c4  contra #fecaca
     '--ih-warning'     => 'deuda',   // #a8620a  contra #ea580c
     '--ih-success'     => 'deuda',   // #5f8a12  contra #16a34a — dos verdes distintos
     '--ih-gray-50'     => 'deuda',   // #faf9fc  contra #fafafa

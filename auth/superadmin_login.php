@@ -280,7 +280,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
               <i class="bi bi-google"></i> Continuar con Google Workspace
               <?php if ($googleHd !== ''): ?>
-                <span class="ih-text-xs" style="margin-left:6px;opacity:.75">(@<?= htmlspecialchars($googleHd) ?>)</span>
+                <span class="ih-text-xs ih-text-apagado">(@<?= htmlspecialchars($googleHd) ?>)</span>
               <?php endif; ?>
             </a>
           <?php endif; ?>
@@ -288,7 +288,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($msAuthUrl) ?>">
               <i class="bi bi-microsoft"></i> Continuar con Microsoft 365
               <?php if ($msHd !== ''): ?>
-                <span class="ih-text-xs" style="margin-left:6px;opacity:.75">(@<?= htmlspecialchars($msHd) ?>)</span>
+                <span class="ih-text-xs ih-text-apagado">(@<?= htmlspecialchars($msHd) ?>)</span>
               <?php endif; ?>
             </a>
           <?php endif; ?>

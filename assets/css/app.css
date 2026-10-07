@@ -49,6 +49,7 @@
   --ih-success:var(--accent-600); --ih-success-bg:var(--accent-050);
   --ih-warning:var(--warn);       --ih-warning-bg:var(--warn-bg);
   --ih-danger:var(--danger);      --ih-danger-bg:var(--danger-bg);
+  --ih-danger-line:var(--danger-line);
   --ih-info:var(--info);          --ih-info-bg:var(--info-bg);
   --ih-shadow-xs:0 1px 2px rgba(16,20,30,.05);
   --ih-shadow-sm:var(--shadow); --ih-shadow-md:var(--shadow);
@@ -172,6 +173,9 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
 .ih-sidebar__footer{display:none}
 .ih-sidebar__nav{display:flex;align-items:center;gap:.25rem;flex:1;min-width:0}
 .ih-sidebar__group{display:flex;align-items:center;gap:.25rem}
+/* El grupo que cierra la navegación se va a la derecha: Datos y
+   Configuración no son pestañas del inventario, son lo de al lado. */
+.ih-sidebar__group--fin{margin-left:auto}
 .ih-sidebar__group-title{display:none}    /* los títulos de grupo no aplican en horizontal */
 .ih-sidebar__link{
   display:inline-flex;align-items:center;gap:.4rem;padding:.7rem .7rem;

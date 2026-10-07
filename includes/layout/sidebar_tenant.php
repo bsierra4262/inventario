@@ -100,7 +100,7 @@ $sb_hijas_config = ['catalogos', 'campos', 'integracion', 'usuarios', 'roles'];
     </div>
   </div>
 
-  <div class="ih-sidebar__group" style="margin-left:auto">
+  <div class="ih-sidebar__group ih-sidebar__group--fin">
     <a href="/auth/change_password.php" class="ih-sidebar__link" title="Cambiar contraseña">
       <i class="bi bi-key"></i><span class="ih-hidden-mobile"> Contraseña</span>
     </a>

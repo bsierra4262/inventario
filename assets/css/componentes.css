@@ -1172,6 +1172,45 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 }
 
 /* Una aclaración chica debajo de un botón ancho, centrada con él. */
+/* Un enlace dentro de un KPI. Hereda el color del número de al lado —pintarlo
+   de violeta ahí adentro lo hace competir con la cifra, que es lo que la
+   persona vino a leer— y se subraya para que se vea que se puede tocar. */
+/* Un rótulo con una casilla adentro: lo que se toca es el rótulo entero y no
+   el cuadradito de 16 px, así que tiene que verse que se puede tocar. */
+.ih-label--casilla {
+  display: flex; align-items: center; gap: .4rem;
+  cursor: pointer; user-select: none;
+}
+
+/* El segundo renglón de una celda: el correo debajo del nombre, «Compra»
+   debajo de la fecha. Es el dato de apoyo, no el dato. */
+.ih-text-apagado { color: var(--ih-gray-400, #a7a3b4); }
+a.ih-text-apagado { text-decoration: none; }
+a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: underline; }
+
+/* Un logo dentro de una línea de texto o de un botón: el de Google, el de
+   Microsoft, el de Drive. Un `<svg>` es `inline` por defecto, así que se apoya
+   en la línea de base y queda un par de píxeles más abajo que el texto de al
+   lado; y dentro de un flex se encoge si el nombre es largo. */
+.ih-logo-inline {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Un bloque que tiene que poder encogerse adentro de un flex. Sin esto, un
+   texto largo —el correo de alguien en el topbar— estira la fila y empuja
+   fuera lo que viene después, porque el mínimo de un flex es el de su
+   contenido. */
+.ih-min-0 { min-width: 0; }
+
+.ih-stat__enlace {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ih-stat__enlace:hover { color: inherit; text-decoration: none; }
+
 .ih-pie-centrado {
   margin: .4rem 0 0;
   text-align: center;
@@ -1265,6 +1304,199 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-text-semibold { font-weight: 600; }
 .ih-fw-600 { font-weight: 600; }
 .ih-fw-700 { font-weight: 700; }
+
+/* ---------------------------------------------------------------------------
+   7 septies. El listado: filtros pegados a la tabla, menú y filas
+   ---------------------------------------------------------------------------
+   El listado de activos es la pantalla que más se mira, y era la que tenía más
+   estilos escritos a mano: treinta y dos atributos `style`.
+   --------------------------------------------------------------------------- */
+
+/* Dos tarjetas que se leen como una: la barra de filtros arriba y la tabla
+   abajo. Estaba hecho con cuatro `border-radius: 0` sueltos en los dos
+   extremos, uno por esquina, y un `margin` en cero en cada uno. */
+.ih-pegada-arriba {
+  margin-bottom: 0;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+}
+.ih-pegada-abajo {
+  margin-top: 0;
+  border-top-left-radius: 0; border-top-right-radius: 0;
+  border-top: 0;
+}
+
+/* La fila de filtros. Igual que `.ih-filtros` de reportes, pero en una sola
+   línea: acá los filtros son tres y entran. */
+.ih-filtros-linea {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  margin: 0;
+}
+.ih-filtros-linea .ih-select { flex: 0 1 11rem; min-width: 0; }
+@media (max-width: 560px) {
+  .ih-filtros-linea .ih-select { flex: 1 1 100%; }
+}
+
+/* La barra chica que va entre los filtros y la tabla, con las acciones que no
+   son filtros: elegir qué columnas se ven. */
+.ih-barra-fina {
+  display: flex; justify-content: flex-end;
+  padding: .5rem 1.25rem;
+  background: var(--ih-gray-50, #faf9fc);
+  border-top: 1px solid var(--ih-gray-100, #f0edf6);
+}
+
+/* Un menú que cuelga de un botón. No es `.ihc-pop` —ese lo construye el
+   JavaScript de los desplegables y se cuelga del <body> para no quedar
+   recortado—: este es parte del HTML de la página y cuelga de su botón. */
+.ih-menu-ancla { position: relative; }
+.ih-menu {
+  position: absolute; right: 0; top: calc(100% + .4rem); z-index: 60;
+  min-width: 15rem; padding: .75rem 1rem;
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-md, 10px);
+  box-shadow: var(--ih-shadow-lg, 0 24px 60px -20px rgba(74, 36, 112, .42));
+}
+.ih-menu__titulo {
+  margin: 0 0 .6rem;
+  font-size: var(--ih-text-xs, 11px); font-weight: 800;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ih-gray-500, #6f6a7d);
+}
+.ih-menu__opcion {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .3rem 0;
+  font-size: var(--ih-text-sm, 12.5px);
+  color: var(--ih-gray-800, #2b2836);
+  cursor: pointer; user-select: none;
+}
+.ih-menu__pie {
+  display: flex; gap: .4rem;
+  margin-top: .6rem; padding-top: .6rem;
+  border-top: 1px solid var(--ih-gray-100, #f0edf6);
+}
+.ih-menu__pie .ih-btn { flex: 1; }
+
+/* ── Una celda de activo: icono, nombre y lo que va debajo ───────────────── */
+.ih-celda {
+  display: flex; align-items: center; gap: .5rem;
+  min-width: 0;
+}
+.ih-celda__icono {
+  flex: none;
+  font-size: 18px;
+  color: var(--ih-purple, #663399);
+}
+.ih-celda__texto { min-width: 0; }
+.ih-celda__nombre { font-weight: 600; color: var(--ih-gray-900, #161922); }
+
+/* Un valor con su icono al lado, dentro de una celda. */
+.ih-con-icono { display: inline-flex; align-items: center; gap: .4rem; }
+.ih-con-icono > .bi { color: var(--ih-gray-500, #6f6a7d); }
+/* Y lo que cuelga debajo de ese valor, alineado con el texto y no con el
+   icono: la subcategoría debajo de la categoría. */
+.ih-colgado {
+  margin-top: .15rem;
+  padding-left: 1.25rem;
+}
+
+/* La celda que avisa que la tabla está vacía. */
+.ih-table__vacio {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--ih-gray-500, #6f6a7d);
+}
+.ih-table__vacio > .bi {
+  display: block;
+  margin-bottom: .5rem;
+  font-size: 2rem;
+}
+
+/* ---------------------------------------------------------------------------
+   7 octies. La pantalla de una sola decisión
+   ---------------------------------------------------------------------------
+   Una tarjeta sola en el medio de la pantalla, con un icono, un título, lo que
+   hay que saber y los botones. Es lo que sale al archivar un activo, al
+   encontrarse con un archivo duplicado y al terminar cualquiera de las dos.
+
+   Tres pantallas, el mismo molde, escrito tres veces: cuarenta y ocho atributos
+   `style` entre las tres. Y con diferencias que no quería nadie: la tarjeta
+   medía 540, 600 y 560 px, y el relleno era 2rem, 2rem y 2.5rem.
+
+   El icono de dos de ellas tenía
+   `background: linear-gradient(135deg, var(--warn), var(--warn))` — un
+   degradado entre un color y el mismo color, que es un color.
+   --------------------------------------------------------------------------- */
+.ih-app__main--centrado {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh;
+}
+.ih-foco { width: 100%; max-width: 36rem; }
+.ih-foco--ancha { max-width: 42rem; }
+
+.ih-foco__cabecera {
+  display: flex; align-items: center; gap: .9rem;
+  margin-bottom: 1.5rem;
+}
+.ih-foco__icono {
+  flex: none;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: #fff;
+  background: var(--ih-purple, #663399);
+  border-radius: var(--ih-radius-lg, 15px);
+}
+/* Cuando lo que sigue no se deshace, el icono lo dice. */
+.ih-foco__icono--aviso  { background: var(--ih-warning, #a8620a); }
+.ih-foco__icono--peligro { background: var(--ih-danger, #a12a1e); }
+
+.ih-foco__titulo { margin: 0; font-size: var(--ih-text-lg, 16px); font-weight: 700; color: var(--ih-gray-800, #2b2836); }
+.ih-foco__sub    { margin: 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d); }
+
+/* Los botones del pie, del mismo ancho: ninguna de las dos salidas es «la
+   obvia» —archivar o no archivar— así que ninguna se ve más grande. */
+.ih-foco__acciones { display: flex; gap: .6rem; flex-wrap: wrap; }
+.ih-foco__acciones > * { flex: 1 1 10rem; justify-content: center; }
+
+/* El resultado: un icono grande, un título y el detalle. */
+.ih-foco--resultado { text-align: center; }
+.ih-foco__marca {
+  margin-bottom: 1.25rem;
+  font-size: 4rem; line-height: 1;
+}
+.ih-foco__marca--bien { color: var(--ih-success, #5f8a12); }
+.ih-foco__marca--mal  { color: var(--ih-danger, #a12a1e); }
+/* El detalle va alineado a la izquierda aunque el resto esté centrado: puede
+   ser una lista de archivos o un mensaje de error de varias líneas, y eso
+   centrado no se lee. */
+.ih-foco__detalle {
+  margin-bottom: 2rem; padding: 1rem;
+  text-align: left;
+  font-size: var(--ih-text-sm, 12.5px);
+  color: var(--ih-gray-600, #5b566a);
+  background: var(--ih-gray-50, #faf9fc);
+  border-radius: var(--ih-radius-md, 10px);
+}
+
+/* Dos caminos entre los que elegir, uno al lado del otro. */
+.ih-caminos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+.ih-camino { border: 2px solid var(--ih-gray-200, #e7e4ef); }
+.ih-camino--peligro { border-color: var(--ih-danger-line, #f3c9c4); }
+.ih-camino--seguro  { border-color: var(--ih-purple-200, #d0bfea); }
+.ih-camino__cabecera { display: flex; align-items: center; gap: .5rem; }
+.ih-camino__cabecera > .bi { font-size: 1.4rem; }
+.ih-camino--peligro .ih-camino__cabecera > .bi { color: var(--ih-danger, #a12a1e); }
+.ih-camino--seguro  .ih-camino__cabecera > .bi { color: var(--ih-purple, #663399); }
+.ih-camino__titulo { font-size: var(--ih-text-sm, 12.5px); font-weight: 700; }
+.ih-camino__texto {
+  margin: 0;
+  font-size: var(--ih-text-xs, 11px); line-height: 1.5;
+  color: var(--ih-gray-500, #6f6a7d);
+}
 
 /* ---------------------------------------------------------------------------
    8. Pastillas de selección y lista de permisos

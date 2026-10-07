@@ -50,7 +50,7 @@ if ($topbar_user) {
 
   <span class="ih-topbar__sep"></span>
 
-  <div style="min-width:0">
+  <div class="ih-min-0">
     <h1 class="ih-topbar__title">
       <?= htmlspecialchars($topbar_title) ?>
       <?php if ($topbar_subtitle): ?><small><?= htmlspecialchars($topbar_subtitle) ?></small><?php endif; ?>

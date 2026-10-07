@@ -292,23 +292,27 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-stat ih-stat--danger">
         <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
         <div class="ih-stat__value"><?= $kpi_archivados ?></div>
-        <div class="ih-stat__delta"><a href="/inventario/reportes.php?tab=archivados" style="color:inherit;text-decoration:underline">Ver detalle →</a></div>
+        <div class="ih-stat__delta"><a class="ih-stat__enlace" href="/inventario/reportes.php?tab=archivados">Ver el detalle</a></div>
       </div>
     </div>
 
     <!-- ── Filtros y búsqueda ─────────────────────────────────────── -->
-    <div class="ih-card" style="margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;">
-      <div class="ih-card__body" style="padding:14px 20px;">
-        <form method="get" id="form-filtros" class="ih-flex ih-gap-2" style="flex-wrap:wrap;align-items:center;">
-          <div style="flex:1;min-width:200px;position:relative;">
-            <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ih-gray-400);pointer-events:none;"></i>
-            <input type="text" name="q" value="<?= htmlspecialchars($search) ?>"
-                   placeholder="Buscar por modelo, marca, asignado, S/N…"
-                   class="ih-input" style="padding-left:34px;"
+    <?php /* La barra de filtros y la tabla se leen como una sola cosa: van
+             pegadas (.ih-pegada-arriba / .ih-pegada-abajo). Antes eso estaba
+             hecho con cuatro `border-radius: 0` sueltos, uno por esquina. */ ?>
+    <div class="ih-card ih-pegada-arriba">
+      <div class="ih-card__body ih-card__body--compacto">
+        <form method="get" id="form-filtros" class="ih-filtros-linea">
+          <label class="ih-sr-only" for="q">Buscar un activo</label>
+          <div class="ih-buscador__campo">
+            <i class="bi bi-search ih-buscador__lupa" aria-hidden="true"></i>
+            <input type="search" id="q" name="q" value="<?= htmlspecialchars($search) ?>"
+                   placeholder="Ej.: Latitude 5420, Dell, Brian Sierra, 7KJ2M13"
+                   class="ih-input"
                    oninput="debounceSubmit()">
           </div>
 
-          <select name="cat" class="ih-select" style="min-width:160px;" onchange="this.form.submit()">
+          <select name="cat" class="ih-select" aria-label="Filtrar por categoría" onchange="this.form.submit()">
             <option value="">Todas las categorías</option>
             <?php foreach ($categorias as $cat): ?>
               <option value="<?= htmlspecialchars($cat) ?>" <?= $filterCat === $cat ? 'selected' : '' ?>>
@@ -317,7 +321,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <?php endforeach; ?>
           </select>
 
-          <select name="gar" class="ih-select" style="min-width:140px;" onchange="this.form.submit()">
+          <select name="gar" class="ih-select" aria-label="Filtrar por garantía" onchange="this.form.submit()">
             <option value="">Toda garantía</option>
             <option value="vigente"     <?= $filterGar === 'vigente'     ? 'selected' : '' ?>>Vigente</option>
             <option value="por-caducar" <?= $filterGar === 'por-caducar' ? 'selected' : '' ?>>Por caducar</option>
@@ -337,8 +341,8 @@ require __DIR__ . '/../includes/layout/head.php';
     </div>
 
     <!-- ── Barra de acciones de tabla (columnas, etc) ────────────── -->
-    <div style="display:flex;justify-content:flex-end;padding:8px 20px;background:var(--ih-gray-50);border-top:1px solid var(--ih-gray-100);position:relative;z-index:50;">
-      <div style="position:relative;" id="cols-menu-wrap">
+    <div class="ih-barra-fina">
+      <div class="ih-menu-ancla" id="cols-menu-wrap">
         <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-menu-btn" title="Personalizar columnas visibles">
           <i class="bi bi-layout-three-columns"></i> Columnas
         </button>
@@ -355,16 +359,16 @@ require __DIR__ . '/../includes/layout/head.php';
           'drive' => 'Drive',
         ];
         ?>
-        <div id="cols-menu" hidden style="position:absolute;right:0;top:calc(100% + 6px);z-index:1000;background:#fff;border:1px solid var(--ih-gray-200);border-radius:var(--ih-radius-md);box-shadow:0 12px 32px rgba(0,0,0,.18);min-width:240px;padding:12px 16px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ih-gray-500);letter-spacing:.04em;margin-bottom:10px;">Mostrar columnas</div>
+        <div id="cols-menu" class="ih-menu" hidden>
+          <h3 class="ih-menu__titulo">Qué columnas se ven</h3>
           <?php foreach ($colsPersonalizables as $key => $label): ?>
-            <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;color:var(--ih-gray-800);cursor:pointer;user-select:none;">
+            <label class="ih-menu__opcion">
               <input type="checkbox" class="col-toggle" data-col-toggle="<?= $key ?>" checked>
               <span><?= htmlspecialchars($label) ?></span>
             </label>
           <?php endforeach; ?>
-          <div style="border-top:1px solid var(--ih-gray-100);margin-top:10px;padding-top:10px;display:flex;gap:6px;">
-            <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-reset" style="flex:1;font-size:11px;">
+          <div class="ih-menu__pie">
+            <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" id="cols-reset">
               <i class="bi bi-arrow-counterclockwise"></i> Restaurar todas
             </button>
           </div>
@@ -373,8 +377,8 @@ require __DIR__ . '/../includes/layout/head.php';
     </div>
 
     <!-- ── Tabla de activos ───────────────────────────────────────── -->
-    <div class="ih-card" style="border-top-left-radius:0;border-top-right-radius:0;margin-top:0;">
-      <div class="ih-card__body" style="padding:0;">
+    <div class="ih-card ih-pegada-abajo">
+      <div class="ih-card__body ih-card__body--tabla">
         <div class="ih-table-wrap">
           <table class="ih-table">
             <thead>
@@ -401,7 +405,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 </a></th>
                 <?php endforeach; ?>
                 <th data-col-key="drive">Drive</th>
-                <th style="text-align:center;">Acciones</th>
+                <th class="ih-text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -422,10 +426,10 @@ require __DIR__ . '/../includes/layout/head.php';
               <tr>
                 <td data-col-key="id"><span class="ih-text-muted ih-text-sm">#<?= $row['id'] ?></span></td>
                 <td data-col-key="modelo">
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <i class="<?= $iconSub ?>" style="font-size:18px;color:var(--ih-primary);flex-shrink:0;"></i>
-                    <div style="min-width:0;">
-                      <div style="font-weight:600;color:var(--ih-gray-900);"><?= htmlspecialchars($row['modelo'] ?? '—') ?></div>
+                  <div class="ih-celda">
+                    <i class="<?= $iconSub ?> ih-celda__icono" aria-hidden="true"></i>
+                    <div class="ih-celda__texto">
+                      <div class="ih-celda__nombre"><?= htmlspecialchars($row['modelo'] ?? '—') ?></div>
                       <?php if (!empty($row['marca'])): ?>
                         <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars($row['marca']) ?></div>
                       <?php endif; ?>
@@ -443,12 +447,12 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?php endif; ?>
                 </td>
                 <td data-col-key="categoria">
-                  <span class="ih-text-sm" style="display:inline-flex;align-items:center;gap:6px;">
-                    <i class="<?= $iconCat ?>" style="color:var(--ih-gray-500);"></i>
+                  <span class="ih-text-sm ih-con-icono">
+                    <i class="<?= $iconCat ?>" aria-hidden="true"></i>
                     <?= htmlspecialchars($row['categoria'] ?? '—') ?>
                   </span>
                   <?php if (!empty($row['subcategoria'])): ?>
-                    <div class="ih-text-xs ih-text-muted" style="margin-top:2px;padding-left:20px;">
+                    <div class="ih-text-xs ih-text-muted ih-colgado">
                       <?= htmlspecialchars($row['subcategoria']) ?>
                     </div>
                   <?php endif; ?>
@@ -478,7 +482,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 </td>
                 <td data-col-key="valor_usd">
                   <?php if ($row['valor_usd'] > 0): ?>
-                    <span style="font-weight:600;">USD <?= number_format((float)$row['valor_usd'], 2, ',', '.') ?></span>
+                    <span class="ih-text-semibold">USD <?= number_format((float)$row['valor_usd'], 2, ',', '.') ?></span>
                     <?php if ((int)$row['cantidad'] > 1): ?>
                       <div class="ih-text-sm ih-text-muted">× <?= $row['cantidad'] ?> = USD <?= number_format((float)$row['valor_usd'] * (int)$row['cantidad'], 2, ',', '.') ?></div>
                     <?php endif; ?>
@@ -492,7 +496,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td data-col-key="drive">
                   <?php if (!empty($row['carpeta_raiz_drive'])): ?>
                     <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($row['carpeta_raiz_drive']) ?>"
-                       target="_blank" class="ih-btn ih-btn--ghost ih-btn--sm" title="Abrir en Drive" style="padding:6px 10px;">
+                       target="_blank" rel="noopener" class="ih-btn ih-btn--ghost ih-btn--sm" title="Abrir en Drive">
                       <?= $cloudIconCached ?>
                     </a>
                   <?php else: ?>
@@ -500,15 +504,16 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?php endif; ?>
                 </td>
                 <td>
-                  <div class="ih-flex ih-gap-1" style="justify-content:center;">
+                  <div class="ih-acciones ih-justify-center">
                     <a href="/backend/view_details.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver detalle"><i class="bi bi-eye"></i></a>
                     <a href="/inventario/ficha.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ficha técnica"><i class="bi bi-clipboard-data"></i></a>
                     <?php if ($_canEdit): ?>
                       <a href="/backend/edit.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
                     <?php endif; ?>
                     <?php if ($_canArchive): ?>
-                      <a href="/backend/delete.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Archivar"
-                         style="color:var(--ih-danger);"><i class="bi bi-trash"></i></a>
+                      <a href="/backend/delete.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--danger ih-btn--sm" title="Archivar">
+                        <i class="bi bi-archive"></i><span class="ih-sr-only">Archivar este activo</span>
+                      </a>
                     <?php endif; ?>
                   </div>
                 </td>
@@ -516,8 +521,8 @@ require __DIR__ . '/../includes/layout/head.php';
               <?php endwhile; ?>
               <?php else: ?>
               <tr>
-                <td colspan="10" style="text-align:center;padding:48px;color:var(--ih-gray-500);">
-                  <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                <td colspan="10" class="ih-table__vacio">
+                  <i class="bi bi-inbox" aria-hidden="true"></i>
                   <?= $search || $filterCat || $filterGar ? 'No hay activos que coincidan con los filtros.' : 'No hay activos en el inventario.' ?>
                 </td>
               </tr>
@@ -609,10 +614,14 @@ const colsMenu     = document.getElementById('cols-menu');
 const colsReset    = document.getElementById('cols-reset');
 const colToggles   = document.querySelectorAll('.col-toggle');
 
+/* Esconder y mostrar columnas va por el atributo `hidden`, igual que el resto
+   del proyecto. Antes era `style.display`, que tambien funciona; la razon de
+   unificarlo es que mezclar los dos SI rompe: la hoja del sistema declara
+   `[hidden] { display: none !important }`, asi que si una celda llegara con
+   `hidden` puesto, un `style.display = ''` no la volveria a mostrar. */
 function aplicarColumnasVisibles(hiddenKeys) {
   document.querySelectorAll('[data-col-key]').forEach(el => {
-    const k = el.dataset.colKey;
-    el.style.display = hiddenKeys.includes(k) ? 'none' : '';
+    el.hidden = hiddenKeys.includes(el.dataset.colKey);
   });
 }
 function leerColumnasOcultas() {

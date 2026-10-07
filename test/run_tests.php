@@ -1271,11 +1271,21 @@ chequear('Ninguna clase del sistema de diseño se define sólo dentro de una pá
 // verde. Nueve clases estaban en esa situación.
 //
 // includes/ y auth/ son compartidos: sus clases tienen que existir en las dos.
-$clasesDe = static function (string $dir) use (&$clasesDe): array {
+// `$soloDe` filtra los archivos que pertenecen a UN portal, por su nombre:
+// sidebar_tenant.php lo carga el inventario y sidebar_superadmin.php el panel.
+// Sin esto, `includes/` entero contaba como compartido y una clase del sidebar
+// del cliente se reportaba como faltante en la hoja del panel, que nunca lo
+// dibuja.
+$clasesDe = static function (string $dir, string $soloDe = '') use (&$clasesDe): array {
     $out = [];
     foreach (glob(RAIZ . '/' . $dir . '/*') ?: [] as $f) {
-        if (is_dir($f)) { $out += $clasesDe(substr($f, strlen(RAIZ) + 1)); continue; }
+        if (is_dir($f)) { $out += $clasesDe(substr($f, strlen(RAIZ) + 1), $soloDe); continue; }
         if (!str_ends_with($f, '.php')) { continue; }
+        $base = basename($f, '.php');
+        // De un par tenant/superadmin, sólo el del portal que se está mirando.
+        if (str_ends_with($base, '_tenant') || str_ends_with($base, '_superadmin')) {
+            if ($soloDe === '' || !str_ends_with($base, '_' . $soloDe)) { continue; }
+        }
         if (!preg_match_all('/class\s*=\s*"([^"]*)"/', (string)file_get_contents($f), $mm)) { continue; }
         foreach ($mm[1] as $attr) {
             foreach (preg_split('/\s+/', $attr) ?: [] as $c) {
@@ -1291,14 +1301,12 @@ $clasesDe = static function (string $dir) use (&$clasesDe): array {
 // con app.css para un usuario de empresa y con intellihelp.css para un
 // superadmin. Contarlo como tenant dejaba un punto ciego: `.ih-edit-grid` y
 // `.ih-badge--neutral` estaban solo en app.css y en el panel no tenian regla.
-$compartidas = $clasesDe('includes') + $clasesDe('auth') + $clasesDe('backend');
-
 foreach ([
-    'portal tenant (app.css)'            => [['inventario'], $css],
-    'panel superadmin (intellihelp.css)' => [['dashboard'],   leer('assets/css/intellihelp.css')],
-] as $portal => [$dirs, $hoja]) {
-    $usa = $compartidas;
-    foreach ($dirs as $d) { $usa += $clasesDe($d); }
+    'portal tenant (app.css)'            => [['inventario'], 'tenant',     $css],
+    'panel superadmin (intellihelp.css)' => [['dashboard'],  'superadmin', leer('assets/css/intellihelp.css')],
+] as $portal => [$dirs, $cual, $hoja]) {
+    $usa = $clasesDe('includes', $cual) + $clasesDe('auth', $cual) + $clasesDe('backend', $cual);
+    foreach ($dirs as $d) { $usa += $clasesDe($d, $cual); }
     $faltan = [];
     foreach (array_keys($usa) as $c) {
         if (str_contains($hoja, '.' . $c)) { continue; }
@@ -1309,6 +1317,47 @@ foreach ([
     chequear(count($usa) . " clases del {$portal} están en una hoja QUE ESE PORTAL CARGA",
         $faltan === [], 'faltan: ' . implode(', ', array_slice($faltan, 0, 12)));
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Ninguna pantalla del cliente tiene estilos propios
+//
+// Esto es el resultado de la revisión pantalla por pantalla, y está acá para
+// que no se deshaga. Dos razones, y la segunda es la que importa:
+//
+//   1. Una regla escrita en una pantalla no la ve ninguna otra, así que el
+//      mismo componente termina con dos formas. Pasó con el paginador —tres
+//      versiones—, con las pastillas de rol —dos— y con el rótulo de sección
+//      —tres, con tres nombres distintos—.
+//   2. La hoja de la página carga DESPUÉS de la del sistema, así que una regla
+//      de pantalla le gana a la del sistema sin pedir permiso. El listado tenía
+//      un `<style>` que repintaba `.ih-flash` con un verde de otra paleta y en
+//      la misma pantalla convivían dos verdes.
+//
+// Lo que sí se permite en un atributo `style`: un dato que sólo el PHP conoce
+// —el nivel de sangría de un árbol, que viaja como `--nivel`— y el color de un
+// logo ajeno, que si se pinta de violeta deja de ser el logo.
+$conEstilos = [];
+$conInline  = [];
+foreach (['inventario', 'backend', 'includes', 'includes/layout', 'auth'] as $dir) {
+    foreach (glob(RAIZ . '/' . $dir . '/*.php') ?: [] as $f) {
+        $rel = $dir . '/' . basename($f);
+        $src = sin_comentarios((string)file_get_contents($f));
+        if (preg_match('/<style[\s>]/i', $src)) { $conEstilos[] = $rel; }
+        if (preg_match_all('/\sstyle\s*=\s*"([^"]*)"/i', $src, $mm)) {
+            foreach ($mm[1] as $decl) {
+                // Un dato que viaja como propiedad propia: `style="--nivel: 2"`.
+                if (preg_match('/^\s*--[a-z-]+\s*:/i', $decl)) { continue; }
+                // El color de un logo de otra marca.
+                if (preg_match('/^\s*color\s*:\s*#[0-9a-f]{6}\s*;?\s*$/i', $decl)) { continue; }
+                $conInline[] = $rel . ' → ' . $decl;
+            }
+        }
+    }
+}
+chequear('Ninguna pantalla del cliente define sus propios estilos en un <style>',
+    $conEstilos === [], implode(', ', $conEstilos));
+chequear('Ningún atributo style= que no sea un dato o el color de un logo ajeno',
+    $conInline === [], implode(' | ', array_slice($conInline, 0, 6)));
 
 // ───────────────────────────────────────────────────────────────────────────
 // Clases sin prefijo `ih-`

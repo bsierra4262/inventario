@@ -162,31 +162,26 @@ require __DIR__ . '/../includes/layout/sidebar_tenant.php';
 require __DIR__ . '/../includes/layout/topbar.php';
 ?>
 
-<main class="ih-app__main" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
-  <div class="ih-card" style="max-width:560px;width:100%;text-align:center;">
-    <div class="ih-card__body" style="padding:2.5rem 2rem;">
+<main class="ih-app__main ih-app__main--centrado">
+  <div class="ih-card ih-foco ih-foco--resultado">
+    <div class="ih-card__body">
 
-      <!-- Ícono -->
-      <div style="font-size:4rem;margin-bottom:1.25rem;line-height:1;">
-        <?php if ($isSuccess): ?>
-          <i class="bi bi-check-circle-fill" style="color:var(--ih-success);"></i>
-        <?php else: ?>
-          <i class="bi bi-exclamation-octagon-fill" style="color:var(--ih-danger);"></i>
-        <?php endif; ?>
+      <div class="ih-foco__marca <?= $isSuccess ? 'ih-foco__marca--bien' : 'ih-foco__marca--mal' ?>">
+        <i class="bi bi-<?= $isSuccess ? 'check-circle-fill' : 'exclamation-octagon-fill' ?>"></i>
       </div>
 
-      <!-- Título -->
-      <h2 style="font-size:var(--ih-text-xl);font-weight:700;color:var(--ih-gray-800);margin-bottom:.75rem;">
-        <?= $isSuccess ? 'Operación exitosa' : 'Ocurrió un error' ?>
+      <h2 class="ih-foco__titulo ih-mb-3">
+        <?= $isSuccess ? 'Listo' : 'No se pudo' ?>
       </h2>
 
-      <!-- Mensaje -->
-      <div style="color:var(--ih-gray-600);font-size:var(--ih-text-sm);margin-bottom:2rem;text-align:left;background:var(--ih-gray-50);border-radius:var(--ih-radius-md);padding:1rem;">
+      <?php /* El detalle va alineado a la izquierda aunque el resto este
+               centrado: puede ser una lista de archivos o un error de varias
+               lineas, y eso centrado no se lee. */ ?>
+      <div class="ih-foco__detalle">
         <?= formatMessageSafe($msg) ?>
       </div>
 
-      <!-- Botones -->
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <div class="ih-foco__acciones">
         <?php if ($isSuccess): ?>
           <a href="/inventario/index.php" class="ih-btn ih-btn--primary">
             <i class="bi bi-house-door"></i> Volver al inventario

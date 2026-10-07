@@ -169,81 +169,76 @@ require __DIR__ . '/../includes/layout/sidebar_tenant.php';
 require __DIR__ . '/../includes/layout/topbar.php';
 ?>
 
-<main class="ih-app__main" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
-  <div class="ih-card" style="max-width:600px;width:100%;">
-    <div class="ih-card__body" style="padding:2rem;">
+<main class="ih-app__main ih-app__main--centrado">
+  <div class="ih-card ih-foco ih-foco--ancha">
+    <div class="ih-card__body">
 
-      <!-- Encabezado -->
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
-        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--warn),var(--warn));color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
-          <i class="bi bi-exclamation-triangle"></i>
+      <div class="ih-foco__cabecera">
+        <div class="ih-foco__icono ih-foco__icono--aviso">
+          <i class="bi bi-files"></i>
         </div>
         <div>
-          <h2 style="margin:0;font-size:var(--ih-text-lg);font-weight:700;color:var(--ih-gray-800);">Archivo duplicado</h2>
-          <p style="margin:0;font-size:var(--ih-text-sm);color:var(--ih-gray-500);">
-            En <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8') ?>
-          </p>
+          <h2 class="ih-foco__titulo">Ese archivo ya está subido</h2>
+          <p class="ih-foco__sub">En <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8') ?></p>
         </div>
       </div>
 
-      <div class="ih-alert ih-alert--warning" style="margin-bottom:1.5rem;">
-        <i class="bi bi-files"></i>
+      <div class="ih-alert ih-alert--warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
         <div>
-          El archivo <strong><?= htmlspecialchars((string)$actual['file_name'], ENT_QUOTES, 'UTF-8') ?></strong>
-          ya existe en <?= htmlspecialchars($providerLabel, ENT_QUOTES, 'UTF-8') ?>.
-          Elegí cómo continuar:
+          En la carpeta de este activo ya hay un archivo que se llama
+          <strong><?= htmlspecialchars((string)$actual['file_name'], ENT_QUOTES, 'UTF-8') ?></strong>.
+          Hay dos salidas, y conviene mirar cuál antes de elegir.
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <?php /* Dos caminos, uno al lado del otro. El de la izquierda no se
+               deshace —el archivo viejo se pierde— y el borde lo dice. */ ?>
+      <div class="ih-caminos">
 
-        <!-- Opción: Sobrescribir -->
-        <div class="ih-card" style="border:2px solid var(--ih-danger-light,var(--danger-line));">
-          <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <i class="bi bi-arrow-repeat" style="font-size:1.4rem;color:var(--ih-danger);"></i>
-              <strong style="font-size:var(--ih-text-sm);">Sobrescribir</strong>
+        <div class="ih-card ih-camino ih-camino--peligro">
+          <div class="ih-card__body ih-card__body--compacto ih-col ih-gap-3">
+            <div class="ih-camino__cabecera">
+              <i class="bi bi-arrow-repeat"></i>
+              <strong class="ih-camino__titulo">Reemplazar el que está</strong>
             </div>
-            <p style="margin:0;font-size:var(--ih-text-xs);color:var(--ih-gray-500);line-height:1.5;">
-              Reemplaza el archivo existente con la versión nueva.
+            <p class="ih-camino__texto">
+              El archivo que ya estaba se pierde y queda sólo el nuevo. No se puede deshacer.
             </p>
             <form action="sobrescribir.php" method="POST">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
               <input type="hidden" name="file_id" value="<?= htmlspecialchars($fileId, ENT_QUOTES, 'UTF-8') ?>">
               <button type="submit" class="ih-btn ih-btn--danger ih-btn--block ih-btn--sm">
-                <i class="bi bi-arrow-repeat"></i> Sobrescribir
+                <i class="bi bi-arrow-repeat"></i> Reemplazar
               </button>
             </form>
           </div>
         </div>
 
-        <!-- Opción: Renombrar y Subir -->
-        <div class="ih-card" style="border:2px solid var(--ih-primary-light,var(--primary-100));">
-          <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <i class="bi bi-pencil-square" style="font-size:1.4rem;color:var(--ih-primary);"></i>
-              <strong style="font-size:var(--ih-text-sm);">Renombrar y subir</strong>
+        <div class="ih-card ih-camino ih-camino--seguro">
+          <div class="ih-card__body ih-card__body--compacto ih-col ih-gap-3">
+            <div class="ih-camino__cabecera">
+              <i class="bi bi-pencil-square"></i>
+              <strong class="ih-camino__titulo">Subirlo con otro nombre</strong>
             </div>
-            <p style="margin:0;font-size:var(--ih-text-xs);color:var(--ih-gray-500);line-height:1.5;">
-              Sube el archivo con un nuevo nombre, conservando el original.
+            <p class="ih-camino__texto">
+              Quedan los dos. El que ya estaba no se toca.
             </p>
             <form action="renombrar.php" method="POST">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
               <input type="hidden" name="folder_id" value="<?= htmlspecialchars($actual['folder_id'], ENT_QUOTES, 'UTF-8') ?>">
               <input type="hidden" name="producto_id" value="<?= htmlspecialchars((string)$productoId, ENT_QUOTES, 'UTF-8') ?>">
-              <div style="display:flex;gap:6px;">
-                <input
-                  type="text"
-                  class="ih-input"
-                  name="new_name"
-                  placeholder="Nuevo nombre..."
-                  required
-                  style="flex:1;font-size:var(--ih-text-xs);"
-                >
+              <div class="ih-buscador">
+                <label class="ih-sr-only" for="new_name">El nombre nuevo del archivo</label>
+                <input type="text" class="ih-input" id="new_name" name="new_name" required
+                       placeholder="Ej.: factura-dell-marzo-v2.pdf">
                 <button type="submit" class="ih-btn ih-btn--primary ih-btn--sm">
-                  <i class="bi bi-upload"></i>
+                  <i class="bi bi-upload"></i><span class="ih-sr-only">Subir con ese nombre</span>
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
             </form>
           </div>
         </div>

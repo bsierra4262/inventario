@@ -14,6 +14,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../core/tenants/campos.php';
+require_once __DIR__ . '/../core/tenants/papelera.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -254,65 +255,71 @@ require __DIR__ . '/../includes/layout/sidebar_tenant.php';
 require __DIR__ . '/../includes/layout/topbar.php';
 ?>
 
-<main class="ih-app__main" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
-  <div class="ih-card" style="max-width:540px;width:100%;">
-    <div class="ih-card__body" style="padding:2rem;">
+<main class="ih-app__main ih-app__main--centrado">
+  <div class="ih-card ih-foco">
+    <div class="ih-card__body">
 
-      <!-- Encabezado -->
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
-        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--warn),var(--warn));color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
+      <?php /* Una pantalla con una sola decision usa el molde del sistema
+               (.ih-foco). Antes estaba escrita a mano aca, en
+               confirmar_accion.php y en resultado.php, con la tarjeta de 540,
+               600 y 560 px y el relleno de 2, 2 y 2.5 rem. */ ?>
+      <div class="ih-foco__cabecera">
+        <div class="ih-foco__icono ih-foco__icono--aviso">
           <i class="bi bi-archive"></i>
         </div>
         <div>
-          <h2 style="margin:0;font-size:var(--ih-text-lg);font-weight:700;color:var(--ih-gray-800);">Archivar activo</h2>
-          <p style="margin:0;font-size:var(--ih-text-sm);color:var(--ih-gray-500);"><?= esc_del($nombreActivo) ?></p>
+          <h2 class="ih-foco__titulo">Archivar este activo</h2>
+          <p class="ih-foco__sub"><?= esc_del($nombreActivo) ?></p>
         </div>
       </div>
 
-      <!-- Aviso -->
-      <div class="ih-alert ih-alert--warning" style="margin-bottom:1.5rem;">
+      <div class="ih-alert ih-alert--warning">
         <i class="bi bi-exclamation-triangle-fill"></i>
-        <div>El activo se marcará como <strong>archivado</strong> y quedará fuera del inventario activo. Se conserva el historial y se puede restaurar.</div>
+        <div>
+          Sale del inventario y de los totales, pero no se borra: conserva su historial y sus
+          archivos, y desde la papelera se puede devolver. Su carpeta de Drive se mueve a
+          «Archivados» y vuelve sola al restaurarlo.
+        </div>
       </div>
 
-      <!-- Formulario -->
       <form method="post" action="/backend/delete.php">
         <input type="hidden" name="csrf_token" value="<?= esc_del($csrf_token) ?>">
         <input type="hidden" name="id" value="<?= esc_del((string)$producto_id) ?>">
 
-        <div class="ih-field" style="margin-bottom:1rem;">
-          <label class="ih-field__label">Motivo <span style="color:var(--ih-danger)">*</span></label>
-          <select name="motivo" class="ih-select" required>
-            <option value="" disabled selected>Seleccionar motivo...</option>
-            <option>Venta</option>
-            <option>Donación</option>
-            <option>Scrapping</option>
-            <option>Desguace</option>
-            <option>Perdida</option>
-            <option>Robo</option>
-          </select>
-        </div>
-
-        <div class="ih-field" style="margin-bottom:1rem;">
-          <label class="ih-field__label">Fecha de baja</label>
-          <input type="date" name="fecha_baja" class="ih-input" value="<?= date('Y-m-d') ?>">
-        </div>
-
-        <div class="ih-field" style="margin-bottom:1.5rem;">
-          <label class="ih-field__label">
-            Descripción adicional
-            <span style="color:var(--ih-gray-400);font-weight:400;">(opcional)</span>
+        <div class="ih-field">
+          <label class="ih-field__label" for="motivo">
+            Por qué se archiva <span class="ih-field__req" aria-hidden="true">*</span>
           </label>
-          <textarea name="detalle" class="ih-input" rows="3"
-                    placeholder="Ej: Activo vendido al área de contabilidad..."></textarea>
+          <select name="motivo" id="motivo" class="ih-select" required>
+            <option value="" disabled selected>Elegí un motivo…</option>
+            <?php foreach (PAPELERA_MOTIVOS as $__v => $__t): ?>
+              <option value="<?= esc_del($__v) ?>"><?= esc_del($__t) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="ih-field__hint">Queda escrito en el historial del activo y en la papelera.</div>
         </div>
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button type="submit" class="ih-btn ih-btn--danger" style="flex:1;">
-            <i class="bi bi-archive-fill"></i> Confirmar archivado
+        <div class="ih-field">
+          <label class="ih-field__label" for="fecha_baja">Desde cuándo</label>
+          <input type="date" name="fecha_baja" id="fecha_baja" class="ih-input" value="<?= date('Y-m-d') ?>">
+          <div class="ih-field__hint">La fecha en que dejó de usarse. Por defecto, hoy.</div>
+        </div>
+
+        <div class="ih-field">
+          <label class="ih-field__label" for="detalle">
+            Algo más que convenga anotar
+            <span class="ih-field__opcional">(se puede dejar vacío)</span>
+          </label>
+          <textarea name="detalle" id="detalle" class="ih-input" rows="3"
+                    placeholder="Ej.: lo retiró Contaduría el 12/03, remito 0001-00045"></textarea>
+        </div>
+
+        <div class="ih-foco__acciones ih-mt-5">
+          <button type="submit" class="ih-btn ih-btn--danger">
+            <i class="bi bi-archive-fill"></i> Archivar
           </button>
-          <a href="/inventario/index.php" class="ih-btn ih-btn--ghost" style="flex:1;">
-            <i class="bi bi-x-circle"></i> Cancelar
+          <a href="/inventario/index.php" class="ih-btn ih-btn--ghost">
+            <i class="bi bi-x-circle"></i> No archivar
           </a>
         </div>
       </form>

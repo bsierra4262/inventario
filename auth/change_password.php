@@ -178,7 +178,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <div class="ih-auth__body">
 
       <?php if ($isForced && $msg_texto === ''): ?>
-        <div class="ih-alert ih-alert--warning" style="margin-bottom:1rem">
+        <div class="ih-alert ih-alert--warning">
           <i class="bi bi-key-fill"></i>
           <div>Tu cuenta requiere una contraseña nueva. Completá el formulario para acceder al inventario.</div>
         </div>

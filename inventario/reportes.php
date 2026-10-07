@@ -12,6 +12,7 @@ require_once __DIR__ . '/../logs/logger.php';
 // infocom_amortizacion_anios(): el plazo de amortización guardado por activo,
 // con el del reporte como respaldo.
 require_once __DIR__ . '/../core/tenants/infocom.php';
+require_once __DIR__ . '/../core/tenants/papelera.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: /auth/login.php');
@@ -196,7 +197,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </nav>
 
 <!-- ════════ INVENTARIO GENERAL ════════ -->
-<div style="display:<?= $tab === 'inventario' ? 'block' : 'none' ?>">
+<div<?= $tab === 'inventario' ? '' : ' hidden' ?>>
   <form method="GET" class="ih-filtros" id="form-inventario">
     <input type="hidden" name="tab" value="inventario">
     <div>
@@ -242,15 +243,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="ih-label">Hasta Fecha de Carga</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
-    <div style="display:flex;align-items:end;gap:8px;">
-      <label class="ih-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+    <div class="ih-flex ih-items-end ih-gap-2">
+      <label class="ih-label ih-label--casilla">
         <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
         Incluir archivados
       </label>
     </div>
     <div>
       <button class="ih-btn ih-btn--primary" type="submit">Filtrar</button>
-      <a href="?tab=inventario" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
+      <a href="?tab=inventario" class="ih-btn ih-btn--ghost">Limpiar</a>
     </div>
   </form>
 
@@ -327,7 +328,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div class="ih-pager">
     <form method="get" id="form-per-page-inventario" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
-      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+      <span class="ih-text-sm ih-text-muted">
         <?= number_format($totalRows) ?> registro<?= $totalRows === 1 ? '' : 's' ?>
       </span>
       Mostrar:
@@ -348,7 +349,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 
 <!-- ════════ RANKING POR CANTIDAD ════════ -->
-<div style="display:<?= $tab === 'valor' ? 'block' : 'none' ?>">
+<div<?= $tab === 'valor' ? '' : ' hidden' ?>>
   <form method="GET" class="ih-filtros" id="form-valor">
     <input type="hidden" name="tab" value="valor">
     <div>
@@ -374,7 +375,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="ih-label">Hasta Fecha de Carga</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
-    <div style="display:flex;gap:8px;align-items:flex-end;">
+    <div class="ih-flex ih-items-end ih-gap-2">
       <button class="ih-btn ih-btn--primary" type="submit" name="ranking_cantidad">Filtrar</button>
       <button class="ih-btn ih-btn--ghost ih-btn--sm" type="button" onclick="resetRanking()">Todo</button>
     </div>
@@ -461,14 +462,14 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </tr>
     <?php endwhile; ?>
     </tbody>
-    <tfoot><tr><th colspan="4">TOTAL GENERAL:</th><th style="text-align:left"><?= (int)$granTotal ?></th></tr></tfoot>
+    <tfoot><tr><th colspan="4">TOTAL GENERAL:</th><th class="ih-text-left"><?= (int)$granTotal ?></th></tr></tfoot>
   </table>
   </div>
 
   <div class="ih-pager">
     <form method="get" id="form-per-page-valor" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
-      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+      <span class="ih-text-sm ih-text-muted">
         <?= number_format($totalRowsV) ?> registro<?= $totalRowsV === 1 ? '' : 's' ?>
       </span>
       Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-valor').submit()">
@@ -487,7 +488,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 
 <!-- ════════ AMORTIZACIÓN ════════ -->
-<div style="display:<?= $tab === 'amortizacion' ? 'block' : 'none' ?>">
+<div<?= $tab === 'amortizacion' ? '' : ' hidden' ?>>
   <form method="GET" class="ih-filtros" id="form-amorti">
     <input type="hidden" name="tab" value="amortizacion">
     <div>
@@ -534,15 +535,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="ih-label">Hasta Fecha Compra/Ingreso</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
-    <div style="display:flex;align-items:end;gap:8px;">
-      <label class="ih-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+    <div class="ih-flex ih-items-end ih-gap-2">
+      <label class="ih-label ih-label--casilla">
         <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
         Incluir archivados
       </label>
     </div>
     <div>
       <button class="ih-btn ih-btn--primary" type="submit" name="filtro_amorti">Ver</button>
-      <a href="?tab=amortizacion" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
+      <a href="?tab=amortizacion" class="ih-btn ih-btn--ghost">Limpiar</a>
     </div>
   </form>
 
@@ -654,9 +655,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <td><?= htmlspecialchars($row['subcategoria']) ?></td>
         <td><?= htmlspecialchars($fecha_base_str) ?>
           <?php if (!empty($row['fecha_compra']) && $row['fecha_compra'] !== '0000-00-00'): ?>
-            <br><small style="color:var(--ih-gray-400)">Compra</small>
+            <br><small class="ih-text-apagado">Compra</small>
           <?php elseif (!empty($row['fecha_ingreso']) && $row['fecha_ingreso'] !== '0000-00-00'): ?>
-            <br><small style="color:var(--ih-gray-400)">Ingreso</small>
+            <br><small class="ih-text-apagado">Ingreso</small>
           <?php endif; ?>
         </td>
         <td>$<?= number_format($valor_compra,2) ?></td>
@@ -668,9 +669,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <tfoot>
       <tr>
         <th colspan="6">TOTAL Compra:</th>
-        <th style="text-align:left">$<?= number_format($totalCompra,2) ?></th>
+        <th class="ih-text-left">$<?= number_format($totalCompra,2) ?></th>
         <th>TOTAL Actual:</th>
-        <th style="text-align:left">$<?= number_format($totalActual,2) ?></th>
+        <th class="ih-text-left">$<?= number_format($totalActual,2) ?></th>
       </tr>
     </tfoot>
   </table>
@@ -679,7 +680,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div class="ih-pager">
     <form method="get" id="form-per-page-amortizacion" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
-      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+      <span class="ih-text-sm ih-text-muted">
         <?= number_format($totalRowsA) ?> registro<?= $totalRowsA === 1 ? '' : 's' ?>
       </span>
       Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-amortizacion').submit()">
@@ -698,7 +699,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 
 <!-- ════════ TRAZABILIDAD ════════ -->
-<div style="display:<?= $tab === 'trazabilidad' ? 'block' : 'none' ?>">
+<div<?= $tab === 'trazabilidad' ? '' : ' hidden' ?>>
   <?php
   // Lista dinamica de acciones existentes en producto_movimientos
   $accionesT = [];
@@ -742,7 +743,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <button class="ih-btn ih-btn--primary" type="submit" name="trazabilidad">Buscar</button>
-      <a href="?tab=trazabilidad" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
+      <a href="?tab=trazabilidad" class="ih-btn ih-btn--ghost">Limpiar</a>
     </div>
   </form>
 
@@ -814,7 +815,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         $dt = trim($row['detec_mod']);
         if ($dt == '' && $row['pctipo_mod']) $dt = "{$row['pctipo_mod']} – {$row['pclong_mod']} m";
         $dt = htmlspecialchars($dt, ENT_QUOTES);
-        $usr = htmlspecialchars($row['username'], ENT_QUOTES) . '<br><small style="color:var(--ih-gray-400)">'.htmlspecialchars($row['email'], ENT_QUOTES)."</small>";
+        $usr = htmlspecialchars($row['username'], ENT_QUOTES) . '<br><small class="ih-text-apagado">'.htmlspecialchars($row['email'], ENT_QUOTES)."</small>";
     ?>
       <tr>
         <td><?= $row['fecha'] ?></td>
@@ -836,7 +837,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </tr>
     <?php endwhile; ?>
     <?php if (!$hay_datos): ?>
-      <tr><td colspan="16" style="text-align:center;color:var(--ih-gray-400);padding:24px;">No hay datos disponibles</td></tr>
+      <tr><td colspan="16" class="ih-table__vacio">No hay datos disponibles</td></tr>
     <?php endif; ?>
     </tbody>
   </table>
@@ -845,7 +846,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div class="ih-pager">
     <form method="get" id="form-per-page-trazabilidad" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
-      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+      <span class="ih-text-sm ih-text-muted">
         <?= number_format($totalRowsT) ?> registro<?= $totalRowsT === 1 ? '' : 's' ?>
       </span>
       Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-trazabilidad').submit()">
@@ -864,10 +865,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 
 <!-- ════════ ARCHIVADOS ════════ -->
-<div style="display:<?= $tab === 'archivados' ? 'block' : 'none' ?>">
+<div<?= $tab === 'archivados' ? '' : ' hidden' ?>>
   <?php
-  // Motivos: union de fijos + los detectados en DB historica
-  $motivosDef = ['Venta','Donación','Scrapping','Desguace','Perdida','Robo'];
+  /* Los motivos que ofrece la pantalla de archivar (PAPELERA_MOTIVOS) mas los
+     que ya estan escritos en el historial: una base vieja puede tener motivos
+     que la lista de hoy ya no ofrece, y si no aparecen en el filtro esos
+     activos no se pueden encontrar.
+
+     La lista fija NO esta escrita aca: estaba, y era la misma lista que la de
+     backend/delete.php, en otro archivo. Ahora las dos salen de
+     core/tenants/papelera.php. */
+  $motivosDef = array_keys(PAPELERA_MOTIVOS);
   $motivosDB = [];
   $mvRes = $conn->query("SELECT DISTINCT descripcion FROM `{$movTable}` WHERE accion = 'Archivado' AND descripcion LIKE 'Motivo:%'");
   if ($mvRes) {
@@ -887,8 +895,13 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <label class="ih-label">Motivo</label>
       <select name="motivo" class="ih-select">
         <option value="">Todos</option>
-        <?php foreach($motivosTodos as $motivo): ?>
-          <option value="<?=htmlspecialchars($motivo)?>" <?=($_GET['motivo']??'')===$motivo?'selected':''?>><?=htmlspecialchars($motivo)?></option>
+        <?php foreach ($motivosTodos as $motivo): ?>
+          <?php /* El valor es el que esta guardado en la base; el texto, el que
+                   se lee. Un motivo que viene de un activo viejo y que ya no
+                   esta en la lista de hoy se muestra tal cual. */ ?>
+          <option value="<?= htmlspecialchars($motivo) ?>" <?= ($_GET['motivo'] ?? '') === $motivo ? 'selected' : '' ?>>
+            <?= htmlspecialchars(PAPELERA_MOTIVOS[$motivo] ?? $motivo) ?>
+          </option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -981,7 +994,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <td><?= $row['fecha'] ?></td>
         <td><?= htmlspecialchars($motivo) ?></td>
         <td><?= htmlspecialchars($detalle_txt) ?></td>
-        <td><?= htmlspecialchars($row['username']) ?><br><small style="color:var(--ih-gray-400)"><?=htmlspecialchars($row['email'])?></small></td>
+        <td><?= htmlspecialchars($row['username']) ?><br><small class="ih-text-apagado"><?=htmlspecialchars($row['email'])?></small></td>
         <td><?= $row['producto_id'] ?></td>
         <td><?= htmlspecialchars($row['modelo']) ?></td>
         <td><?= htmlspecialchars($row['marca']) ?></td>
@@ -1000,7 +1013,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </tr>
     <?php endwhile; ?>
     <?php if (!$hay_datos): ?>
-      <tr><td colspan="19" style="text-align:center;color:var(--ih-gray-400);padding:24px;">No hay datos disponibles</td></tr>
+      <tr><td colspan="19" class="ih-table__vacio">No hay datos disponibles</td></tr>
     <?php endif; ?>
     </tbody>
   </table>
@@ -1009,7 +1022,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div class="ih-pager">
     <form method="get" id="form-per-page-archivados" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
-      <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
+      <span class="ih-text-sm ih-text-muted">
         <?= number_format($totalRowsAR) ?> registro<?= $totalRowsAR === 1 ? '' : 's' ?>
       </span>
       Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-archivados').submit()">
@@ -1076,10 +1089,13 @@ require __DIR__ . '/../includes/layout/topbar.php';
   }
 
   // ── Exportaciones ──────────────────────────────────────────────
+  /* Antes de exportar, que no quede ninguna columna escondida: lo que baja
+     tiene que ser la tabla completa y no lo que la persona dejo a la vista.
+     Se limpia el atributo `hidden`, que es con lo que se esconden. */
   function ensureAllColumnsVisible(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    table.querySelectorAll('thead th, tbody td').forEach(el => el.style.display = '');
+    table.querySelectorAll('thead th, tbody td').forEach(el => { el.hidden = false; });
   }
 
   // ── Generador de PDF profesional ─────────────────────────────────

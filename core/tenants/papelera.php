@@ -20,6 +20,31 @@
 
 declare(strict_types=1);
 
+if (!defined('PAPELERA_MOTIVOS')) {
+    /**
+     * Por qué se archiva un activo: lo que se guarda => lo que se lee.
+     *
+     * La clave es el valor que termina en la base y en el historial, y por eso
+     * no se toca: hay activos archivados con esos textos. El valor del arreglo
+     * es lo que ve la persona, y eso sí se puede escribir bien —«Perdida» sin
+     * tilde estaba a la vista en el desplegable, y «Scrapping» es una palabra
+     * que no dice nada en una pantalla en castellano.
+     *
+     * Está acá porque la lista la necesitan dos pantallas que no se hablan:
+     * backend/delete.php, que ofrece los motivos al archivar, e
+     * inventario/reportes.php, que filtra por ellos. Escritas por separado, una
+     * puede ofrecer un motivo que la otra no sabe filtrar.
+     */
+    define('PAPELERA_MOTIVOS', [
+        'Venta'     => 'Se vendió',
+        'Donación'  => 'Se donó',
+        'Scrapping' => 'Se dio de baja por obsoleto',
+        'Desguace'  => 'Se desarmó para repuestos',
+        'Perdida'   => 'Se perdió',
+        'Robo'      => 'Se lo robaron',
+    ]);
+}
+
 if (!defined('PAPELERA_TABLAS_DEPENDIENTES')) {
     /**
      * Las tablas con una columna `producto_id`.
