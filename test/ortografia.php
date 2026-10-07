@@ -66,6 +66,15 @@ const ORTO_FALTAS = [
     'despues' => 'después', 'valida' => 'válida', 'valido' => 'válido',
     'invalido' => 'inválido', 'invalida' => 'inválida',
     'maquina' => 'máquina', 'pagina' => 'página', 'paginas' => 'páginas',
+    'modulo' => 'módulo', 'modulos' => 'módulos',
+    'bateria' => 'batería', 'baterias' => 'baterías',
+    'extension' => 'extensión', 'extensiones' => 'extensiones',
+    'anios' => 'años', 'anio' => 'año',
+    'numeros' => 'números',
+    'tamano' => 'tamaño', 'tamanos' => 'tamaños',
+    'disenio' => 'diseño', 'conexion' => 'conexión',
+    'ubicacion' => 'ubicación', 'instalacion' => 'instalación',
+    'aplicacion' => 'aplicación',
 ];
 
 /**

@@ -227,6 +227,20 @@ try {
     // los configurables, que viven en `campos_valor`.
     require_once __DIR__ . '/../core/tenants/campos.php';
     campos_guardar($conn, (int)$producto_id, $categoria, $subcategoria, $_POST);
+
+    // El sistema operativo también: es una fila por activo, así que entra en
+    // la misma transacción. Lo que necesita el id del activo —componentes,
+    // puertos, relaciones— se carga después, en la ficha técnica, y a eso se
+    // redirige al terminar.
+    require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
+    if (so_disponible($conn)) {
+        so_asegurar_fila($conn, (int)$producto_id);
+        $datosSo = [];
+        foreach (array_merge(SO_CAMPOS_TEXTO, SO_CAMPOS_FECHA) as $cSo) {
+            if (isset($_POST[$cSo])) { $datosSo[$cSo] = (string)$_POST[$cSo]; }
+        }
+        if ($datosSo !== []) { so_guardar($conn, (int)$producto_id, $datosSo); }
+    }
     $stmt->close();
 
     // Crear estructura de carpetas en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)
@@ -414,7 +428,10 @@ try {
     } elseif (!$parentFolderId) {
         $okMsg .= ' Sin carpeta Drive asignada — configurá el ID de carpeta en Integración.';
     }
-    header('Location: /inventario/index.php?ok=1&msg=' . urlencode($okMsg));
+    // A la ficha técnica, no al listado: el alta recién empieza. Componentes,
+    // red, contratos y documentos necesitan el id del activo, que recién
+    // existe ahora. Antes había que volver al listado, buscarlo y entrar.
+    header('Location: /inventario/ficha.php?id=' . (int)$producto_id . '&nuevo=1&ok=' . urlencode($okMsg));
     exit();
 
 } catch (Throwable $e) {

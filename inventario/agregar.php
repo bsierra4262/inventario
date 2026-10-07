@@ -460,6 +460,62 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
       <?php endif; ?>
 
+      <?php /* ── Bloque: sistema operativo ────────────────────────────────
+               Se carga acá y no sólo en la ficha técnica porque es una fila por
+               activo: entra en la misma transacción del alta. Lo que sí
+               necesita que el activo ya exista —componentes, puertos de red,
+               relaciones, contratos— se carga en la ficha, y el alta termina
+               llevando ahí directamente. */ ?>
+      <div class="ih-card" style="margin-bottom:16px;">
+        <div class="ih-card__header">
+          <div>
+            <h3 class="ih-card__title"><i class="bi bi-windows"></i> Sistema operativo</h3>
+            <p class="ih-card__subtitle">Opcional. Si el activo no corre ningún sistema —un cable,
+            una bobina, un mueble— dejalo en blanco.</p>
+          </div>
+        </div>
+        <div class="ih-card__body">
+          <div class="ih-form-grid">
+            <div class="ih-field">
+              <label class="ih-label" for="f-so">Sistema</label>
+              <?php campo_catalogo($conn, 'so', '', $puedeGestionarCatalogos, 'f-so'); ?>
+              <div class="ih-field__hint">Ej: Windows 11, Ubuntu Server, VMware ESXi, MikroTik RouterOS</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so_version">Versión</label>
+              <?php campo_catalogo($conn, 'so_version', '', $puedeGestionarCatalogos, 'f-so_version'); ?>
+              <div class="ih-field__hint">Ej: 22.04 LTS, 23H2, 8.0, Sonoma 14.4</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so_edicion">Edición</label>
+              <?php campo_catalogo($conn, 'so_edicion', '', $puedeGestionarCatalogos, 'f-so_edicion'); ?>
+              <div class="ih-field__hint">Ej: Pro, Home, Enterprise, Datacenter, Standard</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so_arquitectura">Arquitectura</label>
+              <?php campo_catalogo($conn, 'so_arquitectura', '', $puedeGestionarCatalogos, 'f-so_arquitectura'); ?>
+              <div class="ih-field__hint">Ej: x86_64 en un PC o servidor, ARM64 en una Mac con chip M</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so-kernel">Kernel o build</label>
+              <input class="ih-input" id="f-so-kernel" name="kernel" placeholder="Ej: 5.15.0-91-generic">
+              <div class="ih-field__hint">En Linux, lo que devuelve <code>uname -r</code>. En Windows, el número de compilación</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so-clave">Clave de producto</label>
+              <input class="ih-input" id="f-so-clave" name="clave_producto"
+                     placeholder="Ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX">
+              <div class="ih-field__hint">La clave con la que se activó el sistema</div>
+            </div>
+            <div class="ih-field">
+              <label class="ih-label" for="f-so-fecha">Instalado el</label>
+              <input class="ih-input" type="date" id="f-so-fecha" name="instalado_en">
+              <div class="ih-field__hint">Cuándo se instaló o se reinstaló por última vez</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Bloque 3: Garantía y fechas ───────────────────────────── -->
       <div class="ih-card" style="margin-bottom:16px;">
         <div class="ih-card__header">

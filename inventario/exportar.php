@@ -130,7 +130,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <form method="POST" action="/backend/export_csv.php">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_activos) ?>">
             <input type="hidden" name="incluir_archivados" value="0">
-            <button type="submit" class="ih-btn ih-btn--accent" style="width:100%;">
+            <button type="submit" class="ih-btn ih-btn--primary" style="width:100%;">
               <i class="bi bi-download"></i> Descargar CSV
             </button>
           </form>

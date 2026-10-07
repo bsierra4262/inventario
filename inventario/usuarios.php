@@ -106,6 +106,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field">
               <label class="ih-field__label">Usuario <span class="req">*</span></label>
               <input class="ih-input" type="text" name="username" required
+                     placeholder="Ej: jperez"
                      pattern="[a-zA-Z0-9._\-]{3,120}"
                      title="Mínimo 3 caracteres, solo letras, números, punto, guión o guión bajo.">
             </div>
@@ -237,7 +238,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <div class="ih-field">
             <label class="ih-field__label">Email</label>
-            <input type="email" name="email" id="editEmail" class="ih-input">
+            <input type="email" name="email" id="editEmail" class="ih-input" placeholder="usuario@empresa.com">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Rol</label>

@@ -702,6 +702,94 @@ function migraciones_tenant(): array {
                         SELECT DISTINCT TRIM(proveedor) FROM `{$p}activo_infocom`
                         WHERE proveedor IS NOT NULL AND TRIM(proveedor) <> ''");
         },
+
+        10 => function (mysqli $c, string $p): void {
+            // ═══════════════════════════════════════════════════════════════
+            //  El sistema operativo pasa a ser un catálogo, no texto libre
+            //
+            //  Estaba como `<input list="…">` con diez sugerencias escritas en
+            //  el HTML. Eso tiene el mismo problema que tenían «Asignado a» y
+            //  «Ubicación» antes de la migración 6: conviven «Windows 11»,
+            //  «windows 11», «Win11» y «W11», y la pregunta que motivó todo
+            //  esto —cuántas máquinas siguen en Windows 10— vuelve a no
+            //  poder contestarse.
+            //
+            //  GLPI usa un desplegable administrable (glpi_operatingsystems).
+            //  Acá se apoya en la tabla `catalogos`, que ya existe y ya tiene
+            //  alta, renombrado con arrastre y control de uso.
+            // ═══════════════════════════════════════════════════════════════
+
+            $semilla = [
+                // ── Windows de escritorio ──
+                'Windows 11', 'Windows 10', 'Windows 8.1', 'Windows 7',
+                // ── Windows Server ──
+                'Windows Server 2025', 'Windows Server 2022', 'Windows Server 2019',
+                'Windows Server 2016', 'Windows Server 2012 R2',
+                // ── Linux de escritorio y servidor ──
+                'Ubuntu', 'Ubuntu Server', 'Debian', 'Linux Mint',
+                'Red Hat Enterprise Linux', 'Rocky Linux', 'AlmaLinux', 'CentOS',
+                'Oracle Linux', 'SUSE Linux Enterprise', 'openSUSE', 'Fedora',
+                'Arch Linux', 'Alpine Linux', 'Raspberry Pi OS',
+                // ── Apple ──
+                'macOS', 'iOS', 'iPadOS',
+                // ── Móviles y livianos ──
+                'Android', 'ChromeOS',
+                // ── BSD y appliances de red ──
+                'FreeBSD', 'OpenBSD', 'pfSense', 'OPNsense',
+                // ── Virtualización (lo que corre el hipervisor, no el huésped) ──
+                'VMware ESXi', 'VMware vCenter Server', 'Proxmox VE',
+                'Microsoft Hyper-V Server', 'XCP-ng', 'Citrix Hypervisor',
+                'Nutanix AHV', 'Oracle VM VirtualBox',
+                // ── Sistemas de equipos de red ──
+                'Cisco IOS', 'Cisco IOS XE', 'Cisco NX-OS', 'Cisco ASA',
+                'MikroTik RouterOS', 'Juniper Junos', 'FortiOS',
+                'Ubiquiti UniFi OS', 'Ubiquiti EdgeOS', 'Aruba OS', 'HPE Comware',
+                'Huawei VRP', 'TP-Link Omada',
+                // ── Almacenamiento ──
+                'Synology DSM', 'QNAP QTS', 'TrueNAS', 'Unraid',
+                // ── Unix heredado ──
+                'Solaris', 'IBM AIX', 'HP-UX',
+                // ── Casos que no son un sistema operativo ──
+                'Firmware propietario', 'Sin sistema operativo',
+            ];
+
+            $tabla = $p . 'catalogos';
+            $st = @$c->prepare("INSERT IGNORE INTO `{$tabla}` (tipo, valor, activo, orden) VALUES ('so', ?, 1, ?)");
+            if ($st) {
+                foreach ($semilla as $i => $valor) {
+                    $orden = $i + 1;
+                    $st->bind_param('si', $valor, $orden);
+                    $st->execute();
+                }
+                $st->close();
+            }
+
+            // Las arquitecturas también: eran una constante en el código y por
+            // eso no se les podía agregar una.
+            $arqs = ['x86_64', 'x86 (32 bits)', 'ARM64', 'ARM', 'RISC-V', 'PowerPC', 'SPARC'];
+            $st = @$c->prepare("INSERT IGNORE INTO `{$tabla}` (tipo, valor, activo, orden)
+                                VALUES ('so_arquitectura', ?, 1, ?)");
+            if ($st) {
+                foreach ($arqs as $i => $valor) {
+                    $orden = $i + 1;
+                    $st->bind_param('si', $valor, $orden);
+                    $st->execute();
+                }
+                $st->close();
+            }
+
+            // Lo que ya estaba cargado a mano entra al catálogo, para que no
+            // quede fuera de la lista en su propia pantalla.
+            @$c->query("INSERT IGNORE INTO `{$tabla}` (tipo, valor, activo)
+                        SELECT DISTINCT 'so', TRIM(so), 1 FROM `{$p}activo_so`
+                         WHERE so IS NOT NULL AND TRIM(so) <> ''");
+            @$c->query("INSERT IGNORE INTO `{$tabla}` (tipo, valor, activo)
+                        SELECT DISTINCT 'so_version', TRIM(version), 1 FROM `{$p}activo_so`
+                         WHERE version IS NOT NULL AND TRIM(version) <> ''");
+            @$c->query("INSERT IGNORE INTO `{$tabla}` (tipo, valor, activo)
+                        SELECT DISTINCT 'so_edicion', TRIM(edicion), 1 FROM `{$p}activo_so`
+                         WHERE edicion IS NOT NULL AND TRIM(edicion) <> ''");
+        },
     ];
 }
 }

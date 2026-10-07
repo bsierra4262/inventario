@@ -1752,6 +1752,22 @@ chequear('Ninguna pantalla fuerza una letra de menos de 11px',
     $conStyleChico === [], implode(', ', $conStyleChico));
 
 // ───────────────────────────────────────────────────────────────────────────
+grupo('FORMULARIOS · ejemplos');
+//
+// Un campo rotulado «Service pack» y vacío no ayuda: quien no sabe qué es no
+// lo completa, y quien sabe no sabe en qué formato se espera. Un ejemplo
+// —«Ej: SP1»— contesta las dos cosas de una. No es estilo: es la diferencia
+// entre un formulario que se puede llenar y uno en el que hay que adivinar.
+//
+// El detalle se ve con `php test/ayudas.php`.
+require_once RAIZ . '/test/ayudas.php';
+$sinAyuda = ayudas_campos_sin_ejemplo();
+$cuantosSin = array_sum(array_map(fn($c) => count(array_unique($c)), $sinAyuda));
+chequear('Todos los campos de formulario tienen un ejemplo o una explicación',
+    $sinAyuda === [],
+    $cuantosSin . ' sin ejemplo en: ' . implode(', ', array_keys($sinAyuda))
+    . ' — correr `php test/ayudas.php` para ver cuáles');
+// ───────────────────────────────────────────────────────────────────────────
 grupo('ORTOGRAFIA');
 //
 // La revisión vive en test/ortografia.php, que también se puede correr sola

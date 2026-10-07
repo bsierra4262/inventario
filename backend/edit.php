@@ -762,7 +762,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field edit-full">
             <label class="ih-field__label">Descripción</label>
-            <textarea class="ih-input" name="descripcion" rows="3"><?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+            <textarea class="ih-input" name="descripcion" rows="3"
+                      placeholder="Ej: Notebook de la gerencia. Tiene la batería cambiada en 2025."><?= htmlspecialchars($producto['descripcion'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
           </div>
         </div>
 

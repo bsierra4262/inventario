@@ -172,76 +172,12 @@ $topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost 
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
-<style>
-/* ─── Tab nav ──────────────────────────────────────────────────────── */
-.rp-tabnav {
-  display: flex; flex-wrap: wrap; gap: 0;
-  background: var(--ih-white);
-  border-bottom: 2px solid var(--ih-gray-200);
-  margin-bottom: 20px;
-  border-radius: var(--ih-radius-lg) var(--ih-radius-lg) 0 0;
-}
-.rp-tab {
-  padding: 11px 20px;
-  font-size: var(--ih-text-sm);
-  font-weight: 600;
-  color: var(--ih-gray-600);
-  text-decoration: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  white-space: nowrap;
-  transition: color .15s, border-color .15s;
-}
-.rp-tab:hover { color: var(--ih-primary); }
-.rp-tab--active { color: var(--ih-green); border-bottom-color: var(--ih-green); font-weight: 700; }
+<?php /* Esta pantalla tenía 69 líneas de CSS propio: sus pestañas, su barra
+         de filtros y su paginador, con nombres que no usaba ninguna otra
+         (`rp-tab`, `pagination-cool`). Por eso la pestaña activa de acá
+         salía verde y la del menú violeta. Ahora son los componentes del
+         sistema: .ih-subtabs, .ih-filtros y .ih-pager, en componentes.css. */ ?>
 
-/* ─── Filtros ────────────────────────────────────────────────────── */
-.rp-filter {
-  background: var(--ih-gray-50);
-  padding: 16px;
-  border-radius: var(--ih-radius-md);
-  margin-bottom: 20px;
-  border: 1px solid var(--ih-gray-200);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 10px 12px;
-  align-items: end;
-}
-.rp-label {
-  font-size: 12px; font-weight: 600; color: var(--ih-gray-600);
-  text-transform: uppercase; letter-spacing: .04em;
-  display: block; margin-bottom: 4px;
-}
-
-/* ─── Export buttons ─────────────────────────────────────────────── */
-.export-btns { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-
-/* ─── Tablas ─────────────────────────────────────────────────────── */
-/* Las tablas de reportes viven en assets/css/app.css, con el mismo
-   encabezado que el resto de las tablas de la aplicacion. Aca dibujaban
-   un encabezado violeta solido que no usaba ninguna otra pantalla. */
-/* ─── Paginador ──────────────────────────────────────────────────── */
-.paginador-container { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-top: 12px; flex-wrap: wrap; }
-@media(max-width:700px) { .paginador-container { flex-direction: column; align-items: stretch; gap: .8rem; } }
-.select-perpage-label { color: var(--ih-primary); font-size: var(--ih-text-sm); font-weight: 600; display: flex; align-items: center; gap: .65em; }
-.select-perpage {
-  appearance: none; -webkit-appearance: none;
-  border: 2px solid var(--ih-green); border-radius: 20px;
-  color: var(--ih-primary); font-size: var(--ih-text-sm); font-weight: 700;
-  background: #fff; padding: .2em 1.2em; width: 80px; text-align: center; outline: none;
-}
-.pagination-cool { display: flex; gap: .15em; list-style: none; padding-left: 0; margin: 0; }
-.pagination-cool .page-link {
-  border-radius: 50px; color: var(--ih-primary); background: #fff;
-  border: 2px solid var(--ih-gray-200); font-weight: 700; font-size: 13px;
-  padding: .2em .8em; text-decoration: none; display: block;
-  transition: background .2s, color .2s, border-color .2s;
-}
-.pagination-cool .page-link:hover { background: var(--ih-primary); color: #fff; border-color: var(--ih-primary); }
-.pagination-cool .page-item.active .page-link { background: var(--ih-green); color: #fff; border-color: var(--ih-green); }
-.pagination-cool .page-item.disabled .page-link { color: #aaa; background: #f5f5f5; border-color: #f0f0f0; pointer-events: none; }
-@media(max-width:640px) { .rp-filter { grid-template-columns: 1fr; } }
-</style>
 
 <div class="ih-app">
 <?php
@@ -251,20 +187,20 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <main class="ih-app__main">
 
 <!-- ── Tab nav ──────────────────────────────────────── -->
-<nav class="rp-tabnav">
-  <a class="rp-tab <?= $tab === 'inventario'  ? 'rp-tab--active' : '' ?>" href="?tab=inventario">Inventario General</a>
-  <a class="rp-tab <?= $tab === 'valor'        ? 'rp-tab--active' : '' ?>" href="?tab=valor">Ranking por Cantidad</a>
-  <a class="rp-tab <?= $tab === 'amortizacion' ? 'rp-tab--active' : '' ?>" href="?tab=amortizacion">Amortización</a>
-  <a class="rp-tab <?= $tab === 'trazabilidad' ? 'rp-tab--active' : '' ?>" href="?tab=trazabilidad">Trazabilidad</a>
-  <a class="rp-tab <?= $tab === 'archivados'   ? 'rp-tab--active' : '' ?>" href="?tab=archivados">Archivados</a>
+<nav class="ih-subtabs">
+  <a class="ih-subtab <?= $tab === 'inventario'  ? 'is-active' : '' ?>" href="?tab=inventario">Inventario General</a>
+  <a class="ih-subtab <?= $tab === 'valor'        ? 'is-active' : '' ?>" href="?tab=valor">Ranking por Cantidad</a>
+  <a class="ih-subtab <?= $tab === 'amortizacion' ? 'is-active' : '' ?>" href="?tab=amortizacion">Amortización</a>
+  <a class="ih-subtab <?= $tab === 'trazabilidad' ? 'is-active' : '' ?>" href="?tab=trazabilidad">Trazabilidad</a>
+  <a class="ih-subtab <?= $tab === 'archivados'   ? 'is-active' : '' ?>" href="?tab=archivados">Archivados</a>
 </nav>
 
 <!-- ════════ INVENTARIO GENERAL ════════ -->
 <div style="display:<?= $tab === 'inventario' ? 'block' : 'none' ?>">
-  <form method="GET" class="rp-filter" id="form-inventario">
+  <form method="GET" class="ih-filtros" id="form-inventario">
     <input type="hidden" name="tab" value="inventario">
     <div>
-      <label class="rp-label">Categoría</label>
+      <label class="ih-label">Categoría</label>
       <select name="categoria" id="categoria-reporte" class="ih-select">
         <option value="">Todas</option>
         <?php foreach($categorias as $cat): ?>
@@ -273,21 +209,21 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Subcategoría</label>
+      <label class="ih-label">Subcategoría</label>
       <select name="subcategoria" id="subcategoria-reporte" class="ih-select">
         <option value="">Todas</option>
       </select>
     </div>
     <div>
-      <label class="rp-label">Marca</label>
+      <label class="ih-label">Marca</label>
       <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Modelo</label>
+      <label class="ih-label">Modelo</label>
       <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Estado</label>
+      <label class="ih-label">Estado</label>
       <select name="estado" class="ih-select">
         <option value="">Todos</option>
         <option value="Nuevo" <?=($_GET['estado']??'')==='Nuevo'?'selected':''?>>Nuevo</option>
@@ -295,36 +231,36 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Ubicación</label>
+      <label class="ih-label">Ubicación</label>
       <input type="text" name="ubicacion" class="ih-input" value="<?=htmlspecialchars($_GET['ubicacion']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Desde Fecha de Carga</label>
+      <label class="ih-label">Desde Fecha de Carga</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Hasta Fecha de Carga</label>
+      <label class="ih-label">Hasta Fecha de Carga</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
     <div style="display:flex;align-items:end;gap:8px;">
-      <label class="rp-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <label class="ih-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
         <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
         Incluir archivados
       </label>
     </div>
     <div>
-      <button class="ih-btn ih-btn--accent" type="submit">Filtrar</button>
+      <button class="ih-btn ih-btn--primary" type="submit">Filtrar</button>
       <a href="?tab=inventario" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
-  <div class="export-btns">
+  <div class="ih-filtros__acciones">
     <button class="ih-btn ih-btn--ghost export-pdf-btn" data-table="tabla-inventario"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-inventario"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
-  <div class="rp-table-wrap">
-  <table class="rp-table" id="tabla-inventario">
+  <div class="ih-table-wrap">
+  <table class="ih-table" id="tabla-inventario">
     <thead>
       <tr>
         <th>ID</th><th>Modelo</th><th>Marca</th><th>Descripción</th>
@@ -388,35 +324,35 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
-  <div class="paginador-container">
-    <form method="get" id="form-per-page-inventario" class="select-perpage-label">
+  <div class="ih-pager">
+    <form method="get" id="form-per-page-inventario" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
       <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
         <?= number_format($totalRows) ?> registro<?= $totalRows === 1 ? '' : 's' ?>
       </span>
       Mostrar:
-      <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-inventario').submit()">
+      <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-inventario').submit()">
         <?php foreach($per_page_opts as $opt): ?><option value="<?= $opt ?>" <?= $per_page == $opt ? 'selected' : '' ?>><?= $opt ?></option><?php endforeach; ?>
       </select>
       por página
     </form>
-    <nav><ul class="pagination-cool">
+    <nav><ul class="ih-pager__paginas">
       <?php $start = max(1, $page-2); $end = min($totalPages, $page+2); ?>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?= $i ?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page>=$totalPages?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
+      <li class="ih-pager__item <?= $page<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="ih-pager__item <?= $page<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="ih-pager__item <?= $i==$page?'is-active':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?= $i ?></a></li><?php endfor; ?>
+      <li class="ih-pager__item <?= $page>=$totalPages?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPages,$page+1)])) ?>">&rsaquo;</a></li>
+      <li class="ih-pager__item <?= $page>=$totalPages?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
 
 <!-- ════════ RANKING POR CANTIDAD ════════ -->
 <div style="display:<?= $tab === 'valor' ? 'block' : 'none' ?>">
-  <form method="GET" class="rp-filter" id="form-valor">
+  <form method="GET" class="ih-filtros" id="form-valor">
     <input type="hidden" name="tab" value="valor">
     <div>
-      <label class="rp-label">Categoría</label>
+      <label class="ih-label">Categoría</label>
       <select name="categoria" id="categoria-reporte4" class="ih-select">
         <option value="">Todas</option>
         <?php foreach($categorias as $cat): ?>
@@ -425,32 +361,32 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Subcategoría</label>
+      <label class="ih-label">Subcategoría</label>
       <select name="subcategoria" id="subcategoria-reporte4" class="ih-select">
         <option value="">Todas</option>
       </select>
     </div>
     <div>
-      <label class="rp-label">Desde Fecha de Carga</label>
+      <label class="ih-label">Desde Fecha de Carga</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Hasta Fecha de Carga</label>
+      <label class="ih-label">Hasta Fecha de Carga</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end;">
-      <button class="ih-btn ih-btn--accent" type="submit" name="ranking_cantidad">Filtrar</button>
+      <button class="ih-btn ih-btn--primary" type="submit" name="ranking_cantidad">Filtrar</button>
       <button class="ih-btn ih-btn--ghost ih-btn--sm" type="button" onclick="resetRanking()">Todo</button>
     </div>
   </form>
 
-  <div class="export-btns">
+  <div class="ih-filtros__acciones">
     <button class="ih-btn ih-btn--ghost export-pdf-btn" data-table="tabla-valor"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-valor"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
-  <div class="rp-table-wrap">
-  <table class="rp-table" id="tabla-valor">
+  <div class="ih-table-wrap">
+  <table class="ih-table" id="tabla-valor">
     <thead>
       <tr><th>Modelo</th><th>Marca</th><th>Categoría</th><th>Subcategoría</th><th>Total Cantidad</th></tr>
     </thead>
@@ -529,33 +465,33 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
-  <div class="paginador-container">
-    <form method="get" id="form-per-page-valor" class="select-perpage-label">
+  <div class="ih-pager">
+    <form method="get" id="form-per-page-valor" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
       <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
         <?= number_format($totalRowsV) ?> registro<?= $totalRowsV === 1 ? '' : 's' ?>
       </span>
-      Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-valor').submit()">
+      Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-valor').submit()">
         <?php foreach($per_page_opts_v as $opt): ?><option value="<?=$opt?>" <?=$per_page_v==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
-    <nav><ul class="pagination-cool">
+    <nav><ul class="ih-pager__paginas">
       <?php $start = max(1, $page_v-2); $end = min($totalPagesV, $page_v+2); ?>
-      <li class="page-item <?= $page_v<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page_v<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_v-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_v?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page_v>=$totalPagesV?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesV,$page_v+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page_v>=$totalPagesV?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesV])) ?>">&raquo;</a></li>
+      <li class="ih-pager__item <?= $page_v<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="ih-pager__item <?= $page_v<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_v-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="ih-pager__item <?= $i==$page_v?'is-active':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="ih-pager__item <?= $page_v>=$totalPagesV?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesV,$page_v+1)])) ?>">&rsaquo;</a></li>
+      <li class="ih-pager__item <?= $page_v>=$totalPagesV?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesV])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
 
 <!-- ════════ AMORTIZACIÓN ════════ -->
 <div style="display:<?= $tab === 'amortizacion' ? 'block' : 'none' ?>">
-  <form method="GET" class="rp-filter" id="form-amorti">
+  <form method="GET" class="ih-filtros" id="form-amorti">
     <input type="hidden" name="tab" value="amortizacion">
     <div>
-      <label class="rp-label">Años Amortización</label>
+      <label class="ih-label">Años Amortización</label>
       <select name="anios" class="ih-select">
         <?php for($i=1;$i<=10;$i++): ?>
           <option value="<?=$i?>" <?=((isset($_GET['anios'])?(int)$_GET['anios']:4)===$i)?'selected':''?>><?=$i?> año<?=$i>1?'s':''?></option>
@@ -563,7 +499,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Categoría</label>
+      <label class="ih-label">Categoría</label>
       <select name="categoria" id="categoria-reporte3" class="ih-select" onchange="this.form.submit()">
         <option value="">Todas</option>
         <?php foreach($categorias as $cat): ?>
@@ -572,7 +508,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Subcategoría</label>
+      <label class="ih-label">Subcategoría</label>
       <select name="subcategoria" id="subcategoria-reporte3" class="ih-select">
         <option value="">Todas</option>
         <?php if (!empty($_GET['categoria']) && isset($categorias_full[$_GET['categoria']])): ?>
@@ -583,40 +519,40 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Marca</label>
+      <label class="ih-label">Marca</label>
       <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Modelo</label>
+      <label class="ih-label">Modelo</label>
       <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Desde Fecha Compra/Ingreso</label>
+      <label class="ih-label">Desde Fecha Compra/Ingreso</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Hasta Fecha Compra/Ingreso</label>
+      <label class="ih-label">Hasta Fecha Compra/Ingreso</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
     <div style="display:flex;align-items:end;gap:8px;">
-      <label class="rp-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <label class="ih-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
         <input type="checkbox" name="incluir_archivados" value="1" <?= !empty($_GET['incluir_archivados']) ? 'checked' : '' ?>>
         Incluir archivados
       </label>
     </div>
     <div>
-      <button class="ih-btn ih-btn--accent" type="submit" name="filtro_amorti">Ver</button>
+      <button class="ih-btn ih-btn--primary" type="submit" name="filtro_amorti">Ver</button>
       <a href="?tab=amortizacion" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
-  <div class="export-btns">
+  <div class="ih-filtros__acciones">
     <button class="ih-btn ih-btn--ghost export-pdf-btn" data-table="tabla-amortizacion"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-amortizacion"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
-  <div class="rp-table-wrap">
-  <table class="rp-table" id="tabla-amortizacion">
+  <div class="ih-table-wrap">
+  <table class="ih-table" id="tabla-amortizacion">
     <thead>
       <tr>
         <th>ID</th><th>Modelo</th><th>Marca</th><th>Categoría</th><th>Subcategoría</th>
@@ -740,23 +676,23 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
-  <div class="paginador-container">
-    <form method="get" id="form-per-page-amortizacion" class="select-perpage-label">
+  <div class="ih-pager">
+    <form method="get" id="form-per-page-amortizacion" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
       <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
         <?= number_format($totalRowsA) ?> registro<?= $totalRowsA === 1 ? '' : 's' ?>
       </span>
-      Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-amortizacion').submit()">
+      Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-amortizacion').submit()">
         <?php foreach($per_page_opts_a as $opt): ?><option value="<?=$opt?>" <?=$per_page_a==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
-    <nav><ul class="pagination-cool">
+    <nav><ul class="ih-pager__paginas">
       <?php $start = max(1, $page_a-2); $end = min($totalPagesA, $page_a+2); ?>
-      <li class="page-item <?= $page_a<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page_a<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_a-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_a?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page_a>=$totalPagesA?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesA,$page_a+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page_a>=$totalPagesA?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesA])) ?>">&raquo;</a></li>
+      <li class="ih-pager__item <?= $page_a<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="ih-pager__item <?= $page_a<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_a-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="ih-pager__item <?= $i==$page_a?'is-active':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="ih-pager__item <?= $page_a>=$totalPagesA?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesA,$page_a+1)])) ?>">&rsaquo;</a></li>
+      <li class="ih-pager__item <?= $page_a>=$totalPagesA?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesA])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
@@ -769,10 +705,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
   $acRes = $conn->query("SELECT DISTINCT accion FROM `{$movTable}` WHERE accion IS NOT NULL AND accion != '' ORDER BY accion ASC");
   if ($acRes) { while ($ar = $acRes->fetch_assoc()) $accionesT[] = $ar['accion']; }
   ?>
-  <form method="GET" class="rp-filter" id="form-trazabilidad">
+  <form method="GET" class="ih-filtros" id="form-trazabilidad">
     <input type="hidden" name="tab" value="trazabilidad">
     <div>
-      <label class="rp-label">Acción</label>
+      <label class="ih-label">Acción</label>
       <select name="accion" class="ih-select">
         <option value="">Todas</option>
         <?php foreach($accionesT as $ac): ?>
@@ -781,42 +717,42 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Usuario</label>
+      <label class="ih-label">Usuario</label>
       <input type="text" name="usuario" class="ih-input" value="<?=htmlspecialchars($_GET['usuario']??'')?>" placeholder="Nombre o Email">
     </div>
     <div>
-      <label class="rp-label">Modelo</label>
+      <label class="ih-label">Modelo</label>
       <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Marca</label>
+      <label class="ih-label">Marca</label>
       <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
     </div>
     <div>
-      <label class="rp-label">S/N Tag</label>
+      <label class="ih-label">S/N Tag</label>
       <input type="text" name="servis_tag" class="ih-input" value="<?=htmlspecialchars($_GET['servis_tag']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Desde Fecha</label>
+      <label class="ih-label">Desde Fecha</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Hasta Fecha</label>
+      <label class="ih-label">Hasta Fecha</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
     <div>
-      <button class="ih-btn ih-btn--accent" type="submit" name="trazabilidad">Buscar</button>
+      <button class="ih-btn ih-btn--primary" type="submit" name="trazabilidad">Buscar</button>
       <a href="?tab=trazabilidad" class="ih-btn ih-btn--ghost" style="margin-left:6px;">Limpiar</a>
     </div>
   </form>
 
-  <div class="export-btns">
+  <div class="ih-filtros__acciones">
     <button class="ih-btn ih-btn--ghost export-pdf-btn" data-table="tabla-trazabilidad"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-trazabilidad"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
-  <div class="rp-table-wrap">
-  <table class="rp-table" id="tabla-trazabilidad">
+  <div class="ih-table-wrap">
+  <table class="ih-table" id="tabla-trazabilidad">
     <thead>
       <tr>
         <th>Fecha</th><th>Acción</th><th>Modelo</th><th>Marca</th><th>S/N Tag</th>
@@ -906,23 +842,23 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
-  <div class="paginador-container">
-    <form method="get" id="form-per-page-trazabilidad" class="select-perpage-label">
+  <div class="ih-pager">
+    <form method="get" id="form-per-page-trazabilidad" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
       <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
         <?= number_format($totalRowsT) ?> registro<?= $totalRowsT === 1 ? '' : 's' ?>
       </span>
-      Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-trazabilidad').submit()">
+      Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-trazabilidad').submit()">
         <?php foreach($per_page_opts_t as $opt): ?><option value="<?=$opt?>" <?=$per_page_t==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
-    <nav><ul class="pagination-cool">
+    <nav><ul class="ih-pager__paginas">
       <?php $start = max(1, $page_t-2); $end = min($totalPagesT, $page_t+2); ?>
-      <li class="page-item <?= $page_t<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page_t<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_t-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_t?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page_t>=$totalPagesT?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesT,$page_t+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page_t>=$totalPagesT?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesT])) ?>">&raquo;</a></li>
+      <li class="ih-pager__item <?= $page_t<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="ih-pager__item <?= $page_t<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_t-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="ih-pager__item <?= $i==$page_t?'is-active':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="ih-pager__item <?= $page_t>=$totalPagesT?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesT,$page_t+1)])) ?>">&rsaquo;</a></li>
+      <li class="ih-pager__item <?= $page_t>=$totalPagesT?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesT])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>
@@ -945,10 +881,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
   $motivosTodos = array_unique(array_merge($motivosDef, $motivosDB));
   sort($motivosTodos);
   ?>
-  <form method="GET" class="rp-filter" id="form-archivados">
+  <form method="GET" class="ih-filtros" id="form-archivados">
     <input type="hidden" name="tab" value="archivados">
     <div>
-      <label class="rp-label">Motivo</label>
+      <label class="ih-label">Motivo</label>
       <select name="motivo" class="ih-select">
         <option value="">Todos</option>
         <?php foreach($motivosTodos as $motivo): ?>
@@ -957,29 +893,29 @@ require __DIR__ . '/../includes/layout/topbar.php';
       </select>
     </div>
     <div>
-      <label class="rp-label">Responsable</label>
+      <label class="ih-label">Responsable</label>
       <input type="text" name="usuario" class="ih-input" value="<?=htmlspecialchars($_GET['usuario']??'')?>" placeholder="Nombre o Email">
     </div>
     <div>
-      <label class="rp-label">Desde Fecha</label>
+      <label class="ih-label">Desde Fecha</label>
       <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
     </div>
     <div>
-      <label class="rp-label">Hasta Fecha</label>
+      <label class="ih-label">Hasta Fecha</label>
       <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
     </div>
     <div>
-      <button class="ih-btn ih-btn--accent" type="submit">Filtrar</button>
+      <button class="ih-btn ih-btn--primary" type="submit">Filtrar</button>
     </div>
   </form>
 
-  <div class="export-btns">
+  <div class="ih-filtros__acciones">
     <button class="ih-btn ih-btn--ghost export-pdf-btn" data-table="tabla-archivados"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-archivados"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
-  <div class="rp-table-wrap">
-  <table class="rp-table" id="tabla-archivados">
+  <div class="ih-table-wrap">
+  <table class="ih-table" id="tabla-archivados">
     <thead>
       <tr>
         <th>Fecha Archivo</th><th>Motivo</th><th>Detalle</th><th>Responsable</th>
@@ -1070,23 +1006,23 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
-  <div class="paginador-container">
-    <form method="get" id="form-per-page-archivados" class="select-perpage-label">
+  <div class="ih-pager">
+    <form method="get" id="form-per-page-archivados" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
       <span class="ih-text-sm" style="color:var(--ih-gray-600);margin-right:8px;">
         <?= number_format($totalRowsAR) ?> registro<?= $totalRowsAR === 1 ? '' : 's' ?>
       </span>
-      Mostrar: <select name="per_page" class="select-perpage" onchange="document.getElementById('form-per-page-archivados').submit()">
+      Mostrar: <select name="per_page" class="ih-select" onchange="document.getElementById('form-per-page-archivados').submit()">
         <?php foreach($per_page_opts_ar as $opt): ?><option value="<?=$opt?>" <?=$per_page_ar==$opt?'selected':''?>><?=$opt?></option><?php endforeach; ?>
       </select> por página
     </form>
-    <nav><ul class="pagination-cool">
+    <nav><ul class="ih-pager__paginas">
       <?php $start = max(1, $page_ar-2); $end = min($totalPagesAR, $page_ar+2); ?>
-      <li class="page-item <?= $page_ar<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
-      <li class="page-item <?= $page_ar<=1?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_ar-1)])) ?>">&lsaquo;</a></li>
-      <?php for($i=$start;$i<=$end;$i++): ?><li class="page-item <?= $i==$page_ar?'active':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
-      <li class="page-item <?= $page_ar>=$totalPagesAR?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesAR,$page_ar+1)])) ?>">&rsaquo;</a></li>
-      <li class="page-item <?= $page_ar>=$totalPagesAR?'disabled':'' ?>"><a class="page-link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesAR])) ?>">&raquo;</a></li>
+      <li class="ih-pager__item <?= $page_ar<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>1])) ?>">&laquo;</a></li>
+      <li class="ih-pager__item <?= $page_ar<=1?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>max(1,$page_ar-1)])) ?>">&lsaquo;</a></li>
+      <?php for($i=$start;$i<=$end;$i++): ?><li class="ih-pager__item <?= $i==$page_ar?'is-active':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"><?=$i?></a></li><?php endfor; ?>
+      <li class="ih-pager__item <?= $page_ar>=$totalPagesAR?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesAR,$page_ar+1)])) ?>">&rsaquo;</a></li>
+      <li class="ih-pager__item <?= $page_ar>=$totalPagesAR?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesAR])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
 </div>

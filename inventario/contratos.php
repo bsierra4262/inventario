@@ -260,11 +260,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
         <div class="ih-field">
           <label class="ih-label" for="ct-cont">Número contable</label>
-          <input class="ih-input" id="ct-cont" name="numero_contable">
+          <input class="ih-input" id="ct-cont" name="numero_contable" placeholder="Ej: 4.1.2-SOP">
         </div>
         <div class="ih-field ih-col-span-2">
           <label class="ih-label" for="ct-nota">Nota</label>
-          <input class="ih-input" id="ct-nota" name="nota">
+          <input class="ih-input" id="ct-nota" name="nota" placeholder="Ej: cubre los dos servidores del rack A3">
         </div>
         <div class="ih-field" style="grid-column:1/-1">
           <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar contrato</button>
@@ -326,7 +326,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <input type="hidden" name="accion" value="proveedor_guardar">
         <div class="ih-field ih-col-span-2">
           <label class="ih-label" for="pv-nombre">Nombre <span class="req">*</span></label>
-          <input class="ih-input" id="pv-nombre" name="nombre" required>
+          <input class="ih-input" id="pv-nombre" name="nombre" required placeholder="Ej: Distribuidora Norte S.A.">
         </div>
         <div class="ih-field">
           <label class="ih-label" for="pv-cuit">CUIT</label>
@@ -334,23 +334,23 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
         <div class="ih-field">
           <label class="ih-label" for="pv-contacto">Contacto</label>
-          <input class="ih-input" id="pv-contacto" name="contacto">
+          <input class="ih-input" id="pv-contacto" name="contacto" placeholder="Ej: Laura Gómez (ventas)">
         </div>
         <div class="ih-field">
           <label class="ih-label" for="pv-tel">Teléfono</label>
-          <input class="ih-input" id="pv-tel" name="telefono">
+          <input class="ih-input" id="pv-tel" name="telefono" placeholder="Ej: +54 11 4555-1234">
         </div>
         <div class="ih-field">
           <label class="ih-label" for="pv-email">Email</label>
-          <input class="ih-input" type="email" id="pv-email" name="email">
+          <input class="ih-input" type="email" id="pv-email" name="email" placeholder="ventas@proveedor.com.ar">
         </div>
         <div class="ih-field">
           <label class="ih-label" for="pv-web">Web</label>
-          <input class="ih-input" id="pv-web" name="web">
+          <input class="ih-input" id="pv-web" name="web" placeholder="https://www.proveedor.com.ar">
         </div>
         <div class="ih-field ih-col-span-2">
           <label class="ih-label" for="pv-dir">Dirección</label>
-          <input class="ih-input" id="pv-dir" name="direccion">
+          <input class="ih-input" id="pv-dir" name="direccion" placeholder="Ej: Av. Corrientes 1234, CABA">
         </div>
         <div class="ih-field" style="grid-column:1/-1">
           <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar proveedor</button>

@@ -232,7 +232,7 @@ $_canArchive = user_can('asset.archive', $user);
 
 $topbar_actions = '';
 if ($_canCreate) {
-    $topbar_actions .= '<a href="/inventario/agregar.php"  class="ih-btn ih-btn--accent ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nuevo activo</span></a> ';
+    $topbar_actions .= '<a href="/inventario/agregar.php"  class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-plus-lg"></i> <span class="ih-hidden-mobile">Nuevo activo</span></a> ';
 }
 if ($_canExport) {
     $topbar_actions .= '<a href="/inventario/exportar.php" class="ih-btn ih-btn--outline ih-btn--sm"><i class="bi bi-download"></i> <span class="ih-hidden-mobile">Exportar</span></a>';

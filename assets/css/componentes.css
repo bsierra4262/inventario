@@ -588,6 +588,143 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 @media (max-width: 860px) { .ih-col-span-2 { grid-column: auto; } }
 
 /* ---------------------------------------------------------------------------
+   7. Sub-navegación, filtros y paginador
+   ---------------------------------------------------------------------------
+   Estas tres piezas estaban escritas de nuevo dentro de cada pantalla que las
+   necesitaba, con nombres propios: `.rp-tabnav` y `.rp-tab` en reportes,
+   `.role-tab` en roles, `.pagination-cool` en reportes y otro paginador distinto
+   en el listado. 241 líneas de CSS repartidas en siete archivos.
+
+   El efecto se veía: la pestaña activa de reportes salía VERDE y la del menú
+   principal violeta, porque las habían escrito dos personas en dos momentos.
+   El verde es el acento de la marca y está reservado para lo positivo —un
+   estado correcto, una operación que salió bien—; una pestaña activa no es eso,
+   es dónde estás parado, y eso en este sistema es violeta.
+   --------------------------------------------------------------------------- */
+
+/* ── Sub-navegación: las pestañas DENTRO de una pantalla ─────────────────── */
+.ih-subtabs {
+  display: flex; flex-wrap: wrap; gap: 0;
+  background: var(--ih-white, #fff);
+  border-bottom: 2px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-lg, 15px) var(--ih-radius-lg, 15px) 0 0;
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ih-subtabs::-webkit-scrollbar { display: none; }
+.ih-subtab {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .7rem 1.2rem;
+  font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
+  color: var(--ih-gray-600, #5b566a);
+  text-decoration: none; white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.ih-subtab:hover { color: var(--ih-purple, #663399); text-decoration: none; }
+.ih-subtab:focus-visible {
+  outline: none; color: var(--ih-purple, #663399);
+  background: var(--ih-purple-50, #f2ecf9);
+  border-radius: var(--ih-radius-sm, 9px) var(--ih-radius-sm, 9px) 0 0;
+}
+.ih-subtab.is-active {
+  color: var(--ih-purple, #663399);
+  border-bottom-color: var(--ih-purple, #663399);
+  font-weight: 700;
+}
+.ih-subtab .ih-badge { font-size: 10.5px; padding: 1px 6px; }
+
+/* ── Barra de filtros ────────────────────────────────────────────────────── */
+.ih-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: .75rem;
+  align-items: end;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  background: var(--ih-gray-50, #faf9fc);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-md, 10px);
+}
+.ih-filtros__acciones { display: flex; gap: .5rem; flex-wrap: wrap; align-items: end; }
+@media (max-width: 640px) {
+  .ih-filtros { grid-template-columns: 1fr; }
+  .ih-filtros__acciones > * { flex: 1 1 auto; }
+}
+
+/* ── Paginador ───────────────────────────────────────────────────────────── */
+.ih-pager {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.25rem; flex-wrap: wrap; margin-top: 1rem;
+}
+.ih-pager__info {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d);
+}
+.ih-pager__info .ihc-select, .ih-pager__info select { width: auto; min-width: 90px; }
+.ih-pager__paginas { display: flex; gap: .25rem; list-style: none; padding: 0; margin: 0; }
+.ih-pager__link {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; min-height: 34px; padding: 0 .6rem;
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-sm, 9px);
+  color: var(--ih-purple, #663399);
+  font-size: var(--ih-text-sm, 12.5px); font-weight: 700;
+  text-decoration: none;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ih-pager__link:hover {
+  text-decoration: none;
+  background: var(--ih-purple-50, #f2ecf9);
+  border-color: var(--ih-purple-200, #d0bfea);
+}
+.ih-pager__item.is-active .ih-pager__link {
+  background: var(--ih-purple, #663399); color: #fff;
+  border-color: var(--ih-purple, #663399);
+}
+.ih-pager__item.is-disabled .ih-pager__link {
+  color: var(--ih-gray-300, #cfcbd8);
+  background: var(--ih-gray-50, #faf9fc);
+  border-color: var(--ih-gray-100, #f0edf6);
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .ih-pager { flex-direction: column; align-items: stretch; gap: .8rem; }
+  .ih-pager__paginas { justify-content: center; }
+}
+
+/* ── Ficha de datos: etiqueta a la izquierda, valor a la derecha ─────────── */
+/*  Estaba como `.vd-*` dentro de backend/view_details.php, que es una pantalla
+    COMPARTIDA por los dos portales: definida ahí, en el panel no tenía ninguna
+    regla. Es el mismo error que el logo del topbar. */
+.ih-datos { display: grid; gap: 0; }
+.ih-dato {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; padding: .55rem 0;
+  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+}
+.ih-dato:last-child { border-bottom: 0; }
+.ih-dato__label {
+  flex: 0 0 auto;
+  font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
+  color: var(--ih-gray-500, #6f6a7d);
+}
+.ih-dato__valor {
+  flex: 1 1 auto; min-width: 0; text-align: right;
+  font-size: var(--ih-text-base, 14px); font-weight: 600;
+  color: var(--ih-gray-900, #161922);
+  overflow-wrap: anywhere;
+}
+.ih-dato__valor.es-vacio { color: var(--ih-gray-300, #cfcbd8); font-weight: 400; }
+@media (max-width: 480px) {
+  .ih-dato { flex-direction: column; gap: .15rem; }
+  .ih-dato__valor { text-align: left; }
+}
+
+/* ---------------------------------------------------------------------------
    6. Nota sobre la mejora progresiva
    --------------------------------------------------------------------------- */
 /* Las clases que ocultan el control nativo (`ihc-select__nativo`,

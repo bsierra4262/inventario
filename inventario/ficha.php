@@ -30,6 +30,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../includes/hub.php';
+require_once __DIR__ . '/../includes/campo_catalogo.php';
 require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
 require_once __DIR__ . '/../core/tenants/componentes.php';
 require_once __DIR__ . '/../core/tenants/red.php';
@@ -41,6 +42,8 @@ if (!function_exists('log_event')) { function log_event(...$a) {} }
 
 $user    = require_tenant_permission('asset.view');
 $puedeEditar = user_can('asset.edit', $user);
+// Quien administra catálogos ve el botón para sumar un valor sin salir de acá.
+$puedeCatalogos = $puedeEditar && user_can('catalog.manage', $user);
 
 $productoId = (int)($_GET['id'] ?? 0);
 if ($productoId <= 0) { header('Location: /inventario/index.php'); exit; }
@@ -91,6 +94,7 @@ $contratosDisp = $hayCon ? contratos_listar($conn) : [];
 $csrf   = generateCsrfToken('ficha_abm');
 $okMsg  = (string)($_GET['ok']  ?? '');
 $errMsg = (string)($_GET['err'] ?? '');
+$esNuevo = !empty($_GET['nuevo']);
 
 $tenant_name = 'Mi empresa';
 try {
@@ -143,7 +147,19 @@ require __DIR__ . '/../includes/layout/topbar.php';
 ?>
 <main class="ih-app__main">
 
-  <?php if ($okMsg !== ''): ?>
+  <?php /* Cuando se llega recién creado el activo, el aviso dice qué sigue: el
+           alta terminó, pero componentes, red y contratos recién se pueden
+           cargar ahora, porque necesitan el id que hasta hace un segundo no
+           existía. Antes había que volver al listado, buscarlo y entrar. */ ?>
+  <?php if ($esNuevo): ?>
+    <div class="ih-alert ih-alert--success ih-mb-4"><i class="bi bi-check-circle-fill"></i>
+      <div>
+        <strong><?= $okMsg !== '' ? htmlspecialchars($okMsg) : 'Activo creado.' ?></strong><br>
+        Ya podés seguir cargando acá: componentes, puertos de red, vínculos con otros activos,
+        contratos y documentos. Todo esto necesitaba que el activo existiera.
+      </div>
+    </div>
+  <?php elseif ($okMsg !== ''): ?>
     <div class="ih-alert ih-alert--success ih-mb-4"><i class="bi bi-check-circle-fill"></i>
       <div><?= htmlspecialchars($okMsg) ?></div></div>
   <?php endif; ?>
@@ -188,68 +204,70 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <input type="hidden" name="accion" value="so_guardar">
         <input type="hidden" name="producto_id" value="<?= $productoId ?>">
 
+        <?php /* Los cuatro primeros son catálogos administrables, como «Asignado
+                 a» o «Ubicación»: la migración 10 los siembra con la lista
+                 completa —Windows, Linux, macOS, hipervisores, equipos de red— y
+                 el admin puede sumar los que falten con el botón de al lado.
+                 Antes era un <input list> con diez sugerencias en el HTML. */ ?>
         <div class="ih-field">
-          <label class="ih-label" for="so-so">Sistema</label>
-          <input class="ih-input" id="so-so" name="so" list="lista-so" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['so'] ?? ''), ENT_QUOTES) ?>"
-                 placeholder="Ej: Windows 11, Ubuntu Server">
-          <datalist id="lista-so">
-            <option value="Windows 11"><option value="Windows 10"><option value="Windows Server 2022">
-            <option value="Ubuntu Server"><option value="Debian"><option value="Red Hat Enterprise Linux">
-            <option value="macOS"><option value="Android"><option value="iOS"><option value="VMware ESXi">
-          </datalist>
+          <label class="ih-label" for="f-so">Sistema</label>
+          <?php campo_catalogo($conn, 'so', (string)($so['so'] ?? ''), $puedeCatalogos, 'f-so'); ?>
+          <div class="ih-field__hint">Ej: Windows 11, Ubuntu Server, VMware ESXi, MikroTik RouterOS</div>
         </div>
         <div class="ih-field">
-          <label class="ih-label" for="so-version">Versión</label>
-          <input class="ih-input" id="so-version" name="version" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['version'] ?? ''), ENT_QUOTES) ?>"
-                 placeholder="Ej: 22.04 LTS, 23H2">
+          <label class="ih-label" for="f-so_version">Versión</label>
+          <?php campo_catalogo($conn, 'so_version', (string)($so['version'] ?? ''), $puedeCatalogos, 'f-so_version'); ?>
+          <div class="ih-field__hint">Ej: 22.04 LTS, 23H2, 8.0, Sonoma 14.4</div>
         </div>
         <div class="ih-field">
-          <label class="ih-label" for="so-edicion">Edición</label>
-          <input class="ih-input" id="so-edicion" name="edicion" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['edicion'] ?? ''), ENT_QUOTES) ?>"
-                 placeholder="Ej: Pro, Home, Datacenter">
+          <label class="ih-label" for="f-so_edicion">Edición</label>
+          <?php campo_catalogo($conn, 'so_edicion', (string)($so['edicion'] ?? ''), $puedeCatalogos, 'f-so_edicion'); ?>
+          <div class="ih-field__hint">Ej: Pro, Home, Enterprise, Datacenter, Standard</div>
         </div>
         <div class="ih-field">
-          <label class="ih-label" for="so-arq">Arquitectura</label>
-          <select class="ih-select" id="so-arq" name="arquitectura" <?= $puedeEditar ? '' : 'disabled' ?>>
-            <option value="">— Sin especificar —</option>
-            <?php foreach (SO_ARQUITECTURAS as $a): ?>
-              <option value="<?= htmlspecialchars($a, ENT_QUOTES) ?>"
-                      <?= ($so['arquitectura'] ?? '') === $a ? 'selected' : '' ?>><?= htmlspecialchars($a) ?></option>
-            <?php endforeach; ?>
-          </select>
+          <label class="ih-label" for="f-so_arquitectura">Arquitectura</label>
+          <?php campo_catalogo($conn, 'so_arquitectura', (string)($so['arquitectura'] ?? ''), $puedeCatalogos, 'f-so_arquitectura'); ?>
+          <div class="ih-field__hint">Ej: x86_64 en un PC o servidor, ARM64 en una Mac con chip M o en un celular</div>
         </div>
+
         <div class="ih-field">
-          <label class="ih-label" for="so-kernel">Kernel / build</label>
+          <label class="ih-label" for="so-kernel">Kernel o build</label>
           <input class="ih-input" id="so-kernel" name="kernel" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['kernel'] ?? ''), ENT_QUOTES) ?>">
+                 value="<?= htmlspecialchars((string)($so['kernel'] ?? ''), ENT_QUOTES) ?>"
+                 placeholder="Ej: 5.15.0-91-generic">
+          <div class="ih-field__hint">En Linux, lo que devuelve <code>uname -r</code>. En Windows, el número de compilación: 22631.3155</div>
         </div>
         <div class="ih-field">
           <label class="ih-label" for="so-sp">Service pack</label>
           <input class="ih-input" id="so-sp" name="service_pack" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['service_pack'] ?? ''), ENT_QUOTES) ?>">
+                 value="<?= htmlspecialchars((string)($so['service_pack'] ?? ''), ENT_QUOTES) ?>"
+                 placeholder="Ej: SP1, Update 3">
+          <div class="ih-field__hint">Sólo en sistemas que todavía los usan, como Windows 7 o Server 2012</div>
         </div>
         <div class="ih-field">
           <label class="ih-label" for="so-clave">Clave de producto</label>
           <input class="ih-input" id="so-clave" name="clave_producto" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['clave_producto'] ?? ''), ENT_QUOTES) ?>">
+                 value="<?= htmlspecialchars((string)($so['clave_producto'] ?? ''), ENT_QUOTES) ?>"
+                 placeholder="Ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX">
+          <div class="ih-field__hint">La clave con la que se activó el sistema</div>
         </div>
         <div class="ih-field">
           <label class="ih-label" for="so-lic">Número de licencia</label>
           <input class="ih-input" id="so-lic" name="numero_licencia" <?= $puedeEditar ? '' : 'disabled' ?>
-                 value="<?= htmlspecialchars((string)($so['numero_licencia'] ?? ''), ENT_QUOTES) ?>">
+                 value="<?= htmlspecialchars((string)($so['numero_licencia'] ?? ''), ENT_QUOTES) ?>"
+                 placeholder="Ej: OEM-2024-00187">
+          <div class="ih-field__hint">El número con el que figura la licencia en la factura o en el portal del fabricante</div>
         </div>
         <div class="ih-field">
           <label class="ih-label" for="so-fecha">Instalado el</label>
           <input class="ih-input" type="date" id="so-fecha" name="instalado_en" <?= $puedeEditar ? '' : 'disabled' ?>
                  value="<?= htmlspecialchars((string)($so['instalado_en'] ?? ''), ENT_QUOTES) ?>">
+          <div class="ih-field__hint">Cuándo se instaló o se reinstaló por última vez</div>
         </div>
 
         <?php if ($puedeEditar): ?>
         <div class="ih-field" style="grid-column:1/-1">
-          <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-check-lg"></i> Guardar sistema operativo</button>
+          <button type="submit" class="ih-btn ih-btn--accent"><i class="bi bi-check-lg"></i> Guardar sistema operativo</button>
         </div>
         <?php endif; ?>
       </form>
@@ -344,7 +362,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-cant">Cantidad</label>
-            <input class="ih-input" type="number" id="co-cant" name="cantidad" min="1" value="1">
+            <input class="ih-input" type="number" id="co-cant" name="cantidad" min="1" value="1"
+                   placeholder="Ej: 2 módulos de memoria">
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-cap">Capacidad (MB)</label>
@@ -353,15 +372,16 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-frec">Frecuencia (MHz)</label>
-            <input class="ih-input" type="number" id="co-frec" name="frecuencia_mhz" min="0">
+            <input class="ih-input" type="number" id="co-frec" name="frecuencia_mhz" min="0"
+                   placeholder="Ej: 3200">
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-nuc">Núcleos</label>
-            <input class="ih-input" type="number" id="co-nuc" name="nucleos" min="0">
+            <input class="ih-input" type="number" id="co-nuc" name="nucleos" min="0" placeholder="Ej: 8">
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-hil">Hilos</label>
-            <input class="ih-input" type="number" id="co-hil" name="hilos" min="0">
+            <input class="ih-input" type="number" id="co-hil" name="hilos" min="0" placeholder="Ej: 16">
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-mac">Dirección MAC</label>
@@ -369,7 +389,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field">
             <label class="ih-label" for="co-serie">Número de serie</label>
-            <input class="ih-input" id="co-serie" name="numero_serie">
+            <input class="ih-input" id="co-serie" name="numero_serie" placeholder="Ej: S4A2NX0T901234">
           </div>
           <div class="ih-field" style="grid-column:1/-1">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar componente</button>
@@ -518,7 +538,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field">
             <label class="ih-label" for="pu-vlan">VLAN</label>
-            <input class="ih-input" id="pu-vlan" name="vlan">
+            <input class="ih-input" id="pu-vlan" name="vlan" placeholder="Ej: 120">
           </div>
           <div class="ih-field" style="grid-column:1/-1">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar puerto</button>
@@ -780,7 +800,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           </div>
           <div class="ih-field ih-col-span-2">
             <label class="ih-label" for="do-nota">Nota</label>
-            <input class="ih-input" id="do-nota" name="nota">
+            <input class="ih-input" id="do-nota" name="nota" placeholder="Ej: incluye la extensión de garantía a 3 años">
           </div>
           <div class="ih-field" style="grid-column:1/-1">
             <button type="submit" class="ih-btn ih-btn--primary"><i class="bi bi-plus-lg"></i> Agregar documento</button>

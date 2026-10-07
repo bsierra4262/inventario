@@ -43,6 +43,21 @@ if (!defined('CATALOGO_TIPOS')) {
         'estado'       => ['label' => 'Estado',       'tabla' => 'productos', 'columna' => 'estado',
                            'ayuda' => 'En uso, en depósito, en reparación, de baja…'],
 
+        // ── Sistema operativo ───────────────────────────────────────────────
+        //    Eran un <input list> con diez sugerencias escritas en el HTML:
+        //    convivían «Windows 11», «windows 11», «Win11» y «W11», y la
+        //    pregunta que motivó la fase 4 —cuántas máquinas siguen en
+        //    Windows 10— volvía a no poder contestarse. La migración 10 siembra
+        //    una lista completa, al estilo de GLPI.
+        'so'              => ['label' => 'Sistema operativo', 'tabla' => 'activo_so', 'columna' => 'so',
+                              'ayuda' => 'Windows, Linux, macOS, hipervisores y sistemas de equipos de red'],
+        'so_version'      => ['label' => 'Versión del sistema', 'tabla' => 'activo_so', 'columna' => 'version',
+                              'ayuda' => 'La versión concreta: 22.04 LTS, 23H2, Sonoma'],
+        'so_edicion'      => ['label' => 'Edición del sistema', 'tabla' => 'activo_so', 'columna' => 'edicion',
+                              'ayuda' => 'Pro, Home, Enterprise, Datacenter'],
+        'so_arquitectura' => ['label' => 'Arquitectura',        'tabla' => 'activo_so', 'columna' => 'arquitectura',
+                              'ayuda' => 'x86_64, ARM64, RISC-V'],
+
         // ── Financiero y administrativo (Infocom) ───────────────────────────
         'proveedor'    => ['label' => 'Proveedor',    'tabla' => 'activo_infocom', 'columna' => 'proveedor',
                            'ayuda' => 'A quién se le compró el activo'],
