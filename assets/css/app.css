@@ -309,12 +309,15 @@ select::-ms-expand{display:none}
    ------------------------------------------------------------------ */
 .ih-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface)}
 .ih-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface)}
+/* El relleno es .5rem y no .7: con .7 una fila de una sola linea mediía 43px,
+   de los cuales 22 eran aire. Una tabla de veinte activos ocupaba dos pantallas
+   de alto sin decir nada más. */
 .ih-table th{
   text-align:left;font-weight:700;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;
-  color:var(--muted);padding:.7rem .8rem;background:var(--soft);
+  color:var(--muted);padding:.5rem .7rem;background:var(--soft);
   border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:1;
 }
-.ih-table td{padding:.7rem .8rem;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.ih-table td{padding:.5rem .7rem;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 .ih-table tbody tr:last-child td{border-bottom:0}
 .ih-table tbody tr:hover{background:var(--primary-050)}
 .ih-table--clickable tbody tr{cursor:pointer}

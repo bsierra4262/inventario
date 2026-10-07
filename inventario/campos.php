@@ -166,19 +166,24 @@ require __DIR__ . '/../includes/layout/topbar.php';
               $ambito   = trim((string)($d['categoria'] ?? '') . ' › ' . (string)($d['subcategoria'] ?? ''), ' ›');
             ?>
               <tr<?= $activo ? '' : ' class="es-inactiva"' ?>>
+                <?php /* El nombre arriba y la clave con la insignia en un solo
+                         renglon chico abajo. Apilados de a uno, la fila llegaba
+                         a 122 px —casi tres veces una fila normal— y catorce
+                         campos no entraban en la pantalla. */ ?>
                 <td>
                   <strong><?= htmlspecialchars((string)$d['etiqueta'], ENT_QUOTES, 'UTF-8') ?></strong>
-                  <div class="ih-text-sm ih-text-muted"><code><?= htmlspecialchars((string)$d['clave']) ?></code></div>
-                  <?php if ($heredado): ?>
-                    <span class="ih-badge ih-badge--info" title="Guarda en la columna <?= htmlspecialchars((string)$d['columna_legacy']) ?> de productos">
-                      columna propia
-                    </span>
-                  <?php endif; ?>
+                  <div class="ih-celda__sub">
+                    <code><?= htmlspecialchars((string)$d['clave']) ?></code>
+                    <?php if ($heredado): ?>
+                      <span class="ih-badge ih-badge--info"
+                            title="Guarda en la columna <?= htmlspecialchars((string)$d['columna_legacy']) ?> de productos">columna propia</span>
+                    <?php endif; ?>
+                  </div>
                 </td>
                 <td>
                   <?= htmlspecialchars(CAMPO_TIPOS[(string)$d['tipo']] ?? (string)$d['tipo']) ?>
                   <?php if ($d['opciones']): ?>
-                    <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars(implode(' · ', $d['opciones'])) ?></div>
+                    <div class="ih-celda__sub"><?= htmlspecialchars(implode(' · ', $d['opciones'])) ?></div>
                   <?php endif; ?>
                 </td>
                 <td><?= $ambito !== '' ? htmlspecialchars($ambito) : '<span class="ih-text-muted">Todos los activos</span>' ?></td>

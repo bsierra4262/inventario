@@ -884,6 +884,15 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
    propio relleno en cada celda; sumarle el de la tarjeta la deja flotando
    adentro, con el borde lejos y el encabezado desalineado del título. */
 .ih-card__body--tabla { padding: 0; }
+/* Adentro de una tarjeta, el contenedor de la tabla no pone su propio borde ni
+   su propio radio: los pone la tarjeta. Con los dos quedaba una linea doble en
+   los cuatro lados, de esas que no se ven de frente pero hacen que algo
+   parezca mal terminado. */
+.ih-card__body--tabla > .ih-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
 
 /* ── La fila de botones de una fila de tabla ─────────────────────────────── */
 .ih-acciones { display: flex; align-items: center; gap: .4rem; }
@@ -1079,6 +1088,13 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
   font-weight: 400;
   color: var(--ih-gray-500, #6f6a7d);
 }
+
+/* La ayuda que aparece cuando un desplegable se queda sin opciones.
+   Pasa en Versión y Edición: hay sistemas que no distinguen ediciones y
+   sistemas de los que no tenemos las versiones. Un desplegable que no abre
+   nada y no dice por qué parece roto; esto lo explica. Va en ámbar y no en
+   gris porque es una salvedad, no una aclaración más. */
+.cat-sin-opciones { color: var(--ih-warning, #a8620a); }
 /* El icono que acompaña al rótulo de un campo y cambia con lo que la persona
    elige —la carpeta de la categoría en el alta de un activo—. */
 .ih-label__icono {
@@ -1388,7 +1404,24 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   color: var(--ih-purple, #663399);
 }
 .ih-celda__texto { min-width: 0; }
-.ih-celda__nombre { font-weight: 600; color: var(--ih-gray-900, #161922); }
+.ih-celda__nombre { font-weight: 600; color: var(--ih-gray-900, #161922); line-height: 1.35; }
+
+/* El renglón de apoyo de una celda: la marca y la subcategoría debajo del
+   nombre, la clave debajo de la etiqueta, el correo debajo del usuario.
+
+   Va en UN renglón, con los datos separados por un punto medio, y no uno
+   debajo del otro. Apilados, la fila del listado de activos medía 87 px y la
+   de campos llegaba a 122 —tres veces una fila normal— sin decir nada más.
+   El interlineado apretado es a propósito: es texto de apoyo, no de lectura. */
+.ih-celda__sub {
+  margin-top: .1rem;
+  font-size: var(--ih-text-xs, 11px);
+  line-height: 1.35;
+  color: var(--ih-gray-500, #6f6a7d);
+  display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
+}
+.ih-celda__sub code { font-size: inherit; }
+.ih-celda__sub .ih-badge { font-size: 10px; padding: 0 5px; }
 
 /* Un valor con su icono al lado, dentro de una celda. */
 .ih-con-icono { display: inline-flex; align-items: center; gap: .4rem; }
@@ -1496,6 +1529,33 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   margin: 0;
   font-size: var(--ih-text-xs, 11px); line-height: 1.5;
   color: var(--ih-gray-500, #6f6a7d);
+}
+
+/* ---------------------------------------------------------------------------
+   7 nonies. Filas que se repiten
+   ---------------------------------------------------------------------------
+   Un componente, una interfaz de red, una relación con otro activo: cosas de
+   las que no se sabe cuántas hay. Una notebook tiene un disco, un servidor
+   tiene seis, un switch tiene veinticuatro puertos. Un formulario con «Disco
+   1», «Disco 2» y «Disco 3» fijos alcanza para la notebook y no para el
+   servidor.
+
+   Cada fila se separa de la anterior con una línea y un poco de aire: sin eso,
+   seis componentes seguidos se leen como un único formulario de treinta campos
+   y no se ve dónde termina uno y empieza el otro.
+   --------------------------------------------------------------------------- */
+.ih-filas { display: grid; gap: .25rem; margin-bottom: .9rem; }
+.ih-fila { position: relative; padding: .9rem 0; }
+.ih-fila + .ih-fila { border-top: 1px dashed var(--ih-gray-200, #e7e4ef); }
+.ih-fila:first-child { padding-top: 0; }
+
+/* El botón de quitar va arriba a la derecha de su fila, fuera del flujo de los
+   campos: dentro de la grilla ocuparía una celda y correría todo. */
+.ih-fila__quitar { position: absolute; top: .9rem; right: 0; }
+.ih-fila:first-child .ih-fila__quitar { top: 0; }
+@media (max-width: 640px) {
+  /* En pantalla angosta no hay lugar al costado: baja al final de la fila. */
+  .ih-fila__quitar { position: static; margin-top: .5rem; width: 100%; justify-content: center; }
 }
 
 /* ---------------------------------------------------------------------------

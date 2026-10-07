@@ -1481,10 +1481,15 @@ chequear('Los desplegables respetan la capa superior de los <dialog>',
 chequear('El diálogo de confirmación es un <dialog> y no un div con z-index',
     str_contains($compJs, "el('dialog', 'ihc-modal')") && str_contains($compJs, 'm.showModal()'));
 
-// El foco arranca en Cancelar: si alguien venía tecleando Enter, no tiene que
-// confirmar un borrado sin haberlo leído.
+/* El foco arranca en Cancelar: si alguien venía tecleando Enter, no tiene que
+   confirmar un borrado sin haberlo leído.
+   En un aviso —`ihAvisar`, un solo botón— no hay Cancelar, así que arranca en el
+   único que hay; por eso la condición y no `no.focus()` a secas. */
 chequear('La confirmación abre con el foco en Cancelar, no en el botón que borra',
-    str_contains($compJs, 'setTimeout(function () { no.focus(); }, 0)'));
+    str_contains($compJs, '(no.hidden ? si : no).focus()'));
+chequear('Y un aviso de un solo botón esconde el de cancelar',
+    str_contains($compJs, "no.hidden = op.soloAceptar === true")
+ && str_contains($compJs, 'window.ihAvisar'));
 
 // ── Defectos que SÓLO aparecieron corriendo el script en un DOM de verdad
 //    (node test/componentes.js). El análisis estático no podía verlos.

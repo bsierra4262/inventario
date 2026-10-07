@@ -29,6 +29,23 @@
 $page_section = $page_section ?? '';
 $tenant_name  = $tenant_name  ?? 'Mi empresa';
 
+/* ¿Tiene sentido ofrecer «Contraseña»?
+   Si la empresa deshabilitó el acceso con usuario y contraseña —todos entran
+   con Google o con Microsoft— nadie tiene una contraseña que cambiar, y el
+   enlace lleva a una pantalla que no sirve para nada. Pedía cambiar algo que
+   no se usa para entrar. */
+$sb_hay_password = true;
+if (isset($conn) && $conn instanceof mysqli) {
+    $sb_ts = __DIR__ . '/../../core/tenants/tenant_settings.php';
+    if (is_file($sb_ts)) {
+        require_once $sb_ts;
+        if (function_exists('tenant_local_login_disabled')) {
+            try { $sb_hay_password = !tenant_local_login_disabled($conn); }
+            catch (Throwable) { $sb_hay_password = true; }
+        }
+    }
+}
+
 if (!function_exists('ih_tn_active')) {
 /**
  * Marca la pestaña activa. Una pestaña índice también se queda marcada mientras
@@ -101,9 +118,11 @@ $sb_hijas_config = ['catalogos', 'campos', 'integracion', 'usuarios', 'roles'];
   </div>
 
   <div class="ih-sidebar__group ih-sidebar__group--fin">
-    <a href="/auth/change_password.php" class="ih-sidebar__link" title="Cambiar contraseña">
-      <i class="bi bi-key"></i><span class="ih-hidden-mobile"> Contraseña</span>
-    </a>
+    <?php if ($sb_hay_password): ?>
+      <a href="/auth/change_password.php" class="ih-sidebar__link" title="Cambiar contraseña">
+        <i class="bi bi-key"></i><span class="ih-hidden-mobile"> Contraseña</span>
+      </a>
+    <?php endif; ?>
     <a href="/auth/logout.php" class="ih-sidebar__link" title="Cerrar sesión">
       <i class="bi bi-box-arrow-right"></i><span class="ih-hidden-mobile"> Salir</span>
     </a>

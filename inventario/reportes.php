@@ -198,6 +198,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
 <!-- ════════ INVENTARIO GENERAL ════════ -->
 <div<?= $tab === 'inventario' ? '' : ' hidden' ?>>
+  <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
+           que en el listado de activos. Antes eran cuatro bloques sueltos
+           apoyados en el fondo, y la misma tabla parecia mas chica. */ ?>
+  <div class="ih-card ih-pegada-arriba">
+    <div class="ih-card__body ih-card__body--compacto">
   <form method="GET" class="ih-filtros" id="form-inventario">
     <input type="hidden" name="tab" value="inventario">
     <div>
@@ -217,11 +222,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Marca</label>
-      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
+      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>" placeholder="Ej.: Dell, Lenovo, Cisco, HP">
     </div>
     <div>
       <label class="ih-label">Modelo</label>
-      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
+      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>" placeholder="Ej.: Latitude 5420, Catalyst 2960, ThinkPad E15">
     </div>
     <div>
       <label class="ih-label">Estado</label>
@@ -233,15 +238,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Ubicación</label>
-      <input type="text" name="ubicacion" class="ih-input" value="<?=htmlspecialchars($_GET['ubicacion']??'')?>">
+      <input type="text" name="ubicacion" class="ih-input" value="<?=htmlspecialchars($_GET['ubicacion']??'')?>" placeholder="Ej.: Depósito Central">
     </div>
     <div>
       <label class="ih-label">Desde Fecha de Carga</label>
-      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <label class="ih-label">Hasta Fecha de Carga</label>
-      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div class="ih-flex ih-items-end ih-gap-2">
       <label class="ih-label ih-label--casilla">
@@ -260,6 +265,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-inventario"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
+    </div>
+  </div>
+
+  <div class="ih-card ih-pegada-abajo">
+    <div class="ih-card__body ih-card__body--tabla">
   <div class="ih-table-wrap">
   <table class="ih-table" id="tabla-inventario">
     <thead>
@@ -325,6 +335,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
+    </div>
+
+    <div class="ih-card__footer">
   <div class="ih-pager">
     <form method="get" id="form-per-page-inventario" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
@@ -346,10 +359,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <li class="ih-pager__item <?= $page>=$totalPages?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPages])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ RANKING POR CANTIDAD ════════ -->
 <div<?= $tab === 'valor' ? '' : ' hidden' ?>>
+  <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
+           que en el listado de activos. Antes eran cuatro bloques sueltos
+           apoyados en el fondo, y la misma tabla parecia mas chica. */ ?>
+  <div class="ih-card ih-pegada-arriba">
+    <div class="ih-card__body ih-card__body--compacto">
   <form method="GET" class="ih-filtros" id="form-valor">
     <input type="hidden" name="tab" value="valor">
     <div>
@@ -369,11 +389,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Desde Fecha de Carga</label>
-      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <label class="ih-label">Hasta Fecha de Carga</label>
-      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div class="ih-flex ih-items-end ih-gap-2">
       <button class="ih-btn ih-btn--primary" type="submit" name="ranking_cantidad">Filtrar</button>
@@ -386,6 +406,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-valor"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
+    </div>
+  </div>
+
+  <div class="ih-card ih-pegada-abajo">
+    <div class="ih-card__body ih-card__body--tabla">
   <div class="ih-table-wrap">
   <table class="ih-table" id="tabla-valor">
     <thead>
@@ -466,6 +491,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
+    </div>
+
+    <div class="ih-card__footer">
   <div class="ih-pager">
     <form method="get" id="form-per-page-valor" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
@@ -485,10 +513,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <li class="ih-pager__item <?= $page_v>=$totalPagesV?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesV])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ AMORTIZACIÓN ════════ -->
 <div<?= $tab === 'amortizacion' ? '' : ' hidden' ?>>
+  <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
+           que en el listado de activos. Antes eran cuatro bloques sueltos
+           apoyados en el fondo, y la misma tabla parecia mas chica. */ ?>
+  <div class="ih-card ih-pegada-arriba">
+    <div class="ih-card__body ih-card__body--compacto">
   <form method="GET" class="ih-filtros" id="form-amorti">
     <input type="hidden" name="tab" value="amortizacion">
     <div>
@@ -521,19 +556,19 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Marca</label>
-      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
+      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>" placeholder="Ej.: Dell, Lenovo, Cisco, HP">
     </div>
     <div>
       <label class="ih-label">Modelo</label>
-      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
+      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>" placeholder="Ej.: Latitude 5420, Catalyst 2960, ThinkPad E15">
     </div>
     <div>
       <label class="ih-label">Desde Fecha Compra/Ingreso</label>
-      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <label class="ih-label">Hasta Fecha Compra/Ingreso</label>
-      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div class="ih-flex ih-items-end ih-gap-2">
       <label class="ih-label ih-label--casilla">
@@ -552,6 +587,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-amortizacion"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
+    </div>
+  </div>
+
+  <div class="ih-card ih-pegada-abajo">
+    <div class="ih-card__body ih-card__body--tabla">
   <div class="ih-table-wrap">
   <table class="ih-table" id="tabla-amortizacion">
     <thead>
@@ -677,6 +717,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
+    </div>
+
+    <div class="ih-card__footer">
   <div class="ih-pager">
     <form method="get" id="form-per-page-amortizacion" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
@@ -696,6 +739,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <li class="ih-pager__item <?= $page_a>=$totalPagesA?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesA])) ?>">&raquo;</a></li>
     </ul></nav>
   </div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ TRAZABILIDAD ════════ -->
@@ -706,6 +751,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
   $acRes = $conn->query("SELECT DISTINCT accion FROM `{$movTable}` WHERE accion IS NOT NULL AND accion != '' ORDER BY accion ASC");
   if ($acRes) { while ($ar = $acRes->fetch_assoc()) $accionesT[] = $ar['accion']; }
   ?>
+  <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
+           que en el listado de activos. Antes eran cuatro bloques sueltos
+           apoyados en el fondo, y la misma tabla parecia mas chica. */ ?>
+  <div class="ih-card ih-pegada-arriba">
+    <div class="ih-card__body ih-card__body--compacto">
   <form method="GET" class="ih-filtros" id="form-trazabilidad">
     <input type="hidden" name="tab" value="trazabilidad">
     <div>
@@ -723,23 +773,23 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Modelo</label>
-      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>">
+      <input type="text" name="modelo" class="ih-input" value="<?=htmlspecialchars($_GET['modelo']??'')?>" placeholder="Ej.: Latitude 5420, Catalyst 2960, ThinkPad E15">
     </div>
     <div>
       <label class="ih-label">Marca</label>
-      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>">
+      <input type="text" name="marca" class="ih-input" value="<?=htmlspecialchars($_GET['marca']??'')?>" placeholder="Ej.: Dell, Lenovo, Cisco, HP">
     </div>
     <div>
       <label class="ih-label">S/N Tag</label>
-      <input type="text" name="servis_tag" class="ih-input" value="<?=htmlspecialchars($_GET['servis_tag']??'')?>">
+      <input type="text" name="servis_tag" class="ih-input" value="<?=htmlspecialchars($_GET['servis_tag']??'')?>" placeholder="Ej.: 7KJ2M13">
     </div>
     <div>
       <label class="ih-label">Desde Fecha</label>
-      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <label class="ih-label">Hasta Fecha</label>
-      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <button class="ih-btn ih-btn--primary" type="submit" name="trazabilidad">Buscar</button>
@@ -752,6 +802,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-trazabilidad"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
+    </div>
+  </div>
+
+  <div class="ih-card ih-pegada-abajo">
+    <div class="ih-card__body ih-card__body--tabla">
   <div class="ih-table-wrap">
   <table class="ih-table" id="tabla-trazabilidad">
     <thead>
@@ -843,6 +898,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
+    </div>
+
+    <div class="ih-card__footer">
   <div class="ih-pager">
     <form method="get" id="form-per-page-trazabilidad" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
@@ -861,6 +919,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <li class="ih-pager__item <?= $page_t>=$totalPagesT?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesT,$page_t+1)])) ?>">&rsaquo;</a></li>
       <li class="ih-pager__item <?= $page_t>=$totalPagesT?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesT])) ?>">&raquo;</a></li>
     </ul></nav>
+  </div>
+    </div>
   </div>
 </div>
 
@@ -889,6 +949,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
   $motivosTodos = array_unique(array_merge($motivosDef, $motivosDB));
   sort($motivosTodos);
   ?>
+  <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
+           que en el listado de activos. Antes eran cuatro bloques sueltos
+           apoyados en el fondo, y la misma tabla parecia mas chica. */ ?>
+  <div class="ih-card ih-pegada-arriba">
+    <div class="ih-card__body ih-card__body--compacto">
   <form method="GET" class="ih-filtros" id="form-archivados">
     <input type="hidden" name="tab" value="archivados">
     <div>
@@ -911,11 +976,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
     <div>
       <label class="ih-label">Desde Fecha</label>
-      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>">
+      <input type="date" name="fecha_desde" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_desde']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <label class="ih-label">Hasta Fecha</label>
-      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>">
+      <input type="date" name="fecha_hasta" class="ih-input" value="<?=htmlspecialchars($_GET['fecha_hasta']??'')?>" placeholder="dd/mm/aaaa">
     </div>
     <div>
       <button class="ih-btn ih-btn--primary" type="submit">Filtrar</button>
@@ -927,6 +992,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <button class="ih-btn ih-btn--ghost export-csv-btn" data-table="tabla-archivados"><i class="bi bi-filetype-csv"></i> Exportar CSV</button>
   </div>
 
+    </div>
+  </div>
+
+  <div class="ih-card ih-pegada-abajo">
+    <div class="ih-card__body ih-card__body--tabla">
   <div class="ih-table-wrap">
   <table class="ih-table" id="tabla-archivados">
     <thead>
@@ -1019,6 +1089,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
   </table>
   </div>
 
+    </div>
+
+    <div class="ih-card__footer">
   <div class="ih-pager">
     <form method="get" id="form-per-page-archivados" class="ih-pager__info">
       <?php foreach ($_GET as $key => $value) { if ($key === 'per_page' || $key === 'page') continue; echo '<input type="hidden" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars(is_array($value)?'':$value).'">'; } ?>
@@ -1037,6 +1110,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <li class="ih-pager__item <?= $page_ar>=$totalPagesAR?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>min($totalPagesAR,$page_ar+1)])) ?>">&rsaquo;</a></li>
       <li class="ih-pager__item <?= $page_ar>=$totalPagesAR?'is-disabled':'' ?>"><a class="ih-pager__link" href="?<?= http_build_query(array_merge($_GET,['page'=>$totalPagesAR])) ?>">&raquo;</a></li>
     </ul></nav>
+  </div>
+    </div>
   </div>
 </div>
 
@@ -1102,17 +1177,38 @@ require __DIR__ . '/../includes/layout/topbar.php';
   function tableToPdf(tableId, tituloReporte) {
     ensureAllColumnsVisible(tableId);
     const table = document.getElementById(tableId);
+    if (!table) { return; }
     const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    /* Solo las filas con datos: la de «no hay datos disponibles» es un cartel,
+       no un registro, y en el PDF salia como una fila con el texto estirado. */
+    const rows = Array.from(table.querySelectorAll('tbody tr'))
+      .filter(tr => !tr.querySelector('td[colspan]'));
     const totalColumns = headers.length;
 
-    // Colores corporativos
+    if (rows.length === 0) {
+      window.ihAvisar({
+        titulo: 'No hay nada para exportar',
+        detalle: 'Con los filtros puestos, este reporte no tiene ningún registro. '
+               + 'Cambiá los filtros y volvé a intentar.'
+      });
+      return;
+    }
+
+    /* Los colores van en hexadecimal y NO como `var(--ink)`.
+       Ahi estaba el bug del PDF vacio: pdfMake no es un navegador, no sabe que
+       es una variable CSS. El encabezado usaba '#663399' y salia; las filas
+       usaban `color: var(--ink)` y `fillColor: var(--soft)`, y al no poder
+       resolverlos la tabla se renderizaba sin una sola fila. El PDF bajaba
+       igual, con el titulo, el encabezado violeta y nada abajo.
+
+       Son los mismos valores de la identidad visual, escritos aca porque este
+       documento se arma fuera del navegador. */
     const PURPLE      = '#663399';
-    const PURPLE_DARK = '#4E247A';
-    const TEXT        = 'var(--ink)';
-    const TEXT_MUTED  = 'var(--muted)';
-    const STRIPE      = 'var(--soft)';
-    const BORDER      = 'var(--line)';
+    const PURPLE_DARK = '#522A7A';
+    const TEXT        = '#161922';
+    const TEXT_MUTED  = '#6F6A7D';
+    const STRIPE      = '#FAF9FC';
+    const BORDER      = '#E7E4EF';
 
     // Orientation segun cantidad de columnas
     const orientation = totalColumns > 6 ? 'landscape' : 'portrait';
@@ -1160,7 +1256,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           stack: [
             {
               columns: [
-                { text: 'ASSET VAULT', bold: true, color: PURPLE, fontSize: 11, letterSpacing: 1.5 },
+                { text: 'ASSET VAULT', bold: true, color: PURPLE, fontSize: 11, characterSpacing: 1.5 },
                 { text: 'INTELLIHELP S.A.', alignment: 'right', color: TEXT_MUTED, fontSize: 8 }
               ]
             },

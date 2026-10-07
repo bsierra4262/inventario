@@ -11,6 +11,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../includes/volver.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 
@@ -23,6 +24,8 @@ $cloudUploadOk = cloud_upload_disponible($conn);
 
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../includes/campo_catalogo.php';
+require_once __DIR__ . '/../includes/campo_so.php';
+require_once __DIR__ . '/../includes/campos_ficha.php';
 require_once __DIR__ . '/../includes/campos_dinamicos.php';
 
 try {
@@ -169,7 +172,7 @@ $topbar_subtitle = 'Registrá un nuevo equipo en el inventario';
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+$topbar_actions  = volver_boton('/inventario/index.php');
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
@@ -224,7 +227,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field" id="campo-cantidad">
               <label class="ih-label" for="f-cantidad">Cantidad</label>
               <input type="number" id="f-cantidad" name="cantidad" class="ih-input"
-                     min="1" value="<?= (int)max(1, (int)$fv('cantidad', 1)) ?>">
+                     min="1" value="<?= (int)max(1, (int)$fv('cantidad', 1)) ?>" placeholder="Ej.: 1">
             </div>
 
             <div class="ih-field">
@@ -481,15 +484,25 @@ require __DIR__ . '/../includes/layout/head.php';
               <?php campo_catalogo($conn, 'so', '', $puedeGestionarCatalogos, 'f-so'); ?>
               <div class="ih-field__hint">Ej: Windows 11, Ubuntu Server, VMware ESXi, MikroTik RouterOS</div>
             </div>
+            <?php /* Version y Edicion siguen al sistema: eligiendo «Windows 11»
+                     la lista pasa a ser 25H2, 24H2, 23H2… Antes los dos
+                     desplegables salian vacios y habia que ir a cargarlos a otra
+                     pantalla antes de poder anotar nada. */ ?>
             <div class="ih-field">
               <label class="ih-label" for="f-so_version">Versión</label>
-              <?php campo_catalogo($conn, 'so_version', '', $puedeGestionarCatalogos, 'f-so_version'); ?>
-              <div class="ih-field__hint">Ej: 22.04 LTS, 23H2, 8.0, Sonoma 14.4</div>
+              <?php campo_so_dependiente($conn, 'versiones', 'so_version', '', $puedeGestionarCatalogos, 'f-so_version'); ?>
+              <div class="ih-field__hint">Se llena sola al elegir el sistema. Ej: 24H2, 22.04 LTS, 8.0</div>
+              <div class="ih-field__hint cat-sin-opciones" hidden>
+                Ese sistema no tiene versiones conocidas. Si la tenés, agregala con el botón +.
+              </div>
             </div>
             <div class="ih-field">
               <label class="ih-label" for="f-so_edicion">Edición</label>
-              <?php campo_catalogo($conn, 'so_edicion', '', $puedeGestionarCatalogos, 'f-so_edicion'); ?>
-              <div class="ih-field__hint">Ej: Pro, Home, Enterprise, Datacenter, Standard</div>
+              <?php campo_so_dependiente($conn, 'ediciones', 'so_edicion', '', $puedeGestionarCatalogos, 'f-so_edicion'); ?>
+              <div class="ih-field__hint">Se llena sola al elegir el sistema. Ej: Pro, Enterprise, Datacenter</div>
+              <div class="ih-field__hint cat-sin-opciones" hidden>
+                Ese sistema no distingue ediciones.
+              </div>
             </div>
             <div class="ih-field">
               <label class="ih-label" for="f-so_arquitectura">Arquitectura</label>
@@ -534,19 +547,19 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field">
               <label class="ih-label" for="f-fecha-garantia">Inicio de garantía</label>
               <input type="date" id="f-fecha-garantia" name="fecha_garantia" class="ih-input"
-                     value="<?= htmlspecialchars((string)$fv('fecha_garantia')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('fecha_garantia')) ?>" placeholder="dd/mm/aaaa">
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-fecha-ingreso">Fecha de recepción</label>
               <input type="date" id="f-fecha-ingreso" name="fecha_ingreso" class="ih-input"
-                     value="<?= htmlspecialchars((string)$fv('fecha_ingreso')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('fecha_ingreso')) ?>" placeholder="dd/mm/aaaa">
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-fecha-compra">Fecha de compra</label>
               <input type="date" id="f-fecha-compra" name="fecha_compra" class="ih-input"
-                     value="<?= htmlspecialchars((string)$fv('fecha_compra')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('fecha_compra')) ?>" placeholder="dd/mm/aaaa">
             </div>
 
           </div>
@@ -568,19 +581,19 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field">
               <label class="ih-label" for="f-numero_pedido">N.º de pedido</label>
               <input type="text" id="f-numero_pedido" name="numero_pedido" class="ih-input" maxlength="120"
-                     value="<?= htmlspecialchars((string)$fv('numero_pedido')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('numero_pedido')) ?>" placeholder="Ej.: OC-2026-0184">
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-numero_remito">N.º de remito</label>
               <input type="text" id="f-numero_remito" name="numero_remito" class="ih-input" maxlength="120"
-                     value="<?= htmlspecialchars((string)$fv('numero_remito')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('numero_remito')) ?>" placeholder="Ej.: 0001-00045212">
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-numero_factura">N.º de factura</label>
               <input type="text" id="f-numero_factura" name="numero_factura" class="ih-input" maxlength="120"
-                     value="<?= htmlspecialchars((string)$fv('numero_factura')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('numero_factura')) ?>" placeholder="Ej.: A 0003-00012845">
             </div>
 
             <div class="ih-field">
@@ -601,13 +614,13 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field">
               <label class="ih-label" for="f-fecha_entrega">Fecha de entrega</label>
               <input type="date" id="f-fecha_entrega" name="fecha_entrega" class="ih-input"
-                     value="<?= htmlspecialchars((string)$fv('fecha_entrega')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('fecha_entrega')) ?>" placeholder="dd/mm/aaaa">
             </div>
 
             <div class="ih-field">
               <label class="ih-label" for="f-fecha_puesta_servicio">Puesta en servicio</label>
               <input type="date" id="f-fecha_puesta_servicio" name="fecha_puesta_servicio" class="ih-input"
-                     value="<?= htmlspecialchars((string)$fv('fecha_puesta_servicio')) ?>">
+                     value="<?= htmlspecialchars((string)$fv('fecha_puesta_servicio')) ?>" placeholder="dd/mm/aaaa">
             </div>
 
             <div class="ih-field">
@@ -620,6 +633,14 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
         </div>
       </div>
+
+      <?php /* ── La ficha tecnica, en el mismo paso ──────────────────
+               Antes el alta creaba el activo y mandaba a la ficha para cargar
+               componentes, red, relaciones, contratos, documentos y notas: dos
+               pantallas y ocho formularios separados para dar de alta UNA
+               computadora, cada uno con su propio envio. Ahora entra todo junto
+               y lo guarda ficha_alta_guardar() con el activo ya creado. */ ?>
+      <?php campos_ficha_alta($conn); ?>
 
       <!-- ── Bloque 5: Adjuntos ──────────────────────────────────────── -->
       <div class="ih-card ih-mb-5">
@@ -650,7 +671,8 @@ require __DIR__ . '/../includes/layout/head.php';
 
       <!-- ── Acciones ─────────────────────────────────────────────────── -->
       <div class="ih-barra__acciones ih-justify-end ih-mb-6">
-        <a href="/inventario/index.php" class="ih-btn ih-btn--ghost">Cancelar</a>
+        <a href="<?= htmlspecialchars(volver_destino('/inventario/index.php'), ENT_QUOTES) ?>"
+           class="ih-btn ih-btn--ghost">Cancelar</a>
         <button type="submit" class="ih-btn ih-btn--accent" id="btn-guardar">
           <i class="bi bi-check-lg"></i> Guardar activo
         </button>

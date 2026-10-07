@@ -28,6 +28,16 @@ if (empty($_SESSION['user_id'])) {
 
 $user_id = (int)$_SESSION['user_id'];
 
+/* Si la empresa deshabilitó el acceso con usuario y contraseña, nadie tiene una
+   contraseña que cambiar: todos entran con Google o con Microsoft. El enlace ya
+   no se muestra, pero la pantalla seguía abierta a quien tuviera la URL —y
+   dejaba cambiar algo que no sirve para entrar. */
+require_once __DIR__ . '/../core/tenants/tenant_settings.php';
+if (function_exists('tenant_local_login_disabled') && tenant_local_login_disabled($conn)) {
+    header('Location: /inventario/index.php');
+    exit();
+}
+
 // Nombre real de la tabla de usuarios del tenant (t1_users, t2_users, users, etc.)
 $usersTable = tn('users');
 

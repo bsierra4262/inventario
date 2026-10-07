@@ -28,9 +28,11 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../includes/volver.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../includes/hub.php';
 require_once __DIR__ . '/../includes/campo_catalogo.php';
+require_once __DIR__ . '/../includes/campo_so.php';
 require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
 require_once __DIR__ . '/../core/tenants/componentes.php';
 require_once __DIR__ . '/../core/tenants/red.php';
@@ -117,9 +119,10 @@ $topbar_subtitle = $nombre;
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
-$topbar_actions  = '<a href="/backend/view_details.php?id=' . $productoId . '"'
-                 . ' class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i>'
-                 . ' <span class="ih-hidden-mobile">Detalle</span></a>';
+/* El boton dice «Volver» y no «Detalle»: ahora devuelve a donde estaba la
+   persona, que puede ser el listado, la papelera o el detalle. Un rotulo que
+   nombra un destino fijo miente en cuanto el destino deja de ser fijo. */
+$topbar_actions  = volver_boton('/backend/view_details.php?id=' . $productoId);
 
 require __DIR__ . '/../includes/layout/head.php';
 
@@ -216,12 +219,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
         <div class="ih-field">
           <label class="ih-label" for="f-so_version">Versión</label>
-          <?php campo_catalogo($conn, 'so_version', (string)($so['version'] ?? ''), $puedeCatalogos, 'f-so_version'); ?>
+          <?php campo_so_dependiente($conn, 'versiones', 'so_version', (string)($so['version'] ?? ''), $puedeCatalogos, 'f-so_version'); ?>
           <div class="ih-field__hint">Ej: 22.04 LTS, 23H2, 8.0, Sonoma 14.4</div>
         </div>
         <div class="ih-field">
           <label class="ih-label" for="f-so_edicion">Edición</label>
-          <?php campo_catalogo($conn, 'so_edicion', (string)($so['edicion'] ?? ''), $puedeCatalogos, 'f-so_edicion'); ?>
+          <?php campo_so_dependiente($conn, 'ediciones', 'so_edicion', (string)($so['edicion'] ?? ''), $puedeCatalogos, 'f-so_edicion'); ?>
           <div class="ih-field__hint">Ej: Pro, Home, Enterprise, Datacenter, Standard</div>
         </div>
         <div class="ih-field">

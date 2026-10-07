@@ -343,7 +343,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
               <div class="ih-field">
                 <label class="ih-field__label">Redirect URI</label>
                 <input class="ih-input" type="url" name="google_redirect_uri"
-                       value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'').'/auth/superadmin_callback.php')) ?>">
+                       value="<?= htmlspecialchars($googleCfg['redirect_uri'] ?? ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'').'/auth/superadmin_callback.php')) ?>" placeholder="Ej.: https://inventario.tuempresa.com/auth/google_callback.php">
               </div>
             </div>
 
@@ -449,7 +449,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Redirect URI</label>
             <input class="ih-input" type="url" name="ms_redirect_uri"
-                   value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? (MS_REDIRECT_URI ?: ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'').'/auth/superadmin_callback.php'))) ?>">
+                   value="<?= htmlspecialchars($msCfg['redirect_uri'] ?? (MS_REDIRECT_URI ?: ((isset($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'').'/auth/superadmin_callback.php'))) ?>" placeholder="Ej.: https://inventario.tuempresa.com/auth/ms_callback.php">
           </div>
 
           <div class="ih-field">

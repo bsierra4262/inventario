@@ -128,6 +128,27 @@ function documento_guardar(mysqli $conn, int $id, array $d): array {
 }
 }
 
+if (!function_exists('documentos_listar')) {
+/**
+ * Todos los documentos cargados, para elegir de una lista.
+ *
+ * Existía `contratos_listar()` y no su equivalente para documentos: un
+ * documento sólo se podía crear desde la ficha de un activo, y no había forma
+ * de colgar de un activo nuevo una factura que ya estaba cargada. El alta
+ * completa lo necesita.
+ */
+function documentos_listar(mysqli $conn, int $limite = 500): array {
+    if (!documentos_disponible($conn)) { return []; }
+    try {
+        $do = $conn->real_escape_string(tn('documentos'));
+        $rs = $conn->query("SELECT id, nombre, tipo, enlace, drive_id, creado_en
+                              FROM `{$do}` ORDER BY creado_en DESC, nombre
+                             LIMIT " . max(1, $limite));
+        return $rs ? $rs->fetch_all(MYSQLI_ASSOC) : [];
+    } catch (Throwable) { return []; }
+}
+}
+
 if (!function_exists('documentos_de_activo')) {
 /** Los documentos de un activo. */
 function documentos_de_activo(mysqli $conn, int $productoId): array {

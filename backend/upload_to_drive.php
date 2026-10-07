@@ -229,9 +229,7 @@ try {
     campos_guardar($conn, (int)$producto_id, $categoria, $subcategoria, $_POST);
 
     // El sistema operativo también: es una fila por activo, así que entra en
-    // la misma transacción. Lo que necesita el id del activo —componentes,
-    // puertos, relaciones— se carga después, en la ficha técnica, y a eso se
-    // redirige al terminar.
+    // la misma transacción.
     require_once __DIR__ . '/../core/tenants/sistema_operativo.php';
     if (so_disponible($conn)) {
         so_asegurar_fila($conn, (int)$producto_id);
@@ -241,6 +239,20 @@ try {
         }
         if ($datosSo !== []) { so_guardar($conn, (int)$producto_id, $datosSo); }
     }
+
+    /* Y el resto de la ficha técnica: componentes, puertos de red con su
+       dirección, relaciones con otros activos, contratos, documentos y la
+       primera nota. Todo viene en el mismo POST del alta, así que se guarda acá
+       y no en una segunda pantalla — antes eran dos pantallas y ocho
+       formularios separados para dar de alta una computadora.
+
+       Una fila que no se puede guardar NO aborta el alta: se anota el motivo y
+       se sigue. Perder los quince campos que estaban bien porque una MAC estaba
+       mal escrita es peor que guardar catorce y decir cuál falló. */
+    require_once __DIR__ . '/../core/tenants/ficha_alta.php';
+    $quienCarga = (string)($_SESSION['user_email'] ?? ($_SESSION['user_name'] ?? ''));
+    $resFicha   = ficha_alta_guardar($conn, (int)$producto_id, $_POST, $quienCarga);
+
     $stmt->close();
 
     // Crear estructura de carpetas en Drive (solo si Drive está habilitado y hay carpeta raíz configurada)
@@ -428,9 +440,15 @@ try {
     } elseif (!$parentFolderId) {
         $okMsg .= ' Sin carpeta Drive asignada — configurá el ID de carpeta en Integración.';
     }
-    // A la ficha técnica, no al listado: el alta recién empieza. Componentes,
-    // red, contratos y documentos necesitan el id del activo, que recién
-    // existe ahora. Antes había que volver al listado, buscarlo y entrar.
+    /* Lo que entró de la ficha técnica se dice con números y no con un «se
+       guardó todo»: si alguien cargó tres discos y entraron dos, el número lo
+       delata y puede volver a mirar. */
+    $resumen = ficha_alta_resumen($resFicha['guardado'] ?? []);
+    if ($resumen !== '') { $okMsg .= ' ' . $resumen; }
+    foreach (($resFicha['avisos'] ?? []) as $aviso) { $okMsg .= ' ' . $aviso; }
+
+    // A la ficha técnica, no al listado: ahí se ve cargado todo lo que entró y
+    // se puede seguir completando lo que falte.
     header('Location: /inventario/ficha.php?id=' . (int)$producto_id . '&nuevo=1&ok=' . urlencode($okMsg));
     exit();
 

@@ -187,7 +187,7 @@ require __DIR__ . '/../includes/layout/head.php';
                       <label class="ih-sr-only" for="valor-<?= (int)$f['id'] ?>">Nombre</label>
                       <input type="text" name="valor" id="valor-<?= (int)$f['id'] ?>" class="ih-input"
                              maxlength="255"
-                             value="<?= htmlspecialchars((string)$f['valor'], ENT_QUOTES, 'UTF-8') ?>">
+                             value="<?= htmlspecialchars((string)$f['valor'], ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: Depósito Central">
                       <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Guardar el nuevo nombre">
                         <i class="bi bi-check-lg"></i>
                       </button>

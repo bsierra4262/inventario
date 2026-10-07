@@ -187,6 +187,12 @@
 
       opciones = [];
       Array.prototype.forEach.call(nativo.options, function (o, i) {
+        /* Una opcion escondida no se dibuja. El <select> del navegador respeta
+           `hidden`, asi que la cara visible tiene que hacer lo mismo: si no, la
+           pantalla esconde una opcion y en el desplegable propio sigue estando.
+           Pasa con Version y Edicion, que esconden lo que no es del sistema
+           operativo elegido. */
+        if (o.hidden) { return; }
         if (o.parentNode.tagName === 'OPTGROUP' && !o.previousElementSibling) {
           lista.appendChild(el('li', 'ihc-select__grupo', o.parentNode.label));
         }
@@ -340,8 +346,21 @@
           cerrar();
           abrir();
         }
-      }).observe(nativo, { childList: true, attributes: true, attributeFilter: ['disabled'] });
+      }).observe(nativo, {
+        childList: true, attributes: true, subtree: true,
+        /* `subtree` porque lo que cambia muchas veces es una <option> y no el
+           <select>: esconder las versiones que no son del sistema elegido toca
+           `hidden` en cada opcion. Sin subtree, la cara visible seguia
+           mostrando la lista entera. */
+        attributeFilter: ['disabled', 'hidden', 'selected']
+      });
     }
+
+    nativo.addEventListener('ihc:refrescar', function () {
+      btn.disabled = nativo.disabled;
+      pintarValor();
+      if (envoltorio.classList.contains('is-open')) { cerrar(); abrir(); }
+    });
 
     pintarValor();
   }
@@ -377,7 +396,11 @@
     var campo = el('div', 'ihc-fecha__campo');
     var texto = el('input', 'ihc-fecha__texto');
     texto.type = 'text';
-    texto.placeholder = 'dd/mm/aaaa';
+    /* El campo de fecha del navegador ignora `placeholder`, asi que una
+       pantalla que lo escribe lo escribe para nada... salvo aca, que es el
+       campo de texto que lo reemplaza. Si la pantalla puso uno se respeta, y si
+       no, el formato que espera el campo. */
+    texto.placeholder = nativo.getAttribute('placeholder') || 'dd/mm/aaaa';
     texto.inputMode = 'numeric';
     texto.autocomplete = 'off';
     texto.value = aTexto(nativo.value);
@@ -579,11 +602,14 @@
     si.textContent = op.aceptar || 'Confirmar';
     no.textContent = op.cancelar || 'Cancelar';
     si.className = 'ih-btn ' + (peligro ? 'ih-btn--danger' : 'ih-btn--primary');
+    // Un aviso no tiene que decidir nada: se esconde el boton de cancelar.
+    no.hidden = op.soloAceptar === true;
 
     m.showModal();
-    // El foco arranca en Cancelar, no en el botón que borra: si alguien venía
-    // tecleando Enter, no tiene que confirmar un borrado sin leerlo.
-    setTimeout(function () { no.focus(); }, 0);
+    /* El foco arranca en Cancelar y no en el boton que borra: si alguien venia
+       tecleando Enter, no tiene que confirmar un borrado sin leerlo. En un
+       aviso, donde no hay Cancelar, arranca en el unico boton que hay. */
+    setTimeout(function () { (no.hidden ? si : no).focus(); }, 0);
 
     return new Promise(function (resolve) {
       function cerrar(r) {
@@ -630,6 +656,30 @@
     document.body.appendChild(modalTexto);
     return modalTexto;
   }
+
+  /**
+   * Avisa algo. Un solo botón, porque no hay nada que decidir.
+   *
+   *   ihAvisar({ titulo, detalle, aceptar })
+   *
+   * Reemplaza a alert(), que el navegador dibuja con el nombre del dominio
+   * arriba, en la tipografía del sistema operativo y bloqueando la pestana
+   * entera. Quedaban tres: dos en la edicion —archivo muy grande, formato no
+   * permitido— y uno en la exportacion a PDF.
+   *
+   * Es ihConfirmar con el boton de cancelar escondido: así los dos cuadros se
+   * ven iguales, que es la mitad del punto de tener un sistema.
+   */
+  window.ihAvisar = function (op) {
+    op = op || {};
+    return window.ihConfirmar({
+      titulo:  op.titulo || 'Aviso',
+      detalle: op.detalle || '',
+      aceptar: op.aceptar || 'Entendido',
+      peligro: false,
+      soloAceptar: true
+    });
+  };
 
   /**
    * Pide un texto con el diseño del sistema. Devuelve una promesa con lo
@@ -1005,6 +1055,18 @@
 
   // Se expone para el contenido que se agregue después de cargar la página.
   window.ihMejorar = mejorar;
+
+  /**
+   * «Las opciones de este <select> cambiaron».
+   *
+   * El MutationObserver ya lo detecta solo, pero una pantalla que reescribe una
+   * lista puede decirlo de frente en lugar de confiar en un efecto secundario.
+   * Vale tambien si el navegador no tiene MutationObserver.
+   */
+  window.ihRefrescarSelect = function (nativo) {
+    if (!nativo) { return; }
+    nativo.dispatchEvent(new Event('ihc:refrescar', { bubbles: false }));
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { mejorar(document); });

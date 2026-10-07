@@ -14,6 +14,7 @@ require_once __DIR__ . '/db.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/volver.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -77,9 +78,10 @@ $_vd_stmt->close();
 $_canEdit    = user_can('asset.edit', $_vd_user);
 $_canArchive = user_can('asset.archive', $_vd_user);
 
-$topbar_actions = '<a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+$topbar_actions = volver_boton('/inventario/index.php');
 if ($_canEdit) {
-    $topbar_actions .= ' <a href="/backend/edit.php?id=' . $producto_id . '" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-pencil"></i> <span class="ih-hidden-mobile">Editar</span></a>';
+    $topbar_actions .= ' <a href="/backend/edit.php?id=' . $producto_id . '&amp;' . volver_aqui()
+        . '" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-pencil"></i> <span class="ih-hidden-mobile">Editar</span></a>';
 }
 
 require __DIR__ . '/../includes/layout/head.php';
@@ -395,7 +397,7 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
             vd_row('Notas', count($fNot) > 0 ? count($fNot) : '—', 'dot');
           ?>
         </div>
-        <a href="/inventario/ficha.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--outline ih-btn--block ih-mt-3">
+        <a href="/inventario/ficha.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--outline ih-btn--block ih-mt-3">
           <i class="bi bi-clipboard-data"></i> Ver y cargar la ficha completa
         </a>
       </div>
@@ -406,12 +408,12 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
       <div class="ih-card__body ih-card__body--compacto ih-col ih-gap-2">
         <h3 class="ih-seccion__titulo"><i class="bi bi-lightning"></i> Acciones</div>
         <?php if ($_canEdit): ?>
-        <a href="/backend/edit.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--primary ih-btn--block">
+        <a href="/backend/edit.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--primary ih-btn--block">
           <i class="bi bi-pencil-square"></i> Editar activo
         </a>
         <?php endif; ?>
         <?php if ($_canArchive && empty($producto['archivado'])): ?>
-        <a href="/backend/delete.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--danger ih-btn--block">
+        <a href="/backend/delete.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--danger ih-btn--block">
           <i class="bi bi-archive"></i> Archivar activo
         </a>
         <?php endif; ?>

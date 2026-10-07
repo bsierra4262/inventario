@@ -15,6 +15,7 @@ require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../core/tenants/campos.php';
 require_once __DIR__ . '/../core/tenants/papelera.php';
+require_once __DIR__ . '/../includes/volver.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -318,7 +319,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <button type="submit" class="ih-btn ih-btn--danger">
             <i class="bi bi-archive-fill"></i> Archivar
           </button>
-          <a href="/inventario/index.php" class="ih-btn ih-btn--ghost">
+          <a href="<?= esc_del(volver_destino('/inventario/index.php')) ?>" class="ih-btn ih-btn--ghost">
             <i class="bi bi-x-circle"></i> No archivar
           </a>
         </div>

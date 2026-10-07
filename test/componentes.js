@@ -46,6 +46,12 @@ const HTML = `<!doctype html><html lang="es"><body>
     <optgroup label="Periféricos"><option>Teclado</option></optgroup>
   </select>
   <select id="deshabilitado" class="ih-select" disabled><option>Nada</option></select>
+  <select id="dependiente" class="ih-select">
+    <option value="">Sin asignar</option>
+    <option value="24H2" data-so="Windows 11">24H2</option>
+    <option value="22.04 LTS" data-so="Ubuntu" hidden>22.04 LTS</option>
+    <option value="Pro" data-so="Windows 11">Pro</option>
+  </select>
   <label for="fecha">Fecha de compra</label>
   <input type="date" id="fecha" name="fecha" value="2026-03-15" class="ih-input">
   <label for="vacia">Fecha vacía</label>
@@ -549,6 +555,27 @@ clic(md.querySelector('[data-ihc-no]'));
     $('dialog.ihc-modal--texto [data-ihc-si]').className === 'ih-btn ih-btn--primary');
   clic($('dialog.ihc-modal--texto [data-ihc-no]'));
   await pc2;
+
+  // ══════════════════════ OPCIONES ESCONDIDAS
+  /* Version y Edicion esconden las opciones que no son del sistema operativo
+     elegido. El <select> del navegador respeta `hidden`; la cara visible que
+     dibuja el componente tiene que hacer lo mismo, o la pantalla esconde una
+     opcion y en el desplegable sigue apareciendo. */
+  seccion('OPCIONES ESCONDIDAS');
+  const dep = window.document.getElementById('dependiente');
+  clic(dep.closest('.ihc-select').querySelector('.ihc-select__btn'));
+  let opsDep = $$('.ihc-pop .ihc-select__op').map((o) => o.textContent.trim());
+  t('una opcion con hidden no se dibuja', !opsDep.includes('22.04 LTS'), opsDep.join(' | '));
+  t('y las demas si', opsDep.includes('24H2') && opsDep.includes('Pro'), opsDep.join(' | '));
+
+  // Se cambia lo que esta escondido y la lista tiene que seguirlo.
+  dep.querySelector('[value="22.04 LTS"]').hidden = false;
+  dep.querySelector('[value="24H2"]').hidden = true;
+  window.ihRefrescarSelect(dep);
+  opsDep = $$('.ihc-pop .ihc-select__op').map((o) => o.textContent.trim());
+  t('esconder y mostrar en caliente se refleja',
+    opsDep.includes('22.04 LTS') && !opsDep.includes('24H2'), opsDep.join(' | '));
+  clic(window.document.body);
 
   // ════════════════════════════════════════════════════════════ ARCHIVOS
   seccion('ARCHIVOS');

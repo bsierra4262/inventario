@@ -222,7 +222,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 <tr>
                   <td>
                     <div class="ih-text-semibold"><?= htmlspecialchars($nombre) ?></div>
-                    <div class="ih-text-xs ih-text-muted">
+                    <div class="ih-celda__sub">
                       #<?= (int)$f['id'] ?>
                       <?php if (!empty($f['categoria'])): ?> · <?= htmlspecialchars($f['categoria']) ?><?php endif; ?>
                       <?php if (!empty($f['asignado_a'])): ?> · <?= htmlspecialchars($f['asignado_a']) ?><?php endif; ?>
@@ -243,7 +243,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <td class="ih-table__acciones">
                     <div class="ih-acciones">
                       <a class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver el detalle"
-                         href="/backend/view_details.php?id=<?= (int)$f['id'] ?>">
+                         href="/backend/view_details.php?id=<?= (int)$f['id'] ?>&amp;<?= volver_aqui() ?>">
                         <i class="bi bi-eye"></i>
                         <span class="ih-sr-only">Ver el detalle de <?= htmlspecialchars($nombre) ?></span>
                       </a>

@@ -11,6 +11,7 @@ require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../core/tenants/catalogos.php';
 require_once __DIR__ . '/../core/tenants/infocom.php';
 require_once __DIR__ . '/../includes/campo_catalogo.php';
+require_once __DIR__ . '/../includes/volver.php';
 require_once __DIR__ . '/../includes/campos_dinamicos.php';
 
 $iconMap = require __DIR__ . '/../includes/iconMap.php';
@@ -705,7 +706,7 @@ $topbar_email    = $_SESSION['user_email']   ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
 $topbar_actions  =
     '<a href="/backend/view_details.php?id=' . $producto_id . '" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-eye"></i> <span class="ih-hidden-mobile">Ver</span></a>'
-    . ' <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-arrow-left"></i> <span class="ih-hidden-mobile">Volver</span></a>';
+    . ' ' . volver_boton('/backend/view_details.php?id=' . $producto_id);
 
 require __DIR__ . '/../includes/layout/head.php';
 ?>
@@ -732,17 +733,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Nombre/Modelo <span class="req">*</span></label>
             <input type="text" class="ih-input" name="modelo"
-                   value="<?= htmlspecialchars($producto['modelo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
+                   value="<?= htmlspecialchars($producto['modelo'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required placeholder="Ej.: Latitude 5420, Catalyst 2960, ThinkPad E15">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Marca</label>
             <input type="text" class="ih-input" name="marca"
-                   value="<?= htmlspecialchars($producto['marca'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars($producto['marca'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: Dell, Lenovo, Cisco, HP">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">S/N Service Tag</label>
             <input type="text" class="ih-input" name="servis_tag" id="servis_tag"
-                   value="<?= htmlspecialchars($producto['servis_tag'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars($producto['servis_tag'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 7KJ2M13">
           </div>
           <div class="ih-field ih-field--ancho">
             <label class="ih-field__label">Descripción</label>
@@ -789,7 +790,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field" id="cantidad-container">
             <label class="ih-field__label">Cantidad <span class="req">*</span></label>
             <input type="number" class="ih-input" name="cantidad" id="cantidad" min="1"
-                   value="<?= htmlspecialchars((string)($producto['cantidad'] ?? 1), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($producto['cantidad'] ?? 1), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 1">
           </div>
         </div>
 
@@ -916,7 +917,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Detalle Repuesto</label>
             <input type="text" name="detalle_repuesto" class="ih-input"
-                   value="<?= htmlspecialchars($producto['detalle_repuesto'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars($producto['detalle_repuesto'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: fuente 650 W 80 Plus Gold, sin usar">
           </div>
         </div>
 
@@ -956,7 +957,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Valor en USD</label>
             <input type="number" class="ih-input" name="valor_usd" step="0.01" min="0"
-                   value="<?= htmlspecialchars((string)($producto['valor_usd'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($producto['valor_usd'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 850.00">
           </div>
           <div class="ih-field">
             <label class="ih-field__label" for="f-ubicacion">Ubicación</label>
@@ -970,25 +971,25 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Período garantía (meses)</label>
             <input type="number" class="ih-input" name="periodo_garantia"
-                   value="<?= htmlspecialchars((string)($producto['periodo_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($producto['periodo_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 36">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Inicio garantía</label>
             <input type="date" class="ih-input" name="fecha_garantia"
                    value="<?= (!empty($producto['fecha_garantia']) && $producto['fecha_garantia'] !== '0000-00-00')
-                               ? htmlspecialchars($producto['fecha_garantia'], ENT_QUOTES, 'UTF-8') : '' ?>">
+                               ? htmlspecialchars($producto['fecha_garantia'], ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Fecha de Ingreso</label>
             <input type="date" class="ih-input" name="fecha_ingreso"
                    value="<?= (!empty($producto['fecha_ingreso']) && $producto['fecha_ingreso'] !== '0000-00-00')
-                               ? htmlspecialchars($producto['fecha_ingreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
+                               ? htmlspecialchars($producto['fecha_ingreso'], ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Fecha de Egreso</label>
             <input type="date" class="ih-input" name="fecha_egreso"
                    value="<?= (!empty($producto['fecha_egreso']) && $producto['fecha_egreso'] !== '0000-00-00')
-                               ? htmlspecialchars($producto['fecha_egreso'], ENT_QUOTES, 'UTF-8') : '' ?>">
+                               ? htmlspecialchars($producto['fecha_egreso'], ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="dd/mm/aaaa">
           </div>
         </div>
 
@@ -1006,22 +1007,22 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">N.º de pedido</label>
             <input type="text" class="ih-input" name="numero_pedido" maxlength="120"
-                   value="<?= htmlspecialchars((string)($infocom['numero_pedido'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['numero_pedido'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: OC-2026-0184">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">N.º de remito</label>
             <input type="text" class="ih-input" name="numero_remito" maxlength="120"
-                   value="<?= htmlspecialchars((string)($infocom['numero_remito'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['numero_remito'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 0001-00045212">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">N.º de factura</label>
             <input type="text" class="ih-input" name="numero_factura" maxlength="120"
-                   value="<?= htmlspecialchars((string)($infocom['numero_factura'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['numero_factura'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: A 0003-00012845">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">N.º contable</label>
             <input type="text" class="ih-input" name="numero_contable" maxlength="120"
-                   value="<?= htmlspecialchars((string)($infocom['numero_contable'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['numero_contable'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 1.1.3.02.001">
           </div>
           <div class="ih-field">
             <label class="ih-field__label" for="f-proveedor">Proveedor</label>
@@ -1037,27 +1038,27 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Fecha de orden</label>
             <input type="date" class="ih-input" name="fecha_orden"
-                   value="<?= htmlspecialchars((string)($infocom['fecha_orden'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['fecha_orden'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Fecha de entrega</label>
             <input type="date" class="ih-input" name="fecha_entrega"
-                   value="<?= htmlspecialchars((string)($infocom['fecha_entrega'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['fecha_entrega'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Puesta en servicio</label>
             <input type="date" class="ih-input" name="fecha_puesta_servicio"
-                   value="<?= htmlspecialchars((string)($infocom['fecha_puesta_servicio'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['fecha_puesta_servicio'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Último inventario físico</label>
             <input type="date" class="ih-input" name="fecha_ultimo_inventario"
-                   value="<?= htmlspecialchars((string)($infocom['fecha_ultimo_inventario'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['fecha_ultimo_inventario'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Fecha de decomiso</label>
             <input type="date" class="ih-input" name="fecha_decomiso"
-                   value="<?= htmlspecialchars((string)($infocom['fecha_decomiso'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['fecha_decomiso'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="dd/mm/aaaa">
           </div>
           <div class="ih-field">
             <label class="ih-field__label" for="f-criticidad">Criticidad de negocio</label>
@@ -1070,12 +1071,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Datos de la garantía</label>
             <input type="text" class="ih-input" name="garantia_info" maxlength="255"
-                   value="<?= htmlspecialchars((string)($infocom['garantia_info'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['garantia_info'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: ProSupport Next Business Day, incluye batería">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Valor extensión garantía (USD)</label>
             <input type="number" class="ih-input" name="valor_extension_garantia" step="0.01" min="0"
-                   value="<?= htmlspecialchars((string)($infocom['valor_extension_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['valor_extension_garantia'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 120.00">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Años de amortización</label>
@@ -1097,12 +1098,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <div class="ih-field">
             <label class="ih-field__label">Coeficiente</label>
             <input type="number" class="ih-input" name="amortizacion_coeficiente" step="0.001" min="0"
-                   value="<?= htmlspecialchars((string)($infocom['amortizacion_coeficiente'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['amortizacion_coeficiente'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: 0.20 para 5 años">
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Comentarios administrativos</label>
             <input type="text" class="ih-input" name="comentarios_infocom" maxlength="255"
-                   value="<?= htmlspecialchars((string)($infocom['comentarios'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                   value="<?= htmlspecialchars((string)($infocom['comentarios'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Ej.: se compró con el presupuesto de renovación 2026">
           </div>
         </div>
 
@@ -1122,7 +1123,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
           <button type="submit" class="ih-btn ih-btn--primary ih-btn--lg">
             <i class="bi bi-check-circle"></i> Guardar cambios
           </button>
-          <a href="/backend/view_details.php?id=<?= $producto_id ?>" class="ih-btn ih-btn--ghost ih-btn--lg">
+          <?php /* Cancelar deshace el paso: devuelve a donde estaba la persona.
+                   Antes llevaba siempre al detalle del activo, que podia ser una
+                   pantalla por la que nunca habia pasado —se entra a editar
+                   desde el listado, se cancela, y aparecia el detalle. */ ?>
+          <a href="<?= htmlspecialchars(volver_destino('/backend/view_details.php?id=' . $producto_id), ENT_QUOTES) ?>"
+             class="ih-btn ih-btn--ghost ih-btn--lg">
             Cancelar
           </a>
         </div>
@@ -1202,11 +1208,14 @@ function validarArchivos() {
     ];
     for (let f of archivos) {
         if (f.size > 5*1024*1024) {
-            alert(`El archivo "${f.name}" excede 5MB.`);
+            window.ihAvisar({ titulo: 'Ese archivo pesa demasiado',
+              detalle: '«' + f.name + '» supera los 5 MB. Probá con una versión más liviana.' });
             return false;
         }
         if (!tipos.includes(f.type)) {
-            alert(`El formato de "${f.name}" no está permitido.`);
+            window.ihAvisar({ titulo: 'Ese formato no se puede subir',
+              detalle: '«' + f.name + '» no es uno de los formatos que se aceptan: '
+                     + 'fotos, PDF, Word, Excel o PowerPoint.' });
             return false;
         }
     }

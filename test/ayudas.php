@@ -71,9 +71,16 @@ function ayudas_campos_sin_ejemplo(): array {
 
             $src = $limpio;
 
-            // Cada <input> o <textarea> con su contexto: 400 caracteres después,
-            // que es donde cabe el hint si lo hay.
-            if (!preg_match_all('/<(input|textarea)\b[^>]*>/i', $src, $mm, PREG_OFFSET_CAPTURE)) {
+            /* Cada <input> o <textarea> con su contexto: 400 caracteres después,
+               que es donde cabe el hint si lo hay.
+
+               El `(?:<\?.*?\?>|[^>])*` es lo que permite que la etiqueta pase por
+               arriba de un bloque PHP. Con el `[^>]*` de antes, la captura se
+               cortaba en el `?>` del primer `value="<?= … ?>"` — que es el primer
+               atributo de casi cualquier campo— y todo lo que venía después,
+               incluido el `placeholder`, quedaba afuera. El buscador del listado
+               de activos aparecía como «sin ejemplo» teniendo uno. */
+            if (!preg_match_all('/<(input|textarea)\b(?:<\?.*?\?>|[^>])*>/is', $src, $mm, PREG_OFFSET_CAPTURE)) {
                 continue;
             }
             foreach ($mm[0] as $i => [$tag, $pos]) {
@@ -83,8 +90,17 @@ function ayudas_campos_sin_ejemplo(): array {
 
                 if (in_array($tipo, AYUDA_EXCEPTUADOS, true)) { continue; }
                 if (!in_array($tipo, AYUDA_TIPOS, true)) { continue; }
-                // Un `type` armado con PHP no se puede clasificar: se omite.
-                if (str_contains($tag, '<?')) { continue; }
+
+                /* Sólo se omite cuando el TYPE está armado con PHP, porque ahí
+                   no se sabe qué clase de campo es.
+
+                   Antes decía `str_contains($tag, '<?')`, que descarta la
+                   etiqueta entera si tiene un `<?php` en CUALQUIER atributo — y
+                   casi todo campo real trae `value="<?= … ?>"`. O sea: la prueba
+                   se estaba salteando la mayoría de los campos del proyecto y
+                   daba verde. Los diecinueve filtros de reportes no tenían ni un
+                   ejemplo y nadie se enteró. */
+                if (preg_match('/type\s*=\s*"[^"]*<\?/i', $tag)) { continue; }
 
                 $name = '';
                 if (preg_match('/name\s*=\s*"([^"]+)"/i', $tag, $mn)) { $name = $mn[1]; }

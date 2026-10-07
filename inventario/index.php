@@ -12,6 +12,7 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_F
 
 require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
+require_once __DIR__ . '/../includes/volver.php';
 if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
 if (!function_exists('log_event')) { function log_event(...$a) {} }
 require_once __DIR__ . '/../includes/cloud_icons.php';
@@ -428,13 +429,18 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td data-col-key="modelo">
                   <div class="ih-celda">
                     <i class="<?= $iconSub ?> ih-celda__icono" aria-hidden="true"></i>
+                    <?php /* Dos renglones y no tres: el nombre arriba, y la marca
+                             con la subcategoria juntas abajo. Apiladas de a una
+                             la fila media 87 px —el doble que una de una sola
+                             linea— y la tabla se veia enorme sin decir mas. */ ?>
                     <div class="ih-celda__texto">
                       <div class="ih-celda__nombre"><?= htmlspecialchars($row['modelo'] ?? '—') ?></div>
-                      <?php if (!empty($row['marca'])): ?>
-                        <div class="ih-text-sm ih-text-muted"><?= htmlspecialchars($row['marca']) ?></div>
-                      <?php endif; ?>
-                      <?php if (!empty($row['subcategoria'])): ?>
-                        <div><span class="ih-badge ih-badge--purple"><?= htmlspecialchars($row['subcategoria']) ?></span></div>
+                      <?php if (!empty($row['marca']) || !empty($row['subcategoria'])): ?>
+                        <div class="ih-celda__sub">
+                          <?php if (!empty($row['marca'])): ?><?= htmlspecialchars($row['marca']) ?><?php endif; ?>
+                          <?php if (!empty($row['marca']) && !empty($row['subcategoria'])): ?> · <?php endif; ?>
+                          <?php if (!empty($row['subcategoria'])): ?><?= htmlspecialchars($row['subcategoria']) ?><?php endif; ?>
+                        </div>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -449,13 +455,11 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td data-col-key="categoria">
                   <span class="ih-text-sm ih-con-icono">
                     <i class="<?= $iconCat ?>" aria-hidden="true"></i>
-                    <?= htmlspecialchars($row['categoria'] ?? '—') ?>
+                    <?= htmlspecialchars($row['categoria'] ?? '—') ?><?php
+                      if (!empty($row['subcategoria'])): ?><span
+                        class="ih-text-apagado"> › <?= htmlspecialchars($row['subcategoria']) ?></span><?php
+                      endif; ?>
                   </span>
-                  <?php if (!empty($row['subcategoria'])): ?>
-                    <div class="ih-text-xs ih-text-muted ih-colgado">
-                      <?= htmlspecialchars($row['subcategoria']) ?>
-                    </div>
-                  <?php endif; ?>
                 </td>
                 <td data-col-key="estado">
                   <?php
@@ -505,13 +509,17 @@ require __DIR__ . '/../includes/layout/head.php';
                 </td>
                 <td>
                   <div class="ih-acciones ih-justify-center">
-                    <a href="/backend/view_details.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver detalle"><i class="bi bi-eye"></i></a>
-                    <a href="/inventario/ficha.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ficha técnica"><i class="bi bi-clipboard-data"></i></a>
+                    <?php /* Cada accion lleva colgada la direccion de esta pantalla,
+                             con su pagina y sus filtros: asi al cancelar o al volver,
+                             la persona aterriza donde estaba y no en una pantalla
+                             por la que nunca paso. */ ?>
+                    <a href="/backend/view_details.php?id=<?= $row['id'] ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver detalle"><i class="bi bi-eye"></i></a>
+                    <a href="/inventario/ficha.php?id=<?= $row['id'] ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Ficha técnica"><i class="bi bi-clipboard-data"></i></a>
                     <?php if ($_canEdit): ?>
-                      <a href="/backend/edit.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
+                      <a href="/backend/edit.php?id=<?= $row['id'] ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--ghost ih-btn--sm" title="Editar"><i class="bi bi-pencil"></i></a>
                     <?php endif; ?>
                     <?php if ($_canArchive): ?>
-                      <a href="/backend/delete.php?id=<?= $row['id'] ?>" class="ih-btn ih-btn--danger ih-btn--sm" title="Archivar">
+                      <a href="/backend/delete.php?id=<?= $row['id'] ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--danger ih-btn--sm" title="Archivar">
                         <i class="bi bi-archive"></i><span class="ih-sr-only">Archivar este activo</span>
                       </a>
                     <?php endif; ?>
