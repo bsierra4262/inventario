@@ -77,7 +77,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <main class="ih-app__main">
 
   <?php if ($msg !== ''): ?>
-    <div class="ih-alert ih-alert--<?= $alertClass ?>" style="margin-bottom:24px;">
+    <div class="ih-alert ih-alert--<?= $alertClass ?>">
       <i class="bi bi-<?= $icon ?>"></i>
       <div><?= $msg ?></div>
       <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
@@ -90,7 +90,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <!-- EXPORT -->
     <div class="ih-card">
       <div class="ih-card__body" style="padding:28px;">
-        <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#9CC930,#7AA725);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">
+        <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#9CC930,var(--accent-600));color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;">
           <i class="bi bi-download"></i>
         </div>
         <h3 style="font-size:var(--ih-text-lg);font-weight:700;color:var(--ih-gray-800);margin-bottom:8px;">Exportar backup completo</h3>
@@ -180,7 +180,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   transition: border-color .2s, background .2s;
   background: var(--ih-gray-50);
 }
-.ih-dropzone:hover { border-color: var(--ih-primary); background: #f4f1f9; }
+.ih-dropzone:hover { border-color: var(--ih-primary); background: var(--primary-050); }
 @media(max-width:640px) {
   [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
 }

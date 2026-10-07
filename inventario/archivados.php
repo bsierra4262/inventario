@@ -8,7 +8,14 @@
  * botón para devolverlos al inventario (también mueve la carpeta de Drive de
  * vuelta desde «Archivados»).
  *
- * Permiso: asset.trash.view para ver, asset.restore para restaurar.
+ * Y, para quien tenga el permiso, el otro extremo: eliminarlos de verdad. Esa
+ * mitad faltaba — `asset.delete` se podía tildar en la pantalla de roles y no
+ * hacía nada, así que la papelera se llenaba y nunca se vaciaba. Lo hace
+ * backend/eliminar_definitivo.php, pidiendo que se escriba el número del
+ * activo: un sí/no se acepta sin leerlo.
+ *
+ * Permisos: asset.trash.view para ver, asset.restore para restaurar,
+ * asset.delete para eliminar.
  */
 
 declare(strict_types=1);
@@ -63,10 +70,11 @@ try {
 } catch (Throwable) {}
 
 // ── Búsqueda y paginación ────────────────────────────────────────────────────
-$q         = trim((string)($_GET['q'] ?? ''));
-$perPage   = 25;
-$page      = max(1, (int)($_GET['page'] ?? 1));
-$tProd     = tn('productos');
+$q           = trim((string)($_GET['q'] ?? ''));
+$perPageOpts = [20, 50, 100];
+$perPage     = in_array((int)($_GET['per_page'] ?? 0), $perPageOpts, true) ? (int)$_GET['per_page'] : 20;
+$page        = max(1, (int)($_GET['page'] ?? 1));
+$tProd       = tn('productos');
 
 $where  = ['archivado = 1'];
 $params = [];
@@ -151,26 +159,37 @@ require __DIR__ . '/../includes/layout/head.php';
     <div class="ih-alert ih-alert--info">
       <i class="bi bi-info-circle-fill"></i>
       <div>
-        Los activos archivados no se borran: salen del listado principal y de los totales,
-        pero conservan su historial y sus archivos. Restaurarlos los devuelve al inventario
-        y trae su carpeta de Drive de vuelta desde «Archivados».
+        Archivar no borra: el activo sale del listado principal y de los totales,
+        pero conserva su historial y sus archivos. Restaurarlo lo devuelve al
+        inventario y trae su carpeta de Drive de vuelta desde «Archivados».
+        <?php if ($puedeBorrar): ?>
+          Eliminar, en cambio, sí borra el activo — y eso no se puede deshacer.
+          Queda el historial y queda la carpeta de Drive; el activo no.
+        <?php endif; ?>
       </div>
     </div>
 
     <div class="ih-card">
       <div class="ih-card__header">
         <h2 class="ih-card__title">Activos archivados</h2>
-        <form method="get" class="ih-flex ih-gap-2">
-          <input type="text" name="q" class="ih-input" value="<?= htmlspecialchars($q) ?>"
-                 placeholder="Buscar por modelo, marca, service tag o motivo…" style="min-width:240px">
-          <button class="ih-btn ih-btn--ghost ih-btn--sm" type="submit"><i class="bi bi-search"></i></button>
+        <?php /* El buscador del encabezado es el del sistema (.ih-buscador):
+                 conserva el ancho que necesita un texto de verdad y en pantalla
+                 angosta pasa a ocupar la fila completa. */ ?>
+        <form method="get" class="ih-buscador" role="search">
+          <label class="ih-sr-only" for="q">Buscar en la papelera</label>
+          <input type="search" id="q" name="q" class="ih-input" value="<?= htmlspecialchars($q) ?>"
+                 placeholder="Ej.: Latitude 5420, Dell, 7KJ2M13, «se quemó la fuente»">
+          <input type="hidden" name="per_page" value="<?= (int)$perPage ?>">
+          <button class="ih-btn ih-btn--ghost ih-btn--sm" type="submit">
+            <i class="bi bi-search"></i><span class="ih-sr-only">Buscar</span>
+          </button>
           <?php if ($q !== ''): ?>
             <a class="ih-btn ih-btn--ghost ih-btn--sm" href="/inventario/archivados.php">Limpiar</a>
           <?php endif; ?>
         </form>
       </div>
 
-      <div class="ih-card__body">
+      <div class="ih-card__body <?= $filas ? 'ih-card__body--tabla' : '' ?>">
         <?php if (!$filas): ?>
           <div class="ih-empty">
             <div class="ih-empty__icon"><i class="bi bi-archive"></i></div>
@@ -178,7 +197,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <p class="ih-empty__text">
               <?= $q !== ''
                   ? 'Ningún activo archivado coincide con esa búsqueda.'
-                  : 'Cuando des de baja un activo desde el inventario, va a aparecer acá y vas a poder restaurarlo.' ?>
+                  : 'Cuando archives un activo desde el inventario va a aparecer acá, y desde acá lo podés devolver al inventario.' ?>
             </p>
           </div>
         <?php else: ?>
@@ -190,7 +209,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <th>Service tag</th>
                   <th>Archivado</th>
                   <th>Motivo</th>
-                  <th style="width:210px">Acciones</th>
+                  <th class="ih-table__acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,18 +240,40 @@ require __DIR__ . '/../includes/layout/head.php';
                         ? '<span class="ih-badge ih-badge--warning">' . htmlspecialchars($f['archivado_motivo']) . '</span>'
                         : '<span class="ih-text-muted">—</span>' ?>
                   </td>
-                  <td>
-                    <div class="ih-flex ih-gap-2 ih-fw">
-                      <a class="ih-btn ih-btn--ghost ih-btn--sm" href="/backend/view_details.php?id=<?= (int)$f['id'] ?>">
-                        <i class="bi bi-eye"></i> Ver
+                  <td class="ih-table__acciones">
+                    <div class="ih-acciones">
+                      <a class="ih-btn ih-btn--ghost ih-btn--sm" title="Ver el detalle"
+                         href="/backend/view_details.php?id=<?= (int)$f['id'] ?>">
+                        <i class="bi bi-eye"></i>
+                        <span class="ih-sr-only">Ver el detalle de <?= htmlspecialchars($nombre) ?></span>
                       </a>
                       <?php if ($puedeRestaurar): ?>
-                        <form method="post" action="/backend/restaurar.php" style="display:inline"
+                        <form method="post" action="/backend/restaurar.php"
                               onsubmit="return confirm('¿Restaurar «<?= htmlspecialchars(addslashes($nombre)) ?>» al inventario?')">
                           <?php csrfInput('restaurar_activo'); ?>
                           <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
                           <button type="submit" class="ih-btn ih-btn--accent ih-btn--sm">
                             <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+                          </button>
+                        </form>
+                      <?php endif; ?>
+                      <?php if ($puedeBorrar): ?>
+                        <?php /* Eliminar no se puede deshacer, así que no alcanza con un
+                                 sí/no: el formulario se envía recién cuando la persona
+                                 escribe el número del activo. Lo pide el diálogo del
+                                 sistema (ihPedirTexto con `esperado`), y el endpoint lo
+                                 vuelve a verificar del lado del servidor, por si alguien
+                                 postea a mano. */ ?>
+                        <form method="post" action="/backend/eliminar_definitivo.php"
+                              data-eliminar="<?= (int)$f['id'] ?>"
+                              data-nombre="<?= htmlspecialchars($nombre) ?>">
+                          <?php csrfInput('eliminar_activo'); ?>
+                          <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
+                          <input type="hidden" name="confirmacion" value="">
+                          <button type="submit" class="ih-btn ih-btn--danger ih-btn--sm"
+                                  title="Eliminar definitivamente">
+                            <i class="bi bi-trash3"></i>
+                            <span class="ih-sr-only">Eliminar definitivamente <?= htmlspecialchars($nombre) ?></span>
                           </button>
                         </form>
                       <?php endif; ?>
@@ -244,19 +285,113 @@ require __DIR__ . '/../includes/layout/head.php';
             </table>
           </div>
 
-          <?php if ($totalPages > 1): ?>
-            <div class="ih-flex ih-gap-2 ih-justify-center ih-mt-4">
-              <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-                <a class="ih-btn ih-btn--sm <?= $p === $page ? 'ih-btn--primary' : 'ih-btn--ghost' ?>"
-                   href="?page=<?= $p ?><?= $q !== '' ? '&q=' . urlencode($q) : '' ?>"><?= $p ?></a>
-              <?php endfor; ?>
-            </div>
-          <?php endif; ?>
         <?php endif; ?>
       </div>
+
+    <?php if ($filas): ?>
+      <?php /* ── Pie de tabla ──────────────────────────────────────────────
+               El paginador es el del sistema (.ih-pager), el mismo de Activos y
+               de Reportes. Acá antes se dibujaba un botón por página: con cien
+               activos archivados eran cinco botones, con tres mil eran ciento
+               cincuenta y la tarjeta se desarmaba. */ ?>
+      <div class="ih-card__footer">
+        <div class="ih-pager">
+          <div class="ih-pager__info">
+            <span>
+              Mostrando <strong><?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $total)) ?></strong>
+              de <strong><?= number_format($total) ?></strong> <?= $total === 1 ? 'activo archivado' : 'activos archivados' ?>
+            </span>
+            <label class="ih-sr-only" for="per-page">Activos por página</label>
+            <select class="ih-select" id="per-page"
+                    onchange="window.location='?<?= http_build_query(['q' => $q, 'page' => 1]) ?>&per_page='+this.value">
+              <?php foreach ($perPageOpts as $opt): ?>
+                <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?> por página</option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <?php if ($totalPages > 1):
+            $pLink  = fn(int $pg): string => '?' . http_build_query(['q' => $q, 'per_page' => $perPage, 'page' => $pg]);
+            $pStart = max(1, $page - 2);
+            $pEnd   = min($totalPages, $page + 2);
+          ?>
+          <nav aria-label="Páginas de la papelera">
+            <ul class="ih-pager__paginas">
+              <li class="ih-pager__item <?= $page <= 1 ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink(1) ?>" aria-label="Primera página"><i class="bi bi-chevron-double-left"></i></a>
+              </li>
+              <li class="ih-pager__item <?= $page <= 1 ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($page - 1) ?>" aria-label="Página anterior"><i class="bi bi-chevron-left"></i></a>
+              </li>
+              <?php for ($i = $pStart; $i <= $pEnd; $i++): ?>
+                <li class="ih-pager__item <?= $i === $page ? 'is-active' : '' ?>">
+                  <a class="ih-pager__link" href="<?= $pLink($i) ?>"
+                     <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
+                </li>
+              <?php endfor; ?>
+              <li class="ih-pager__item <?= $page >= $totalPages ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($page + 1) ?>" aria-label="Página siguiente"><i class="bi bi-chevron-right"></i></a>
+              </li>
+              <li class="ih-pager__item <?= $page >= $totalPages ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($totalPages) ?>" aria-label="Última página"><i class="bi bi-chevron-double-right"></i></a>
+              </li>
+            </ul>
+          </nav>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
     </div>
 
   </main>
 </div><!-- /ih-app -->
+
+<?php if ($puedeBorrar): ?>
+<script>
+/* ── La confirmación escrita para eliminar ───────────────────────────────────
+   Eliminar un activo de la papelera no se deshace, así que no alcanza con un
+   sí/no: hay que escribir el número del activo. No es burocracia — es que un
+   «¿está seguro?» se acepta sin leerlo, y copiar un número obliga a mirar cuál
+   es el que se está borrando.
+
+   El servidor lo vuelve a verificar: si alguien postea el formulario a mano sin
+   pasar por acá, backend/eliminar_definitivo.php lo rechaza igual. Esto es la
+   cortesía, no la seguridad.
+
+   Si el JavaScript no corre, el botón envía el formulario con la confirmación
+   vacía y el servidor contesta que falta escribir el número. Feo, pero nunca
+   borra algo sin confirmar. */
+(function () {
+  document.querySelectorAll('form[data-eliminar]').forEach(function (form) {
+    form.addEventListener('submit', function (ev) {
+      if (form.dataset.confirmado === '1') { return; }   // ya se confirmó: dejalo pasar
+      ev.preventDefault();
+
+      var id     = form.dataset.eliminar;
+      var nombre = form.dataset.nombre || ('el activo #' + id);
+
+      window.ihPedirTexto({
+        titulo:   'Eliminar «' + nombre + '» definitivamente',
+        detalle:  'Esto borra el activo, su sistema operativo, sus componentes, su red, '
+                + 'sus notas y sus campos propios. No se puede deshacer. Queda el historial '
+                + 'y queda la carpeta de Drive; el activo no. '
+                + 'Si solo querés sacarlo del inventario, ya está archivado: dejalo así.',
+        etiqueta: 'Escribí el número del activo (' + id + ') para confirmar',
+        esperado: id,
+        aceptar:  'Eliminar definitivamente',
+        cancelar: 'No eliminar',
+        peligro:  true,
+        max:      12
+      }).then(function (escrito) {
+        if (escrito === null) { return; }                // canceló
+        form.elements['confirmacion'].value = escrito;
+        form.dataset.confirmado = '1';
+        form.submit();
+      });
+    });
+  });
+})();
+</script>
+<?php endif; ?>
 
 <?php require __DIR__ . '/../includes/layout/foot.php'; ?>

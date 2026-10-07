@@ -117,7 +117,7 @@ require __DIR__ . '/../includes/layout/head.php';
   <main class="ih-app__main ih-anim-fade">
 
     <?php if ($pendingSetup): ?>
-      <div class="ih-alert ih-alert--warning" style="margin-bottom:20px">
+      <div class="ih-alert ih-alert--warning">
         <i class="bi bi-shield-exclamation" style="font-size:22px;flex-shrink:0"></i>
         <div>
           <div class="ih-alert__title">Configuración de SSO requerida</div>

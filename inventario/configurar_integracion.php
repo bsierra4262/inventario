@@ -117,7 +117,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <main class="ih-app__main">
 
   <?php if ($feedbackMsg !== ''): ?>
-    <div class="ih-alert ih-alert--<?= $feedbackType ?>" style="margin-bottom:20px;">
+    <div class="ih-alert ih-alert--<?= $feedbackType ?>">
       <i class="bi bi-<?= $feedbackType === 'danger' ? 'exclamation-triangle-fill' : ($feedbackType === 'warning' ? 'exclamation-circle-fill' : 'check-circle-fill') ?>"></i>
       <div><?= $feedbackMsg ?></div>
       <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
@@ -183,7 +183,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     $tenantGoogleOk = !empty($googleCfg['client_id']) && !empty($googleCfg['client_secret']);
     ?>
     <?php if ($platformGoogleOk): ?>
-      <div class="ih-alert ih-alert--success" style="margin-bottom:20px;">
+      <div class="ih-alert ih-alert--success">
         <i class="bi bi-shield-check-fill"></i>
         <div>
           <strong>Credenciales de plataforma activas.</strong>
@@ -192,7 +192,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
       </div>
     <?php elseif ($tenantGoogleOk): ?>
-      <div class="ih-alert ih-alert--success" style="margin-bottom:20px;">
+      <div class="ih-alert ih-alert--success">
         <i class="bi bi-check-circle-fill"></i>
         <div>
           <strong>Credenciales OAuth propias activas.</strong>
@@ -200,7 +200,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
       </div>
     <?php else: ?>
-      <div class="ih-alert ih-alert--warning" style="margin-bottom:20px;">
+      <div class="ih-alert ih-alert--warning">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <div>
           Las credenciales OAuth no están configuradas.
@@ -365,7 +365,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div id="panel-microsoft" style="display:none;">
 
     <?php if ($platformMsOk): ?>
-      <div class="ih-alert ih-alert--success" style="margin-bottom:20px;">
+      <div class="ih-alert ih-alert--success">
         <i class="bi bi-shield-check-fill"></i>
         <div><strong>Credenciales Microsoft de plataforma activas.</strong> Solo configurá el Drive ID si usás SharePoint.</div>
       </div>

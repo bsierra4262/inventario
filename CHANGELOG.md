@@ -4,6 +4,90 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.8.0] — 2026-10-06
+
+Repaso del portal del cliente pantalla por pantalla, con una regla: nada de estilos escritos en
+la página. Lo que una pantalla necesitaba y el sistema no tenía, se agregó al sistema; lo que ya
+existía con otro nombre, se unificó. Y la papelera, que se podía llenar y no vaciar, se completó.
+
+### Agregado
+
+- **Eliminar definitivamente un activo** (`backend/eliminar_definitivo.php`). `asset.delete`
+  —«Eliminar definitivamente»— figuraba en la pantalla de roles desde el principio, se podía
+  tildar y destildar, y no hacía nada: ninguna pantalla ni ningún endpoint lo consultaba, así que
+  la papelera se llenaba y nunca se vaciaba. El requerimiento I9 estaba marcado como cumplido sin
+  estarlo.
+
+  Tres condiciones: sólo se elimina lo que **ya está archivado** —desde el listado no se llega, y
+  archivar sí se deshace—; hay que **escribir el número del activo**, porque un «¿está seguro?» se
+  acepta sin leerlo y copiar un número obliga a mirar cuál; y el **historial sobrevive**, con una
+  fila `Eliminado` que guarda el modelo, la marca, el service tag y quién lo borró. La carpeta de
+  Drive no se toca: borrar los archivos de alguien desde acá sería una sorpresa desagradable.
+
+- **La cascada en un módulo** (`core/tenants/papelera.php`). El esquema del tenant no tiene claves
+  foráneas, así que las ocho tablas que cuelgan de un activo —más las direcciones IP, que cuelgan
+  del puerto, y las relaciones, que apuntan en los dos sentidos— hay que nombrarlas a mano. Una
+  lista escrita a mano en medio de un endpoint es una lista que se olvida de actualizar, así que
+  está en un solo lugar, y la batería de integración la compara contra las tablas que el esquema
+  realmente tiene: si aparece una tabla con `producto_id` y nadie la suma, el test falla.
+
+- **Confirmación escrita en el diálogo del sistema.** `ihPedirTexto()` acepta `esperado`, que no
+  deja seguir hasta que lo escrito coincida —sin espacios, sin mayúsculas y sin acentos: la idea
+  es que la persona confirme, no que acierte un dictado—, `detalle` para explicar qué se está por
+  hacer y `peligro` para pintar el botón de aceptar como el resto de lo destructivo.
+
+- **Cinco componentes compartidos nuevos** en `assets/css/componentes.css`, la hoja que cargan los
+  dos portales: `.ih-barra` (título de una sección con sus botones, que en pantalla angosta pasan
+  abajo y a lo ancho), `.ih-alert--accion` (el aviso que trae el botón que lo resuelve),
+  `.ih-buscador` (con la variante de lupa adentro del campo), `.ih-pills` y `.ih-permisos`.
+
+### Cambiado
+
+- **Los tres paginadores son uno.** Activos lo armaba con botones, Reportes con `.pagination-cool`
+  y la papelera dibujaba **un botón por página**: con tres mil activos archivados eran ciento
+  cincuenta botones y la tarjeta se desarmaba. Ahora las tres usan `.ih-pager`, con el rango de
+  páginas acotado, el «mostrando X–Y de Z» y el selector de cuántas por página.
+
+- **Las pastillas de rol estaban escritas dos veces.** `inventario/roles.php` las definía en 43
+  líneas y `dashboard/superadmin_roles.php` en 12, con valores distintos: el mismo selector se
+  veía de una manera en un portal y de otra en el otro. Ahora son `.ih-pill` y `.ih-permisos`, en
+  la hoja compartida, sin un solo `!important`.
+
+- **El listado de activos ya no define sus propios avisos.** Tenía un `<style>` que repintaba
+  `.ih-flash` con `#16a34a`, `#d97706` y `#b91c1c` —un verde, un ámbar y un rojo de otra paleta— y
+  como la hoja de la página carga después de la del sistema, le ganaba: en la misma pantalla
+  convivían dos verdes distintos.
+
+- **Reportes dejó de estar en verde.** Sus 69 líneas de estilos propios se mapearon a los
+  componentes del sistema.
+
+- **`.ih-alert` ya traía su margen inferior** y catorce pantallas lo volvían a escribir a mano, con
+  tres medidas distintas —16, 20 y 24 px— para el mismo hueco. Se sacaron las catorce.
+
+- **`roles.php` no tiene ni un `style=`.** Los paneles se muestran y se esconden con el atributo
+  `hidden` en lugar de `style.display`, y las pastillas declaran `aria-pressed`, que es lo que son:
+  botones de dos estados, no pestañas de navegación.
+
+- **Textos.** «CUSTOM» y «Default» en inglés y a los gritos pasaron a «Editado» y «Sin cambios»;
+  «Restaurar default» a «Restaurar originales»; «Click acá para reparar» explica qué hace el botón.
+  Las confirmaciones a las que les faltaba el signo de apertura ya lo tienen.
+
+### Corregido
+
+- **El botón «Hoy» del calendario no estaba mal: el test sí.** Comparaba contra
+  `toISOString()`, que es UTC, y fallaba todas las tardes a partir de las 21:00 de Argentina —el
+  componente ponía el 6 y la prueba esperaba el 7—. El «hoy» que espera la persona es el de su
+  reloj.
+
+### Pruebas
+
+- Veinte chequeos nuevos de papelera en la batería estática, incluido el que compara la lista de la
+  cascada contra el DDL del esquema; veintiséis de integración que arman un activo con todo colgado
+  y un testigo al lado, corren la cascada y verifican que no quede nada huérfano y que al testigo no
+  lo haya tocado; siete en la batería de componentes para la confirmación escrita.
+
+---
+
 ## [1.7.0] — 2026-10-06
 
 Fases 4 y 5 del modelo de inventario, tomadas de GLPI: el activo por dentro —sistema operativo,

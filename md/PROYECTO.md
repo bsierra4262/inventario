@@ -432,6 +432,32 @@ buscador y paginado. Restaurar:
 Ver la papelera pide `asset.trash.view`; restaurar, `asset.restore`. Ninguno de los dos lo
 tiene un rol de sólo lectura.
 
+### Eliminar definitivamente
+
+La papelera también se vacía. `asset.delete` estuvo mucho tiempo en la lista de permisos sin
+que ninguna pantalla lo consultara: se podía tildar y no hacía nada. Ahora elimina de verdad,
+con tres condiciones:
+
+1. **Sólo lo archivado.** Desde el listado principal no se llega: primero se archiva (que se
+   deshace) y después se elimina (que no). No hay un botón que destruya algo de un clic.
+2. **Hay que escribir el número del activo.** Un «¿está seguro?» se acepta sin leerlo; copiar
+   un número obliga a mirar cuál. Lo pide el diálogo del sistema y el servidor lo vuelve a
+   verificar, por si alguien postea el formulario a mano.
+3. **El historial sobrevive.** Queda una fila `Eliminado` con el modelo, la marca, el service
+   tag y quién lo borró. Si mañana aparece una auditoría de bienes, la respuesta no puede ser
+   «no sé, alguien lo borró».
+
+La carpeta de Drive **no** se toca: queda en «Archivados», y el mensaje de vuelta lo aclara.
+
+Lo que cuelga del activo —sistema operativo, componentes, puertos de red con sus direcciones,
+notas, campos propios, vínculos con contratos y documentos, relaciones con otros activos— se
+borra en cascada. Como el esquema no tiene claves foráneas, esa lista está escrita a mano en
+[`core/tenants/papelera.php`](core/tenants/papelera.php), en un solo lugar, y la batería de
+integración la compara contra las tablas que el esquema realmente tiene: si alguien agrega una
+tabla con `producto_id` y se olvida de sumarla, el test falla.
+
+Eliminar pide `asset.delete`, que por defecto sólo tiene el administrador.
+
 ---
 
 ## 9. Integración con Google Drive

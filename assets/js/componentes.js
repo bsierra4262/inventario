@@ -603,10 +603,6 @@
     });
   };
 
-  /**
-   * Cambia los confirm() nativos escritos en los atributos onsubmit/onclick por
-   * el diálogo propio, sin tocar las páginas que los escribieron.
-   */
   // ==========================================================================
   //  PEDIR UN TEXTO
   // ==========================================================================
@@ -620,6 +616,7 @@
         '<div class="ihc-modal__cuerpo">' +
           '<div class="ihc-modal__texto">' +
             '<h2 class="ihc-modal__titulo" id="ihc-texto-tit"></h2>' +
+            '<p class="ihc-modal__detalle" hidden></p>' +
             '<label class="ihc-modal__campo-label" for="ihc-texto-input"></label>' +
             '<input type="text" id="ihc-texto-input" class="ihc-modal__campo" autocomplete="off">' +
             '<p class="ihc-modal__error" role="alert" hidden></p>' +
@@ -639,22 +636,43 @@
    * escrito, o null si se canceló. Reemplaza a prompt(), que el navegador
    * dibuja gris y con el nombre del dominio arriba.
    *
-   *   ihPedirTexto({ titulo, etiqueta, valor, aceptar, cancelar, max, requerido })
+   *   ihPedirTexto({ titulo, detalle, etiqueta, valor, aceptar, cancelar,
+   *                  max, requerido, peligro, esperado })
+   *
+   * `esperado` convierte el cuadro en una confirmación escrita: no deja seguir
+   * hasta que lo escrito coincida. Se usa para lo que no se puede deshacer
+   * —eliminar un activo de la papelera— porque un sí/no se acepta sin leerlo,
+   * y copiar un número obliga a mirar cuál. La comparación ignora espacios y
+   * mayúsculas: la idea es que la persona confirme, no que acierte un dictado.
+   *
+   * `peligro` pinta el botón de aceptar en rojo, igual que en ihConfirmar().
    */
+  /** Si lo escrito confirma lo esperado. Sin espacios, sin mayúsculas y sin
+      acentos: la idea es que la persona confirme, no que acierte un dictado. */
+  function coincide(escrito, esperado) {
+    return plano(String(escrito).replace(/\s+/g, ''))
+        === plano(String(esperado).replace(/\s+/g, ''));
+  }
+
   window.ihPedirTexto = function (op) {
     op = op || {};
     var m = construirModalTexto();
     var inp = m.querySelector('#ihc-texto-input');
     var err = m.querySelector('.ihc-modal__error');
+    var det = m.querySelector('.ihc-modal__detalle');
     var si  = m.querySelector('[data-ihc-si]');
     var no  = m.querySelector('[data-ihc-no]');
 
     m.querySelector('.ihc-modal__titulo').textContent = op.titulo || 'Nuevo valor';
     m.querySelector('.ihc-modal__campo-label').textContent = op.etiqueta || '';
+    det.textContent = op.detalle || '';
+    det.hidden = !op.detalle;
     si.textContent = op.aceptar || 'Agregar';
     no.textContent = op.cancelar || 'Cancelar';
+    si.className = 'ih-btn ' + (op.peligro ? 'ih-btn--danger' : 'ih-btn--primary');
     inp.value = op.valor || '';
     inp.maxLength = op.max || 255;
+    inp.setAttribute('inputmode', op.esperado && /^[0-9]+$/.test(String(op.esperado)) ? 'numeric' : 'text');
     err.hidden = true;
 
     m.showModal();
@@ -676,6 +694,13 @@
           err.textContent = 'Escribí un valor.';
           err.hidden = false;
           inp.focus();
+          return;
+        }
+        if (op.esperado != null && !coincide(v, op.esperado)) {
+          err.textContent = 'Eso no es «' + op.esperado + '». Escribilo igual para confirmar.';
+          err.hidden = false;
+          inp.focus();
+          inp.select();
           return;
         }
         cerrar(v);

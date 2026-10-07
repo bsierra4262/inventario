@@ -175,7 +175,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
       <!-- Encabezado -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
-        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--warn),var(--warn));color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
           <i class="bi bi-exclamation-triangle"></i>
         </div>
         <div>
@@ -198,7 +198,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
         <!-- Opción: Sobrescribir -->
-        <div class="ih-card" style="border:2px solid var(--ih-danger-light,#fecaca);">
+        <div class="ih-card" style="border:2px solid var(--ih-danger-light,var(--danger-line));">
           <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <i class="bi bi-arrow-repeat" style="font-size:1.4rem;color:var(--ih-danger);"></i>
@@ -218,7 +218,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </div>
 
         <!-- Opción: Renombrar y Subir -->
-        <div class="ih-card" style="border:2px solid var(--ih-primary-light,#e5d9f7);">
+        <div class="ih-card" style="border:2px solid var(--ih-primary-light,var(--primary-100));">
           <div class="ih-card__body" style="padding:1.25rem;display:flex;flex-direction:column;gap:12px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <i class="bi bi-pencil-square" style="font-size:1.4rem;color:var(--ih-primary);"></i>

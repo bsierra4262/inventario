@@ -260,7 +260,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
       <!-- Encabezado -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;">
-        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--warn),var(--warn));color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">
           <i class="bi bi-archive"></i>
         </div>
         <div>

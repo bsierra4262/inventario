@@ -106,13 +106,13 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <p style="color:#6b6b7b;margin:0 0 24px;">Configurá qué puede hacer cada rol superadmin en la plataforma.</p>
 
   <?php if ($feedback !== ''): ?>
-    <div class="ih-alert <?= $feedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?>" style="margin-bottom:20px;">
+    <div class="ih-alert <?= $feedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?>">
       <i class="bi bi-<?= $feedbackOk ? 'check-circle-fill' : 'exclamation-triangle-fill' ?>"></i>
       <div><?= htmlspecialchars($feedback) ?></div>
     </div>
   <?php endif; ?>
 
-  <div class="ih-alert ih-alert--info" style="margin-bottom:20px;">
+  <div class="ih-alert ih-alert--info">
     <i class="bi bi-info-circle-fill"></i>
     <div>
       El rol <strong>Super Administrador</strong> siempre mantiene todos los permisos (protección anti-lockout).

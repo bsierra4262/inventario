@@ -1093,10 +1093,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
     // Colores corporativos
     const PURPLE      = '#663399';
     const PURPLE_DARK = '#4E247A';
-    const TEXT        = '#1a1a2e';
-    const TEXT_MUTED  = '#6b6b7b';
-    const STRIPE      = '#f7f5fb';
-    const BORDER      = '#e5e1ec';
+    const TEXT        = 'var(--ink)';
+    const TEXT_MUTED  = 'var(--muted)';
+    const STRIPE      = 'var(--soft)';
+    const BORDER      = 'var(--line)';
 
     // Orientation segun cantidad de columnas
     const orientation = totalColumns > 6 ? 'landscape' : 'portrait';

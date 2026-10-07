@@ -527,63 +527,67 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       </div>
 
-      <!-- ── Pie de tabla: contador y paginador ─────────────────── -->
-      <div class="ih-card__footer" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 20px;border-top:1px solid var(--ih-gray-200);">
-        <div class="ih-text-sm ih-text-muted">
-          Mostrando <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $per_page, $totalRows)) ?> de <?= number_format($totalRows) ?> activos
-          &nbsp;|&nbsp;
-          <select class="ih-select" style="display:inline-block;width:auto;padding:2px 8px;font-size:12px;"
-                  onchange="window.location='?<?= http_build_query(['q'=>$search,'cat'=>$filterCat,'gar'=>$filterGar,'sort'=>$sort,'order'=>$order,'page'=>1]) ?>&per_page='+this.value">
-            <?php foreach ($perPageOpts as $opt): ?>
-              <option value="<?= $opt ?>" <?= $per_page === $opt ? 'selected' : '' ?>><?= $opt ?> por página</option>
-            <?php endforeach; ?>
-          </select>
-        </div>
+      <?php /* ── Pie de tabla ──────────────────────────────────────────────
+               El paginador es el del sistema (.ih-pager, en componentes.css),
+               el mismo que usa reportes. Antes acá estaba armado con botones y
+               estilos sueltos y allá con otras clases: dos paginadores que
+               hacían lo mismo y se veían distinto. */ ?>
+      <div class="ih-card__footer">
+        <div class="ih-pager">
+          <div class="ih-pager__info">
+            <span>
+              Mostrando <strong><?= number_format($offset + 1) ?>–<?= number_format(min($offset + $per_page, $totalRows)) ?></strong>
+              de <strong><?= number_format($totalRows) ?></strong> <?= $totalRows === 1 ? 'activo' : 'activos' ?>
+            </span>
+            <label class="ih-sr-only" for="per-page">Activos por página</label>
+            <select class="ih-select" id="per-page"
+                    onchange="window.location='?<?= http_build_query(['q'=>$search,'cat'=>$filterCat,'gar'=>$filterGar,'sort'=>$sort,'order'=>$order,'page'=>1]) ?>&per_page='+this.value">
+              <?php foreach ($perPageOpts as $opt): ?>
+                <option value="<?= $opt ?>" <?= $per_page === $opt ? 'selected' : '' ?>><?= $opt ?> por página</option>
+              <?php endforeach; ?>
+            </select>
+          </div>
 
-        <?php if ($totalPages > 1): ?>
-        <nav style="display:flex;gap:4px;align-items:center;">
-          <?php
-          $pBase = ['q'=>$search,'cat'=>$filterCat,'gar'=>$filterGar,'sort'=>$sort,'order'=>$order,'per_page'=>$per_page];
-          $pLink = fn($p) => '?'.http_build_query(array_merge($pBase,['page'=>$p]));
+          <?php if ($totalPages > 1):
+            $pBase = ['q'=>$search,'cat'=>$filterCat,'gar'=>$filterGar,'sort'=>$sort,'order'=>$order,'per_page'=>$per_page];
+            $pLink = fn($p) => '?' . http_build_query(array_merge($pBase, ['page' => $p]));
+            $pStart = max(1, $page - 2);
+            $pEnd   = min($totalPages, $page + 2);
           ?>
-          <a href="<?= $pLink(1) ?>"           class="ih-btn ih-btn--ghost ih-btn--sm <?= $page<=1?'disabled':'' ?>"><i class="bi bi-chevron-double-left"></i></a>
-          <a href="<?= $pLink($page-1) ?>"      class="ih-btn ih-btn--ghost ih-btn--sm <?= $page<=1?'disabled':'' ?>"><i class="bi bi-chevron-left"></i></a>
-          <?php
-          $pStart = max(1, $page - 2); $pEnd = min($totalPages, $page + 2);
-          for ($i = $pStart; $i <= $pEnd; $i++):
-          ?>
-            <a href="<?= $pLink($i) ?>" class="ih-btn ih-btn--sm <?= $i===$page?'ih-btn--primary':'ih-btn--ghost' ?>"><?= $i ?></a>
-          <?php endfor; ?>
-          <a href="<?= $pLink($page+1) ?>"      class="ih-btn ih-btn--ghost ih-btn--sm <?= $page>=$totalPages?'disabled':'' ?>"><i class="bi bi-chevron-right"></i></a>
-          <a href="<?= $pLink($totalPages) ?>"   class="ih-btn ih-btn--ghost ih-btn--sm <?= $page>=$totalPages?'disabled':'' ?>"><i class="bi bi-chevron-double-right"></i></a>
-        </nav>
-        <?php endif; ?>
+          <nav aria-label="Páginas del listado">
+            <ul class="ih-pager__paginas">
+              <li class="ih-pager__item <?= $page <= 1 ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink(1) ?>" aria-label="Primera página"><i class="bi bi-chevron-double-left"></i></a>
+              </li>
+              <li class="ih-pager__item <?= $page <= 1 ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($page - 1) ?>" aria-label="Página anterior"><i class="bi bi-chevron-left"></i></a>
+              </li>
+              <?php for ($i = $pStart; $i <= $pEnd; $i++): ?>
+                <li class="ih-pager__item <?= $i === $page ? 'is-active' : '' ?>">
+                  <a class="ih-pager__link" href="<?= $pLink($i) ?>"
+                     <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
+                </li>
+              <?php endfor; ?>
+              <li class="ih-pager__item <?= $page >= $totalPages ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($page + 1) ?>" aria-label="Página siguiente"><i class="bi bi-chevron-right"></i></a>
+              </li>
+              <li class="ih-pager__item <?= $page >= $totalPages ? 'is-disabled' : '' ?>">
+                <a class="ih-pager__link" href="<?= $pLink($totalPages) ?>" aria-label="Última página"><i class="bi bi-chevron-double-right"></i></a>
+              </li>
+            </ul>
+          </nav>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
   </main>
 </div>
 
-<style>
-/* .ih-sort-link vive en assets/css/app.css */
-.disabled { pointer-events: none; opacity: .4; }
-
-/* Flash messages */
-.ih-flash {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
-  font-size: 14px; animation: fadeInDown .3s ease;
-}
-.ih-flash--success { background: #f0faf0; color: #16a34a; border: 1px solid #bbf7d0; }
-.ih-flash--warn    { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-.ih-flash--danger  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-.ih-flash__close {
-  margin-left: auto; background: none; border: none; cursor: pointer;
-  font-size: 18px; color: inherit; opacity: .6; padding: 0 4px;
-}
-.ih-flash__close:hover { opacity: 1; }
-@keyframes fadeInDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
-</style>
+<?php /* Esta pantalla redefinía los avisos con #16a34a, #d97706 y #b91c1c:
+         ninguno es un color de este proyecto, y como la hoja de la página
+         carga después, le ganaba a la del sistema. `.ih-flash` ya existe en
+         assets/css/app.css con el verde, el ámbar y el rojo de la marca. */ ?>
 
 <script>
 // Búsqueda con debounce (evita submit en cada tecla)

@@ -1080,6 +1080,78 @@ chequear('asset.restore no lo tiene un rol de sólo lectura',
     preg_match("/'asset\.restore'\s*=>\s*\[([^\]]*)\]/", leer('core/security/permissions.php'), $m) === 1
  && !str_contains($m[1], 'viewer'));
 
+// ── El otro extremo de la papelera: eliminar de verdad ──────────────────────
+// `asset.delete` estuvo mucho tiempo en la lista de permisos sin que ninguna
+// pantalla ni ningún endpoint lo consultara: se podía tildar y no hacía nada.
+// Estos chequeos están para que no vuelva a quedar colgado.
+$elim = leer('backend/eliminar_definitivo.php');
+$pap  = leer('inventario/archivados.php');
+chequear('Existe el endpoint de eliminar definitivamente', $elim !== '');
+chequear('Eliminar exige asset.delete', str_contains($elim, "require_permission('asset.delete'"));
+chequear('Eliminar exige CSRF', str_contains($elim, "csrf_or_fail('eliminar_activo'"));
+chequear('Eliminar sólo acepta POST', str_contains($elim, "REQUEST_METHOD'] !== 'POST'"));
+chequear('Sólo se elimina lo que ya está archivado',
+    substr_count($elim, 'archivado = 1') >= 2,
+    'la condición va en la lectura y otra vez en el DELETE');
+chequear('Eliminar pide escribir el número del activo para confirmar',
+    str_contains($elim, "\$_POST['confirmacion']"));
+chequear('La confirmación se verifica del lado del servidor, no sólo en el navegador',
+    str_contains($elim, '(int)$escrito !== $producto_id'));
+chequear('Eliminar deja rastro en el historial', str_contains($elim, 'producto_movimientos'));
+chequear('Eliminar no borra el historial',
+    str_contains($elim, 'INSERT INTO `{$tMov}`') && !str_contains($elim, 'DELETE FROM `{$tMov}`'),
+    'al historial se le suma una fila, no se le saca ninguna');
+chequear('Eliminar no borra la carpeta de Drive',
+    !str_contains($elim, 'drive_borrar') && !str_contains($elim, 'drive_eliminar'));
+chequear('Eliminar corre todo en una transacción',
+    str_contains($elim, 'begin_transaction') && str_contains($elim, 'rollback'));
+
+/* La cascada vive en su propio módulo, no dentro del endpoint: el esquema no
+   tiene claves foráneas, así que la lista de tablas que apuntan a un activo es
+   una lista escrita a mano — y una lista escrita a mano en medio de un endpoint
+   es una lista que se olvida de actualizar. */
+require_once RAIZ . '/core/tenants/papelera.php';
+chequear('La cascada está en un módulo aparte y no dentro del endpoint',
+    is_file(RAIZ . '/core/tenants/papelera.php')
+ && str_contains($elim, 'papelera_borrar_dependencias'));
+chequear('El endpoint ya no repite la lista de tablas',
+    !str_contains($elim, 'activo_componente') && !str_contains($elim, 'documento_activo'));
+chequear('El historial no está entre las tablas que se borran',
+    !in_array('producto_movimientos', PAPELERA_TABLAS_DEPENDIENTES, true));
+
+/* El chequeo que de verdad protege: la lista del módulo contra el esquema. Si
+   alguien agrega una tabla con `producto_id` y no la pone en la lista, el
+   activo se va a borrar y sus filas van a quedar colgando de un id que ya no
+   existe. Acá se compara una contra la otra. */
+$conProductoId = [];
+// El DDL del tenant está en dos lugares: el esquema base que se crea al dar de
+// alta la empresa, y las migraciones que lo fueron ampliando.
+foreach ([$mig ?? leer('core/db/migraciones.php'), leer('core/tenants/install_tenant.php')] as $fuente) {
+    if (!preg_match_all(
+        '/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`\{?\$?[a-zA-Z_]*\}?([a-z_]+)`\s*\((.*?)\)\s*ENGINE/is',
+        $fuente, $mm, PREG_SET_ORDER
+    )) { continue; }
+    foreach ($mm as $t) {
+        if (preg_match('/^\s*producto_id\s/mi', $t[2])) { $conProductoId[] = $t[1]; }
+    }
+}
+$conProductoId = array_values(array_unique($conProductoId));
+chequear('El esquema tiene tablas que apuntan a un activo (si no, el chequeo que sigue no mide nada)',
+    count($conProductoId) >= 8, 'encontradas: ' . implode(', ', $conProductoId));
+$faltan = array_diff($conProductoId, PAPELERA_TABLAS_DEPENDIENTES, ['producto_movimientos']);
+chequear('Toda tabla con producto_id está en la lista de la cascada',
+    $faltan === [], 'faltan: ' . implode(', ', $faltan));
+$sobran = array_diff(PAPELERA_TABLAS_DEPENDIENTES, $conProductoId);
+chequear('La lista de la cascada no nombra tablas que no existen',
+    $sobran === [], 'sobran: ' . implode(', ', $sobran));
+chequear('La papelera ofrece eliminar sólo a quien tiene el permiso',
+    str_contains($pap, '$puedeBorrar') && str_contains($pap, "user_can('asset.delete'"));
+chequear('asset.delete no lo tiene un rol que no sea admin',
+    preg_match("/'asset\.delete'\s*=>\s*\[([^\]]*)\]/", leer('core/security/permissions.php'), $m) === 1
+ && !str_contains($m[1], 'viewer') && !str_contains($m[1], 'manager'));
+chequear('El diálogo del sistema sabe pedir una confirmación escrita',
+    str_contains(leer('assets/js/componentes.js'), 'op.esperado'));
+
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('ESQUEMA · migraciones');
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1751,6 +1823,40 @@ foreach (archivos_php() as $f) {
 chequear('Ninguna pantalla fuerza una letra de menos de 11px',
     $conStyleChico === [], implode(', ', $conStyleChico));
 
+// ───────────────────────────────────────────────────────────────────────────
+grupo('DISENO · identidad visual, los colores');
+//
+// Cuatro colores: #FFFFFF, #663399, #161922 y #9CC930, el acento, sólo para
+// lo positivo. Más la escala de grises y los tres de estado, que derivan de
+// ellos.
+//
+// Un color escrito a mano no se ve mal solo: se ve mal al lado del de al lado.
+// Los avisos del listado usaban #16a34a, #d97706 y #b91c1c, y como la hoja de
+// la página carga después de la del sistema, le ganaban: en la misma pantalla
+// convivían dos verdes distintos.
+//
+// El detalle se ve con `php test/colores.php`.
+require_once RAIZ . '/test/colores.php';
+$fueraPaleta = colores_fuera_de_paleta();
+$cuantosColores = array_sum(array_map('count', $fueraPaleta));
+chequear('Ningún color escrito a mano fuera de la identidad visual',
+    $fueraPaleta === [],
+    $cuantosColores . ' en: ' . implode(', ', array_keys($fueraPaleta))
+    . ' — correr `php test/colores.php` para ver cuáles');
+
+// El acento es el que más se presta: queda bien en cualquier botón. Por eso
+// se cuenta — en APP Tickets se usa tres veces, siempre para confirmar una
+// creación o una aprobación.
+$conAcento = [];
+foreach (archivos_php() as $f) {
+    $rel = substr($f, strlen(RAIZ) + 1);
+    if (str_starts_with($rel, 'test') || str_starts_with($rel, 'dashboard')) { continue; }
+    $n = substr_count((string)file_get_contents($f), 'ih-btn--accent');
+    if ($n > 0) { $conAcento[$rel] = $n; }
+}
+chequear('El acento verde queda para los botones que confirman, no para cualquiera',
+    array_sum($conAcento) <= 10,
+    array_sum($conAcento) . ' usos: ' . implode(', ', array_keys($conAcento)));
 // ───────────────────────────────────────────────────────────────────────────
 grupo('FORMULARIOS · ejemplos');
 //

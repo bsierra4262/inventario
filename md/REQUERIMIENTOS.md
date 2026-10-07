@@ -32,7 +32,7 @@ y verificado por la batería (`php test/run_tests.php`).
 | I6 | Archivar en vez de borrar, con motivo | ✅ |
 | I7 | **Papelera con restauración**: un activo dado de baja por error se recupera | ✅ |
 | I8 | Al archivar, la carpeta de Drive se mueve a «Archivados» y vuelve al restaurar | ✅ |
-| I9 | Eliminación definitiva reservada al admin | ✅ |
+| I9 | **Eliminación definitiva** reservada al admin, sólo desde la papelera, confirmando con el número del activo y conservando el historial | ✅ |
 | I10 | Importación y exportación CSV | ✅ |
 | I11 | Reportes por categoría, ubicación, responsable, garantía y valor | ✅ |
 

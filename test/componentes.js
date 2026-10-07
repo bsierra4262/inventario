@@ -358,8 +358,17 @@ t('retroceder desde enero pasa a diciembre del año anterior',
   $('.ihc-cal__titulo').textContent.trim() === 'diciembre 2025',
   $('.ihc-cal__titulo').textContent.trim());
 clic($$('.ihc-cal__accion').find((b) => b.textContent === 'Hoy'));
-t('el botón «Hoy» pone la fecha de hoy',
-  fe.value === new Date().toISOString().slice(0, 10), fe.value);
+/* El «hoy» que espera la persona es el de su reloj, no el de UTC. Esta prueba
+   comparábamos contra toISOString(), que es UTC, y fallaba cada tarde desde las
+   21:00 de Argentina: el componente ponía el 6 y la prueba esperaba el 7. El
+   que estaba mal era el test. */
+const hoyLocal = (() => {
+  const d = new Date();
+  const dd = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + dd(d.getMonth() + 1) + '-' + dd(d.getDate());
+})();
+t('el botón «Hoy» pone la fecha de hoy (la del reloj, no la de UTC)',
+  fe.value === hoyLocal, fe.value + ' vs ' + hoyLocal);
 clic(fenv.querySelector('.ihc-fecha__abrir'));
 clic($$('.ihc-cal__accion').find((b) => b.textContent === 'Borrar'));
 t('el botón «Borrar» vacía el campo', fe.value === '' && txt.value === '');
@@ -498,6 +507,48 @@ clic(md.querySelector('[data-ihc-no]'));
 
   t('se reusa un solo diálogo de texto',
     window.document.querySelectorAll('dialog.ihc-modal--texto').length === 1);
+
+  // ══════════════════════════════════════════════ CONFIRMACIÓN ESCRITA
+  /* Lo que usa la papelera para eliminar un activo: en vez de un sí/no, hay
+     que escribir el número del activo. Un «¿está seguro?» se acepta sin
+     leerlo; copiar un número obliga a mirar cuál se está borrando. */
+  seccion('CONFIRMACIÓN ESCRITA');
+  const pc = window.ihPedirTexto({
+    titulo:   'Eliminar «Latitude 5420» definitivamente',
+    detalle:  'Esto no se puede deshacer.',
+    etiqueta: 'Escribí el número del activo (42) para confirmar',
+    esperado: '42',
+    aceptar:  'Eliminar definitivamente',
+    peligro:  true
+  });
+  const mc  = $('dialog.ihc-modal--texto');
+  const inp = mc.querySelector('#ihc-texto-input');
+  const errc = mc.querySelector('.ihc-modal__error');
+  t('muestra el detalle cuando se le pasa uno',
+    mc.querySelector('.ihc-modal__detalle').hidden === false
+    && mc.querySelector('.ihc-modal__detalle').textContent === 'Esto no se puede deshacer.');
+  t('el botón de aceptar se pinta de peligro',
+    mc.querySelector('[data-ihc-si]').className === 'ih-btn ih-btn--danger');
+  t('propone el teclado numérico cuando lo esperado es un número',
+    inp.getAttribute('inputmode') === 'numeric');
+
+  inp.value = '41';
+  mc.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  t('un número que no es el esperado no deja seguir',
+    mc.open === true && errc.hidden === false, errc.textContent);
+
+  inp.value = ' 42 ';
+  mc.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+  t('el número correcto confirma, aunque venga con espacios', (await pc) === '42');
+
+  // Y que el detalle no quede pegado en el siguiente uso del mismo diálogo.
+  const pc2 = window.ihPedirTexto({ titulo: 'Agregar categoría', etiqueta: 'Nombre' });
+  t('el detalle se oculta si el siguiente no trae uno',
+    $('dialog.ihc-modal--texto .ihc-modal__detalle').hidden === true);
+  t('y el botón vuelve a ser el normal',
+    $('dialog.ihc-modal--texto [data-ihc-si]').className === 'ih-btn ih-btn--primary');
+  clic($('dialog.ihc-modal--texto [data-ihc-no]'));
+  await pc2;
 
   // ════════════════════════════════════════════════════════════ ARCHIVOS
   seccion('ARCHIVOS');

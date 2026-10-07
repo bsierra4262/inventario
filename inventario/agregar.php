@@ -181,7 +181,7 @@ require __DIR__ . '/../includes/layout/head.php';
   <main class="ih-app__main ih-anim-fade">
 
     <?php if ($formError !== ''): ?>
-    <div class="ih-alert ih-alert--danger" style="margin-bottom:20px;">
+    <div class="ih-alert ih-alert--danger">
       <i class="bi bi-exclamation-triangle-fill"></i>
       <?= htmlspecialchars($formError) ?>
     </div>
@@ -667,13 +667,13 @@ require __DIR__ . '/../includes/layout/head.php';
 .ih-alert {
   padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
 }
-.ih-alert--danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.ih-alert--danger { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-line); }
 .ih-dropzone {
   border: 2px dashed var(--ih-gray-300); border-radius: 10px;
   padding: 32px 24px; text-align: center; cursor: pointer; position: relative;
   transition: border-color .2s, background .2s;
 }
-.ih-dropzone:hover, .ih-dropzone.is-over { border-color: var(--ih-green); background: #f0faf0; }
+.ih-dropzone:hover, .ih-dropzone.is-over { border-color: var(--ih-green); background: var(--accent-050); }
 .file-chip {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--ih-gray-100); border-radius: 20px;

@@ -214,13 +214,13 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <main class="ih-app__main">
 
 <?php if ($feedback !== ''): ?>
-  <div class="ih-alert <?= $feedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?>" style="margin-bottom:20px;">
+  <div class="ih-alert <?= $feedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?>">
     <i class="bi bi-<?= $feedbackOk ? 'check-circle-fill' : 'exclamation-triangle-fill' ?>"></i>
     <div><?= htmlspecialchars($feedback) ?></div>
   </div>
 <?php endif; ?>
 
-<div class="ih-alert ih-alert--info" style="margin-bottom:20px;">
+<div class="ih-alert ih-alert--info">
   <i class="bi bi-info-circle-fill"></i>
   <div>
     Configurá qué acciones puede realizar cada rol en tu empresa. Si dejás un rol sin overrides,
@@ -231,18 +231,19 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
 <!-- Diagnostico: si la columna role sigue siendo ENUM, ofrecer reparacion -->
 <?php if ($colIsEnum): ?>
-<div class="ih-alert ih-alert--warning" style="margin-bottom:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+<div class="ih-alert ih-alert--warning ih-alert--accion">
   <i class="bi bi-exclamation-triangle-fill"></i>
-  <div style="flex:1;min-width:280px;">
+  <div class="ih-alert__cuerpo">
     <strong>Roles personalizados deshabilitados</strong><br>
     <span class="ih-text-sm">
       La columna <code>role</code> de tu base de datos es de tipo <code><?= htmlspecialchars($colRoleType) ?></code>,
       que solo acepta los 4 roles del sistema (admin, manager, user, viewer).
       Si asignás un rol personalizado a un usuario, MySQL lo rechaza y guarda vacío
-      (por eso aparece "Sin rol"). Click acá para reparar:
+      (por eso aparece «Sin rol»). Con el botón de al lado se cambia el tipo de la
+      columna y los roles propios vuelven a funcionar.
     </span>
   </div>
-  <form method="POST" action="/inventario/roles.php" style="margin:0;">
+  <form class="ih-alert__accion" method="POST" action="/inventario/roles.php">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
     <input type="hidden" name="action" value="fix_role_column">
     <button type="submit" class="ih-btn ih-btn--primary ih-btn--sm">
@@ -252,92 +253,50 @@ require __DIR__ . '/../includes/layout/topbar.php';
 </div>
 <?php endif; ?>
 
-<style>
-.role-tab {
-  padding: 10px 18px;
-  border: 1px solid #e5e1ec;
-  background: #ffffff !important;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  color: #4a4a5e !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.role-tab:hover {
-  border-color: #663399;
-  background: #f7f5fb !important;
-}
-.role-tab.is-active {
-  background: #663399 !important;
-  color: #ffffff !important;
-  border-color: #663399;
-}
-.role-tab--custom { border-color: #663399; }
-.role-tab--new { border-style: dashed; color: #663399 !important; }
-.role-tab--new:hover { background: #f0e8fa !important; }
-.role-tab .badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  background: #f59e0b;
-  color: #ffffff;
-  font-weight: 700;
-}
-.role-tab.is-active .badge { background: rgba(255,255,255,.25); color:#fff; }
-.perm-group { background: #fff; border: 1px solid var(--ih-gray-200); border-radius: 10px; margin-bottom: 14px; }
-.perm-group__title { padding: 12px 16px; border-bottom: 1px solid var(--ih-gray-100); font-weight: 700; color: var(--ih-gray-800); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; background: var(--ih-gray-50); border-radius: 10px 10px 0 0; }
-.perm-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--ih-gray-100); }
-.perm-row:last-child { border-bottom: 0; }
-.perm-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; user-select: none; }
-.perm-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
-.perm-row .perm-key { color: var(--ih-gray-400); font-size: 11px; font-family: monospace; margin-left: auto; }
-</style>
-
-<!-- Tabs de rol -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+<?php /* Las pastillas eligen el rol que se esta editando. No navegan a otra
+         pantalla: muestran y esconden los paneles de abajo. */ ?>
+<div class="ih-pills" role="group" aria-label="Rol que se está editando">
   <?php foreach (TENANT_ROLES as $r): ?>
-    <button class="role-tab" data-role="<?= $r ?>" type="button">
+    <button class="ih-pill" data-role="<?= $r ?>" type="button">
       <?= htmlspecialchars($roleLabels[$r]) ?>
-      <?php if ($roleOverrides[$r]): ?><span class="badge">CUSTOM</span><?php endif; ?>
+      <?php if ($roleOverrides[$r]): ?><span class="ih-badge ih-badge--warning">Editado</span><?php endif; ?>
     </button>
   <?php endforeach; ?>
   <?php foreach ($customRoles as $rk => $rlbl): ?>
-    <button class="role-tab role-tab--custom" data-role="<?= htmlspecialchars($rk) ?>" type="button">
-      <i class="bi bi-stars" style="font-size:11px;"></i>
+    <button class="ih-pill ih-pill--propia" data-role="<?= htmlspecialchars($rk) ?>" type="button">
+      <i class="bi bi-stars"></i>
       <?= htmlspecialchars($rlbl) ?>
     </button>
   <?php endforeach; ?>
-  <button class="role-tab role-tab--new" data-role="__new__" type="button">
+  <button class="ih-pill ih-pill--nueva" data-role="__new__" type="button">
     <i class="bi bi-plus-lg"></i> Nuevo rol
   </button>
 </div>
 
 <!-- Panel: nuevo rol -->
-<div class="role-panel" data-role-panel="__new__" style="display:none;">
-  <div class="ih-card" style="max-width:540px;">
-    <div class="ih-card__body" style="padding:24px;">
-      <h3 style="margin:0 0 6px;font-size:var(--ih-text-lg);color:var(--ih-gray-800);font-weight:700;">
-        <i class="bi bi-stars" style="color:var(--ih-primary);"></i> Crear rol personalizado
-      </h3>
-      <p style="margin:0 0 18px;color:var(--ih-gray-500);font-size:var(--ih-text-sm);">
-        Definí un nombre y una clave técnica. Después podrás asignarle permisos en su pestaña.
-      </p>
+<div class="role-panel" data-role-panel="__new__" hidden>
+  <div class="ih-card ih-card--angosta">
+    <div class="ih-card__body">
+      <div class="ih-barra">
+        <div>
+          <h3 class="ih-barra__titulo"><i class="bi bi-stars"></i> Crear un rol propio</h3>
+          <p class="ih-barra__ayuda">
+            Primero el nombre. Los permisos se eligen después, en la pastilla del rol nuevo.
+          </p>
+        </div>
+      </div>
       <form method="POST" action="/inventario/roles.php">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         <input type="hidden" name="action" value="create_custom">
-        <div class="ih-field" style="margin-bottom:14px;">
+        <div class="ih-field">
           <label class="ih-field__label">Nombre visible *</label>
           <input class="ih-input" name="new_role_label" required maxlength="120" placeholder="Ej: Auditor externo">
         </div>
-        <div class="ih-field" style="margin-bottom:18px;">
+        <div class="ih-field">
           <label class="ih-field__label">Clave técnica (opcional)</label>
           <input class="ih-input" name="new_role_key" maxlength="40" placeholder="auditor_externo (auto-generada del nombre)"
                  pattern="[a-z0-9_]+" title="Sólo minúsculas, números y guion bajo">
-          <div class="ih-field__hint">Si la dejas vacía, se genera automáticamente desde el nombre.</div>
+          <div class="ih-field__hint">Si la dejás vacía, se arma sola a partir del nombre.</div>
         </div>
         <button type="submit" class="ih-btn ih-btn--primary">
           <i class="bi bi-plus-lg"></i> Crear rol
@@ -352,58 +311,62 @@ $allRoles = array_merge(TENANT_ROLES, array_keys($customRoles));
 foreach ($allRoles as $r):
   $isBuiltin = in_array($r, TENANT_ROLES, true);
 ?>
-<div class="role-panel" data-role-panel="<?= $r ?>" style="display:none;">
+<div class="role-panel" data-role-panel="<?= $r ?>" hidden>
   <form method="POST" action="/inventario/roles.php" id="form-role-<?= $r ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="role" value="<?= $r ?>">
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+    <?php /* La barra de título es la del sistema (.ih-barra): en pantalla angosta
+             los botones bajan y ocupan el ancho completo en lugar de apretarse
+             en una fila donde no entran. */ ?>
+    <div class="ih-barra">
       <div>
-        <h3 style="margin:0;font-size:var(--ih-text-lg);color:var(--ih-gray-800);font-weight:700;">
+        <h3 class="ih-barra__titulo">
           <?= htmlspecialchars($roleLabels[$r]) ?>
           <?php if (!$isBuiltin): ?>
-            <span class="ih-badge ih-badge--purple" style="margin-left:8px;font-size:11px;"><i class="bi bi-stars"></i> Personalizado</span>
+            <span class="ih-badge ih-badge--purple"><i class="bi bi-stars"></i> Personalizado</span>
           <?php elseif ($roleOverrides[$r]): ?>
-            <span class="ih-badge ih-badge--warning" style="margin-left:8px;font-size:11px;">Custom</span>
+            <span class="ih-badge ih-badge--warning">Editado</span>
           <?php else: ?>
-            <span class="ih-badge ih-badge--success" style="margin-left:8px;font-size:11px;">Default</span>
+            <span class="ih-badge ih-badge--neutral">Sin cambios</span>
           <?php endif; ?>
         </h3>
-        <p style="margin:4px 0 0;color:var(--ih-gray-500);font-size:var(--ih-text-sm);">
-          <?= count($rolePerms[$r]) ?> permisos activos
+        <p class="ih-barra__ayuda">
+          <?= count($rolePerms[$r]) ?> <?= count($rolePerms[$r]) === 1 ? 'permiso activo' : 'permisos activos' ?>
           <?php if (!$isBuiltin): ?>
-            · <code style="font-size:11px;color:var(--ih-gray-400);"><?= htmlspecialchars($r) ?></code>
+            · <code><?= htmlspecialchars($r) ?></code>
           <?php endif; ?>
         </p>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div class="ih-barra__acciones">
         <button type="submit" class="ih-btn ih-btn--primary">
           <i class="bi bi-check2"></i> Guardar cambios
         </button>
         <?php if ($isBuiltin && $roleOverrides[$r]): ?>
           <button type="submit" class="ih-btn ih-btn--ghost"
-                  onclick="if(!confirm('Restaurar permisos por defecto?')){return false;} this.form.elements['action'].value='reset';">
-            <i class="bi bi-arrow-counterclockwise"></i> Restaurar default
+                  onclick="if(!confirm('¿Restaurar los permisos originales de <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Se pierden los cambios que le hiciste.')){return false;} this.form.elements['action'].value='reset';">
+            <i class="bi bi-arrow-counterclockwise"></i> Restaurar originales
           </button>
         <?php endif; ?>
         <?php if (!$isBuiltin): ?>
           <button type="submit" class="ih-btn ih-btn--danger"
-                  onclick="if(!confirm('Eliminar el rol <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Esta acción no se puede deshacer.')){return false;} this.form.elements['action'].value='delete_custom';">
+                  onclick="if(!confirm('¿Eliminar el rol <?= htmlspecialchars($roleLabels[$r], ENT_QUOTES) ?>? Esta acción no se puede deshacer.')){return false;} this.form.elements['action'].value='delete_custom';">
             <i class="bi bi-trash"></i> Eliminar rol
           </button>
         <?php endif; ?>
       </div>
     </div>
 
+    <div class="ih-permisos">
     <?php foreach ($permGroups as $groupName => $perms): ?>
-      <div class="perm-group">
-        <div class="perm-group__title"><?= htmlspecialchars($groupName) ?></div>
+      <div class="ih-permisos__grupo">
+        <div class="ih-permisos__titulo"><?= htmlspecialchars($groupName) ?></div>
         <?php foreach ($perms as $action => $label):
           $checked = in_array($action, $rolePerms[$r], true);
           $isAdminProtected = ($r === 'admin' && in_array($action, ['user.view','user.edit','integration.view','integration.edit'], true));
         ?>
-          <div class="perm-row">
+          <div class="ih-permisos__fila">
             <label>
               <input type="checkbox" name="perms[]" value="<?= htmlspecialchars($action) ?>"
                      <?= $checked ? 'checked' : '' ?>
@@ -414,30 +377,50 @@ foreach ($allRoles as $r):
               <span>
                 <?= htmlspecialchars($label) ?>
                 <?php if ($isAdminProtected): ?>
-                  <span class="ih-text-xs ih-text-muted" style="margin-left:6px">(siempre activo para admin)</span>
+                  <span class="ih-text-xs ih-text-muted">(siempre activo para el administrador)</span>
                 <?php endif; ?>
               </span>
             </label>
-            <span class="perm-key"><?= htmlspecialchars($action) ?></span>
+            <span class="ih-permisos__clave"><?= htmlspecialchars($action) ?></span>
           </div>
         <?php endforeach; ?>
       </div>
     <?php endforeach; ?>
+    </div>
   </form>
 </div>
 <?php endforeach; ?>
 
 <script>
-const tabs = document.querySelectorAll('.role-tab');
-const panels = document.querySelectorAll('.role-panel');
-function showRole(r) {
-  tabs.forEach(t => t.classList.toggle('is-active', t.dataset.role === r));
-  panels.forEach(p => p.style.display = p.dataset.rolePanel === r ? 'block' : 'none');
-  try { localStorage.setItem('av_roles_last_tab', r); } catch {}
-}
-tabs.forEach(t => t.addEventListener('click', () => showRole(t.dataset.role)));
-const lastTab = (() => { try { return localStorage.getItem('av_roles_last_tab'); } catch { return null; }})();
-showRole(lastTab && document.querySelector('[data-role-panel="'+lastTab+'"]') ? lastTab : 'admin');
+/* Las pastillas muestran y esconden los paneles de permisos. Se usa el atributo
+   `hidden` en lugar de `style.display`, para que el estado viva en el HTML y no
+   en un estilo escrito a mano. */
+(function () {
+  var pastillas = document.querySelectorAll('.ih-pill[data-role]');
+  var paneles   = document.querySelectorAll('.role-panel');
+  var CLAVE     = 'av_roles_last_tab';
+
+  function mostrar(rol) {
+    pastillas.forEach(function (p) {
+      var activa = p.dataset.role === rol;
+      p.classList.toggle('is-active', activa);
+      p.setAttribute('aria-pressed', activa ? 'true' : 'false');
+    });
+    paneles.forEach(function (p) { p.hidden = p.dataset.rolePanel !== rol; });
+    try { localStorage.setItem(CLAVE, rol); } catch (e) {}
+  }
+
+  pastillas.forEach(function (p) {
+    p.addEventListener('click', function () { mostrar(p.dataset.role); });
+  });
+
+  /* Se vuelve al rol que se estaba viendo. Si ese rol ya no existe —lo
+     borraron, o se cambió de empresa— se cae al administrador. */
+  var ultimo = null;
+  try { ultimo = localStorage.getItem(CLAVE); } catch (e) {}
+  var existe = ultimo && document.querySelector('[data-role-panel="' + ultimo + '"]');
+  mostrar(existe ? ultimo : 'admin');
+})();
 </script>
 
 </main>

@@ -875,6 +875,130 @@ chequear('plantilla_baja() la desactiva',
     && count(plantillas_listar($conn, true)) === 1);
 chequear('Una plantilla dada de baja ya no entrega valores', plantilla_valores($conn, $plId) === []);
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+grupo('PAPELERA · eliminar de verdad');
+// ═══════════════════════════════════════════════════════════════════════════
+// El esquema del tenant no tiene claves foráneas, así que cuando un activo se
+// elimina nadie borra sus dependencias por nosotros: hay que nombrarlas una por
+// una. Esa lista está en core/tenants/papelera.php, y lo que se prueba acá es
+// que no se olvide de ninguna — con un activo que tiene de todo colgado y otro
+// al lado que no se tiene que tocar.
+require_once RAIZ . '/core/tenants/papelera.php';
+
+// El resolvedor de tablas. En la aplicación es tn(), que sale de la sesión;
+// acá le pega el prefijo de la base descartable.
+$tp = fn(string $n): string => $PREFIJO . $n;
+
+// ── Un activo con todo colgado ───────────────────────────────────────────────
+$conn->query("INSERT INTO `{$PREFIJO}productos` (modelo, marca, categoria, estado, archivado)
+              VALUES ('Para borrar', 'ACME', 'Informática', 'Usado', 1)");
+$borrarId = (int)$conn->insert_id;
+$conn->query("INSERT INTO `{$PREFIJO}productos` (modelo, marca, categoria, estado, archivado)
+              VALUES ('Testigo', 'ACME', 'Informática', 'Usado', 1)");
+$testigoId = (int)$conn->insert_id;
+
+so_guardar($conn, $borrarId, ['so' => 'Ubuntu Server', 'kernel' => '6.8.0-45-generic']);
+so_guardar($conn, $testigoId, ['so' => 'Windows 11 Pro']);
+
+$ssdId = componente_alta($conn, 'disco', 'Kingston A400 480GB', 'Kingston');
+$ddrId = componente_alta($conn, 'memoria', 'Kingston DDR4 8GB', 'Kingston');
+componente_asignar($conn, $borrarId, $ssdId, ['cantidad' => 1, 'capacidad_mb' => 480000]);
+componente_asignar($conn, $borrarId, $ddrId, ['cantidad' => 2, 'capacidad_mb' => 8192]);
+componente_asignar($conn, $testigoId, $ssdId, ['cantidad' => 1, 'capacidad_mb' => 480000]);
+
+$puerto = red_puerto_guardar($conn, $borrarId, 0, ['nombre' => 'eth0', 'tipo' => 'ethernet',
+                                                    'mac' => 'AA:BB:CC:DD:EE:01']);
+red_ip_guardar($conn, $puerto, ['ip' => '10.0.0.91', 'asignacion' => 'fija']);
+red_ip_guardar($conn, $puerto, ['ip' => '10.0.0.92', 'asignacion' => 'fija']);
+$puertoTestigo = red_puerto_guardar($conn, $testigoId, 0, ['nombre' => 'eth0', 'tipo' => 'ethernet',
+                                                            'mac' => 'AA:BB:CC:DD:EE:02']);
+red_ip_guardar($conn, $puertoTestigo, ['ip' => '10.0.0.93', 'asignacion' => 'fija']);
+
+relacion_crear($conn, $borrarId, $testigoId, 'conectado', 'Al mismo switch');
+relacion_crear($conn, $srvId, $borrarId, 'depende');   // y del otro lado también
+
+nota_agregar($conn, $borrarId, 'Se archivó porque se quemó la fuente.', 'bsierra');
+nota_agregar($conn, $testigoId, 'Esta nota tiene que sobrevivir.', 'bsierra');
+
+$docP = documento_guardar($conn, 0, ['nombre' => 'Remito 0001-00009', 'tipo' => 'remito',
+                                      'enlace' => 'https://drive.google.com/file/d/zzz/view']);
+documento_vincular($conn, (int)($docP['id'] ?? 0), $borrarId);
+documento_vincular($conn, (int)($docP['id'] ?? 0), $testigoId);
+
+// Un campo propio de la empresa, de los que viven en campos_valor.
+$conn->query("INSERT INTO `{$T['campos_valor']}` (producto_id, clave, valor)
+              VALUES ({$borrarId}, 'patrimonio', 'INV-0912')");
+$conn->query("INSERT INTO `{$T['campos_valor']}` (producto_id, clave, valor)
+              VALUES ({$testigoId}, 'patrimonio', 'INV-0913')");
+
+// Y una fila de historial, que NO se tiene que borrar.
+$conn->query("INSERT INTO `{$T['producto_movimientos']}` (producto_id, accion, descripcion, realizado_por)
+              VALUES ({$borrarId}, 'Archivado', 'Se quemó la fuente', 'bsierra')");
+
+// ── Antes de borrar: que el escenario sea el que creemos ─────────────────────
+$cuantas = function (string $tabla, string $col, int $id) use ($conn, $PREFIJO): int {
+    return (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}{$tabla}` WHERE `{$col}` = {$id}");
+};
+/* Una por una, para que si el escenario se arma mal el error diga cuál faltó y
+   no «algo». `activo_infocom` no está en la lista: esa fila la siembra la
+   migración para los activos que ya existían, y este se creó después. */
+foreach ([['activo_so', 1], ['activo_componente', 2], ['puertos_red', 1], ['notas', 1],
+          ['documento_activo', 1], ['campos_valor', 1]] as [$__t, $__n]) {
+    chequear("El activo a borrar tiene su fila en «{$__t}»",
+        $cuantas($__t, 'producto_id', $borrarId) === $__n,
+        'hay ' . $cuantas($__t, 'producto_id', $borrarId) . ", se esperaban {$__n}");
+}
+chequear('Y dos direcciones IP en su puerto',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}direcciones_ip` WHERE puerto_id = {$puerto}") === 2);
+chequear('Y relaciones de los dos lados',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}activo_relacion`
+                      WHERE origen_id = {$borrarId} OR destino_id = {$borrarId}") === 2);
+
+// ── La cascada ───────────────────────────────────────────────────────────────
+$filas = papelera_borrar_dependencias($conn, $borrarId, $tp);
+chequear('La cascada informa cuántas filas se llevó', $filas >= 10, "se llevó {$filas}");
+
+foreach (PAPELERA_TABLAS_DEPENDIENTES as $__t) {
+    chequear("No queda nada en «{$__t}»", $cuantas($__t, 'producto_id', $borrarId) === 0);
+}
+chequear('No quedan direcciones IP huérfanas',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}direcciones_ip` WHERE puerto_id = {$puerto}") === 0);
+chequear('No quedan relaciones de ningún lado',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}activo_relacion`
+                      WHERE origen_id = {$borrarId} OR destino_id = {$borrarId}") === 0);
+
+// ── Lo que NO se tiene que haber tocado ──────────────────────────────────────
+chequear('El historial del activo sigue entero',
+    $cuantas('producto_movimientos', 'producto_id', $borrarId) === 1,
+    'es el único rastro de que el equipo existió');
+chequear('El activo testigo quedó intacto',
+    $cuantas('activo_so', 'producto_id', $testigoId) === 1
+    && $cuantas('activo_componente', 'producto_id', $testigoId) === 1
+    && $cuantas('puertos_red', 'producto_id', $testigoId) === 1
+    && $cuantas('notas', 'producto_id', $testigoId) === 1
+    && $cuantas('documento_activo', 'producto_id', $testigoId) === 1
+    && $cuantas('campos_valor', 'producto_id', $testigoId) === 1);
+chequear('Y su dirección IP también',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}direcciones_ip` WHERE puerto_id = {$puertoTestigo}") === 1);
+chequear('El documento que compartían sigue existiendo',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}documentos` WHERE id = " . (int)($docP['id'] ?? 0)) === 1,
+    'el vínculo se borra, el documento no: lo usa otro activo');
+chequear('Las relaciones entre otros activos siguen ahí',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$PREFIJO}activo_relacion`
+                      WHERE origen_id = {$srvId} OR destino_id = {$srvId}") >= 1);
+
+// ── Correrla dos veces no tiene que fallar ───────────────────────────────────
+$err3 = '';
+try { papelera_borrar_dependencias($conn, $borrarId, $tp); }
+catch (Throwable $e) { $err3 = $e->getMessage(); }
+chequear('Repetir la cascada no da error', $err3 === '', $err3);
+
+// Y el activo, que la cascada NO borra: eso lo hace el endpoint.
+chequear('La cascada no borra el activo en sí',
+    (int)una($conn, "SELECT COUNT(*) FROM `{$T['productos']}` WHERE id = {$borrarId}") === 1,
+    'borrar la fila del activo es decisión del endpoint, no de la cascada');
+
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('FASES 4 y 5 · idempotencia');
 // ═══════════════════════════════════════════════════════════════════════════

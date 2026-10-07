@@ -86,7 +86,7 @@ require __DIR__ . '/../includes/layout/head.php';
   <main class="ih-app__main ih-anim-fade">
 
     <?php if (!$ssoStatus['google'] && !$ssoStatus['microsoft']): ?>
-      <div class="ih-alert ih-alert--warning" style="margin-bottom:20px">
+      <div class="ih-alert ih-alert--warning">
         <i class="bi bi-shield-exclamation" style="font-size:22px;flex-shrink:0"></i>
         <div>
           <div class="ih-alert__title">SSO no configurado</div>

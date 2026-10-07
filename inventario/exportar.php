@@ -119,7 +119,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <!-- Export activos vigentes -->
       <div class="ih-card">
         <div class="ih-card__body" style="text-align:center;padding:32px 24px;">
-          <div style="width:64px;height:64px;background:#f0faf0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <div style="width:64px;height:64px;background:var(--accent-050);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
             <i class="bi bi-file-earmark-spreadsheet" style="font-size:28px;color:var(--ih-green);"></i>
           </div>
           <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--ih-gray-900);">Activos en operación</h3>
@@ -140,8 +140,8 @@ require __DIR__ . '/../includes/layout/head.php';
       <!-- Export completo (activos + archivados) -->
       <div class="ih-card">
         <div class="ih-card__body" style="text-align:center;padding:32px 24px;">
-          <div style="width:64px;height:64px;background:#fff8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="bi bi-file-earmark-spreadsheet-fill" style="font-size:28px;color:var(--ih-warn,#d97706);"></i>
+          <div style="width:64px;height:64px;background:var(--warn-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="bi bi-file-earmark-spreadsheet-fill" style="font-size:28px;color:var(--ih-warn,var(--warn));"></i>
           </div>
           <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--ih-gray-900);">Export completo</h3>
           <p style="color:var(--ih-gray-500);font-size:14px;margin:0 0 20px;">

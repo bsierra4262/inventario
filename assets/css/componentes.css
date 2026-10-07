@@ -24,6 +24,11 @@
    funciona igual.
    ============================================================================ */
 
+/* El navegador ya esconde lo que tiene `hidden`, pero cualquier regla propia
+   que declare `display` le gana sin querer. Esta línea evita ese accidente:
+   varias pantallas muestran y esconden paneles con ese atributo. */
+[hidden] { display: none !important; }
+
 /* ---------------------------------------------------------------------------
    1. Base común de los desplegables (select y fecha comparten superficie)
    --------------------------------------------------------------------------- */
@@ -234,7 +239,6 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
   opacity: 1;   /* el reposo declarado, igual que en .ihc-pop */
   animation: ihc-modal-in .14s ease-out;
 }
-.ihc-modal__detalle[hidden] { display: none; }
 @keyframes ihc-modal-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .ihc-modal__caja { animation: none; } }
 .ihc-modal__cuerpo { display: flex; gap: 1rem; padding: 1.5rem 1.5rem 1rem; }
@@ -288,10 +292,9 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
   margin: .45rem 0 0; font-size: var(--ih-text-sm, 12.5px);
   color: var(--ih-danger, #a12a1e);
 }
-.ihc-modal__error[hidden] { display: none; }
 
 /* ---------------------------------------------------------------------------
-   4 ter. Campo de catálogo (un desplegable con un botón para agregar valores)
+   4 bis. Campo de catálogo (un desplegable con un botón para agregar valores)
    ---------------------------------------------------------------------------
    Vivía en un <style> dentro de includes/campo_catalogo.php: se reimprimía en
    cada página que lo usaba y el navegador no lo podía cachear. Además el botón
@@ -330,7 +333,7 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
 .cat-aviso { margin-top: 4px; font-size: var(--ih-text-xs, 11px); }
 
 /* ---------------------------------------------------------------------------
-   4 bis. Modales con contenido (<dialog class="ih-modal">)
+   4 ter. Modales con contenido (<dialog class="ih-modal">)
    ---------------------------------------------------------------------------
    Distinto del de confirmacion de arriba: estos llevan un formulario adentro y
    los escribe el PHP. Vivian solo en app.css, asi que en el panel salian sin
@@ -587,8 +590,17 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-col-span-2 { grid-column: span 2; }
 @media (max-width: 860px) { .ih-col-span-2 { grid-column: auto; } }
 
+/* Texto que sólo lee un lector de pantalla.
+   Un desplegable con el valor «20 por página» se entiende mirándolo, pero quien
+   lo escucha oye «20 por página» y nada más: no sabe que es un control ni de
+   qué. La etiqueta existe, no se ve, y resuelve eso. */
+.ih-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
 /* ---------------------------------------------------------------------------
-   7. Sub-navegación, filtros y paginador
+   6. Sub-navegación, filtros y paginador
    ---------------------------------------------------------------------------
    Estas tres piezas estaban escritas de nuevo dentro de cada pantalla que las
    necesitaba, con nombres propios: `.rp-tabnav` y `.rp-tab` en reportes,
@@ -724,8 +736,203 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   .ih-dato__valor { text-align: left; }
 }
 
+   7. Barra de título de una sección
+   ---------------------------------------------------------------------------
+   Un título a la izquierda y los botones a la derecha. Estaba escrito con
+   `style="display:flex;..."` en cada pantalla que lo necesitaba, con valores
+   parecidos pero nunca iguales.
+
+   Lo importante es el salto a pantalla angosta: los botones pasan abajo y
+   ocupan el ancho completo, en lugar de apretarse en una fila donde no entran.
+   --------------------------------------------------------------------------- */
+.ih-barra {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: .75rem; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.ih-barra__titulo { margin: 0; font-size: var(--ih-text-lg, 16px); font-weight: 700; color: var(--ih-gray-800, #2b2836); }
+.ih-barra__ayuda { margin: .25rem 0 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d); }
+.ih-barra__acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .ih-barra__acciones { width: 100%; }
+  .ih-barra__acciones > * { flex: 1 1 auto; justify-content: center; }
+}
+
+/* Una tarjeta con un formulario corto adentro. Sin esto se estira a todo el
+   ancho de la pantalla y queda un campo de texto de 1100 px, que no se lee
+   mejor por ser más largo: se lee peor, porque el ojo pierde el renglón. */
+.ih-card--angosta { max-width: 34rem; }
+
 /* ---------------------------------------------------------------------------
-   6. Nota sobre la mejora progresiva
+   7 bis. Aviso con una acción al lado
+   ---------------------------------------------------------------------------
+   Un `.ih-alert` que además de explicar algo ofrece el botón que lo resuelve
+   —«la columna está mal, repararla»— en lugar de mandar a la persona a buscar
+   dónde se arregla.
+
+   Son 17 pantallas y cada una lo escribía con su propio `style="display:flex"`,
+   que encima pisaba el `align-items:flex-start` del aviso. En pantalla angosta
+   el botón queda abajo y a lo ancho: apretado al lado del texto no se lee.
+   --------------------------------------------------------------------------- */
+.ih-alert--accion { align-items: center; flex-wrap: wrap; }
+.ih-alert--accion .ih-alert__cuerpo { flex: 1 1 17rem; min-width: 0; }
+.ih-alert--accion .ih-alert__accion { flex: none; margin: 0; }
+@media (max-width: 560px) {
+  .ih-alert--accion .ih-alert__accion { width: 100%; }
+  .ih-alert--accion .ih-alert__accion .ih-btn { width: 100%; justify-content: center; }
+}
+
+/* ---------------------------------------------------------------------------
+   7 ter. Buscador y fila de acciones
+   ---------------------------------------------------------------------------
+   El buscador del encabezado de una tarjeta. Cada pantalla lo escribía con su
+   propio ancho mínimo a mano —240 px en la papelera, 200 en el listado— y la
+   lupa del listado estaba colocada con seis declaraciones sueltas en el HTML.
+
+   El ancho no es un número elegido a ojo: es un `flex-basis` del largo de un
+   texto de verdad, para que el campo crezca con la tarjeta y en pantalla
+   angosta pase a ocupar la fila completa en vez de encogerse hasta no leerse.
+
+   El campo va con `type="search"`: en el teléfono eso cambia la tecla Enter
+   por una de «buscar», que es la que la persona espera.
+   --------------------------------------------------------------------------- */
+.ih-buscador {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  margin: 0;
+}
+.ih-buscador .ih-input,
+.ih-buscador .ih-buscador__campo { flex: 1 1 16rem; min-width: 0; }
+
+/* La variante con la lupa adentro del campo. */
+.ih-buscador__campo { position: relative; display: flex; }
+.ih-buscador__campo .ih-input { flex: 1 1 auto; min-width: 0; padding-left: 2.15rem; }
+.ih-buscador__lupa {
+  position: absolute; left: .7rem; top: 50%; transform: translateY(-50%);
+  color: var(--ih-gray-400, #a7a3b4);
+  font-size: 14px; line-height: 1; pointer-events: none;
+}
+
+/* Chrome y Safari dibujan su propia cruz para vaciar el campo: gris del
+   sistema y de un tamaño que no es el de ningún otro icono de la página. Se
+   saca porque al lado ya hay un botón «Limpiar» que además vuelve al listado
+   completo, que es lo que la persona quiere cuando borra la búsqueda. */
+.ih-buscador input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; display: none;
+}
+
+@media (max-width: 560px) {
+  .ih-buscador { width: 100%; }
+  .ih-buscador .ih-input,
+  .ih-buscador .ih-buscador__campo { flex: 1 1 100%; }
+}
+
+/* El cuerpo de una tarjeta que sólo contiene una tabla. La tabla ya trae su
+   propio relleno en cada celda; sumarle el de la tarjeta la deja flotando
+   adentro, con el borde lejos y el encabezado desalineado del título. */
+.ih-card__body--tabla { padding: 0; }
+
+/* ── La fila de botones de una fila de tabla ─────────────────────────────── */
+.ih-acciones { display: flex; align-items: center; gap: .4rem; }
+/* La columna se encoge a lo que ocupan sus botones: en una tabla, `width:1%`
+   es la forma de decir «lo mínimo», porque 0 lo ignora. Lo que sobra se lo
+   queda la columna del nombre, que es la que lo necesita. */
+.ih-table__acciones { width: 1%; white-space: nowrap; }
+
+/* ---------------------------------------------------------------------------
+   8. Pastillas de selección y lista de permisos
+   ---------------------------------------------------------------------------
+   Las dos estaban escritas de nuevo en inventario/roles.php (43 líneas) y en
+   dashboard/superadmin_roles.php (12), y con valores distintos: el mismo
+   selector de rol se veía de una manera en un portal y de otra en el otro.
+
+   Una pastilla no es una pestaña: la pestaña dice dónde estás parado dentro de
+   una pantalla y navega; la pastilla elige entre cosas del mismo tipo —un rol,
+   un filtro— sin salir de donde estás. Por eso tienen forma distinta y por eso
+   son dos componentes y no uno con un modificador.
+   --------------------------------------------------------------------------- */
+
+/* ── Pastillas ───────────────────────────────────────────────────────────── */
+.ih-pills { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+.ih-pill {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .55rem 1rem;
+  font-family: inherit;
+  font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
+  color: var(--ih-gray-700, #434050);
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-md, 10px);
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ih-pill:hover {
+  text-decoration: none;
+  border-color: var(--ih-purple-200, #d0bfea);
+  background: var(--ih-gray-50, #faf9fc);
+}
+.ih-pill:focus-visible {
+  outline: none;
+  border-color: var(--ih-purple, #663399);
+  box-shadow: 0 0 0 3px var(--ih-purple-50, #f2ecf9);
+}
+.ih-pill.is-active {
+  background: var(--ih-purple, #663399);
+  color: #fff;
+  border-color: var(--ih-purple, #663399);
+}
+/* Una pastilla de algo propio de esta empresa, no del sistema. */
+.ih-pill--propia { border-color: var(--ih-purple-200, #d0bfea); }
+/* La de «agregar»: se distingue del resto sin gritar. */
+.ih-pill--nueva { border-style: dashed; color: var(--ih-purple, #663399); }
+.ih-pill--nueva:hover { background: var(--ih-purple-50, #f2ecf9); }
+.ih-pill .ih-badge { font-size: 10px; padding: 1px 6px; }
+.ih-pill.is-active .ih-badge { background: rgba(255, 255, 255, .22); color: #fff; }
+
+/* ── Lista de permisos ───────────────────────────────────────────────────── */
+.ih-permisos { display: grid; gap: .9rem; }
+.ih-permisos__grupo {
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-md, 10px);
+  overflow: hidden;
+}
+.ih-permisos__titulo {
+  padding: .75rem 1rem;
+  background: var(--ih-gray-50, #faf9fc);
+  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  font-size: var(--ih-text-xs, 11px); font-weight: 800;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ih-gray-600, #5b566a);
+}
+.ih-permisos__fila {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .65rem 1rem;
+  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+}
+.ih-permisos__fila:last-child { border-bottom: 0; }
+.ih-permisos__fila:hover { background: var(--ih-gray-50, #faf9fc); }
+.ih-permisos__fila label {
+  display: flex; align-items: center; gap: .65rem;
+  flex: 1 1 auto; min-width: 0;
+  cursor: pointer; user-select: none;
+  font-size: var(--ih-text-base, 14px);
+}
+.ih-permisos__fila input[type="checkbox"] { flex: none; width: 18px; height: 18px; cursor: pointer; }
+/* El nombre técnico del permiso: le sirve a quien lo busca en el código, pero
+   no es lo que la persona está leyendo. Por eso va chico, gris y al final. */
+.ih-permisos__clave {
+  flex: none; margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--ih-text-xs, 11px);
+  color: var(--ih-gray-400, #a7a3b4);
+}
+@media (max-width: 560px) {
+  .ih-permisos__fila { flex-wrap: wrap; }
+  .ih-permisos__clave { margin-left: 2.4rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   9. Nota de cierre: la mejora progresiva
    --------------------------------------------------------------------------- */
 /* Las clases que ocultan el control nativo (`ihc-select__nativo`,
    `ihc-archivo__nativo`) las agrega el propio JavaScript. Si el script no

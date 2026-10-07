@@ -434,7 +434,7 @@ require __DIR__ . '/../includes/layout/head.php';
         <!-- ── Sin SSO o ?local=1: formulario usuario/contraseña ── -->
 
         <?php if ($ssoConfigured): ?>
-          <div class="ih-alert ih-alert--info" style="margin-bottom:16px;">
+          <div class="ih-alert ih-alert--info">
             <i class="bi bi-info-circle-fill"></i>
             <div>Acceso alternativo — normalmente usá el botón SSO de tu empresa.</div>
           </div>
