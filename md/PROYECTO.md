@@ -89,8 +89,9 @@ y cada portal redirige al otro si detecta la sesión equivocada.
 ### Estructura de directorios
 
 ```
-assets/css/app.css          sistema de diseño del portal tenant
-assets/css/intellihelp.css  sistema de diseño del panel superadmin
+assets/css/componentes.css  el sistema de diseño: lo cargan los dos portales
+assets/css/app.css          la navegación del portal tenant
+assets/css/intellihelp.css  la navegación del panel superadmin
 auth/                       login local, SSO Google/Microsoft, logout, cambio de contraseña
 backend/                    endpoints: alta, edición, archivado, restaurar, import/export, CSRF
 bin/                        consola: migrar, resets, alta de superadmin
@@ -722,8 +723,9 @@ las tres aplicaciones se vean como una sola familia.
   navegador a bajar y parsear la hoja entera antes de descubrir la fuente.
 - Los assets se versionan con la fecha de modificación del CSS, para que un cambio no lo tape
   la caché del navegador ni la del CDN.
-- **El panel superadmin conserva su diseño** (`assets/css/intellihelp.css`). `head.php` elige
-  la hoja según el portal.
+- **Los dos portales comparten el sistema de diseño** (`assets/css/componentes.css`, que
+  carga última). Cada hoja de portal guarda sólo su navegación: pestañas horizontales en el
+  cliente, barra lateral violeta en el panel. `head.php` elige cuál de las dos cargar.
 
 Las clases del markup siguen llamándose `ih-*`: el cambio de piel no obligó a reescribir
 ninguna pantalla.
@@ -731,10 +733,17 @@ ninguna pantalla.
 ### Tres hojas, y ninguna regla escrita en una pantalla
 
 ```
-assets/css/app.css          los tokens y los componentes del portal del cliente
-assets/css/intellihelp.css  los tokens y los componentes del panel de superadmin
-assets/css/componentes.css  lo que usan LAS DOS, cargada por las dos
+assets/css/componentes.css  EL sistema de diseño: tokens y componentes; la cargan las dos
+assets/css/app.css          sólo la navegación del portal del cliente (pestañas)
+assets/css/intellihelp.css  sólo la navegación del panel superadmin (barra lateral)
 ```
+
+Los componentes —botones, campos, tarjetas, tablas, insignias, cifras, avisos, estados
+vacíos— estaban escritos **dos veces**, una por hoja de portal, con las mismas clases y
+valores distintos: sesenta y cinco clases con dos caras. La etiqueta de un campo medía 13 px
+en minúscula en el cliente y 11 px en MAYÚSCULAS en el panel; el botón «ghost» era blanco con
+borde en uno y transparente en el otro, donde parecía texto suelto. Ahora viven una sola vez
+en `componentes.css`, que carga **última** y por eso manda.
 
 Ninguna pantalla del portal del cliente define estilos propios: ni un bloque `<style>` ni un
 atributo `style`. Las dos excepciones están permitidas explícitamente y una prueba las nombra:
@@ -831,7 +840,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 462 chequeos — análisis estático del árbol
+php test/run_tests.php            # 461 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

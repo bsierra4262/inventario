@@ -38,9 +38,12 @@ if (!function_exists('ayudas_campos_sin_ejemplo')) {
  * la ayuda puede estar en un `.ih-field__hint` que viene después del input, no
  * sólo en su propio atributo.
  */
-function ayudas_campos_sin_ejemplo(): array {
+/* `dashboard` entró recién ahora: el panel superadmin nunca se miraba. Es el
+   mismo agujero que tenían el auditor de colores y el de estilos de pantalla —
+   cuatro carpetas de cinco— y por eso daban verde sin cuidar nada ahí. */
+function ayudas_campos_sin_ejemplo(array $dirs = ['inventario', 'backend', 'auth', 'includes', 'dashboard']): array {
     $out = [];
-    foreach (['inventario', 'backend', 'auth', 'includes'] as $dir) {
+    foreach ($dirs as $dir) {
         foreach (glob(RAIZ . '/' . $dir . '/*.php') ?: [] as $f) {
             $rel = $dir . '/' . basename($f);
             $src = (string)file_get_contents($f);

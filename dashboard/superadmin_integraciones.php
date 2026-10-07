@@ -171,7 +171,10 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card ih-mb-5">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title"><?= cloud_icon_svg('google', 22) ?> Google Workspace SSO</h2>
+            <?php /* El logotipo de GOOGLE y no el de Drive: acá se configura con qué
+         cuenta se entra, no dónde se guardan los archivos. Son dos marcas
+         distintas y la pantalla de al lado usa la otra. */ ?>
+            <h2 class="ih-card__title"><?= marca_svg('google', 20) ?> Google Workspace SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Google</div>
           </div>
           <?php if ($current['sa_google_client_id'] !== ''): ?>
@@ -219,7 +222,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card ih-mb-5">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title"><?= cloud_icon_svg('microsoft', 22) ?> Microsoft 365 / Azure AD SSO</h2>
+            <h2 class="ih-card__title"><?= marca_svg('microsoft', 20) ?> Microsoft 365 / Azure AD SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Microsoft</div>
           </div>
           <?php if ($current['sa_ms_client_id'] !== ''): ?>

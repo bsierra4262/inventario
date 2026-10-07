@@ -201,7 +201,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-pencil-square"></i> <?= htmlspecialchars($company['nombre']) ?></h2>
-          <div class="ih-card__subtitle">Modificar datos generales, SSO y conexión DB</div>
+          <div class="ih-card__subtitle">Datos generales, acceso con Google o Microsoft, y a qué base se conecta</div>
         </div>
       </div>
       <div class="ih-card__body">
@@ -214,19 +214,19 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">Nombre <span class="req">*</span></label>
-                <input class="ih-input" name="nombre" value="<?= htmlspecialchars($company['nombre']) ?>" required>
+                <input class="ih-input" name="nombre" placeholder="Ej.: Ferretería del Norte" value="<?= htmlspecialchars($company['nombre']) ?>" required>
               </div>
             </div>
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">Razón social</label>
-                <input class="ih-input" name="razon_social" value="<?= htmlspecialchars($company['razon_social'] ?? '') ?>">
+                <input class="ih-input" name="razon_social" placeholder="Ej.: Ferretería del Norte S.R.L." value="<?= htmlspecialchars($company['razon_social'] ?? '') ?>">
               </div>
             </div>
             <div class="ih-col-4">
               <div class="ih-field">
                 <label class="ih-field__label">CUIT</label>
-                <input class="ih-input" name="cuit" value="<?= htmlspecialchars($company['cuit'] ?? '') ?>">
+                <input class="ih-input" name="cuit" placeholder="Ej.: 30-71140975-7" value="<?= htmlspecialchars($company['cuit'] ?? '') ?>">
               </div>
             </div>
             <div class="ih-col-4">
@@ -263,7 +263,7 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
             <div class="ih-col-6">
               <div class="ih-field">
-                <label class="ih-field__label">URL completa de login</label>
+                <label class="ih-field__label">Dirección de acceso</label>
                 <input class="ih-input" name="login_url" value="<?= htmlspecialchars($company['login_url'] ?? '') ?>" placeholder="https://intellihelp.tech/auth/login.php?company=cliente">
               </div>
             </div>
@@ -276,7 +276,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-col-6">
                 <div class="ih-field">
                   <label class="ih-field__label">Client ID</label>
-                  <input class="ih-input" name="client_id" value="<?= htmlspecialchars($googleCC['client_id'] ?? '') ?>">
+                  <input class="ih-input" name="client_id" placeholder="xxxxx.apps.googleusercontent.com" value="<?= htmlspecialchars($googleCC['client_id'] ?? '') ?>">
                 </div>
               </div>
               <div class="ih-col-6">
@@ -324,16 +324,16 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-section-title">Base de datos de la empresa</div>
             <div class="ih-grid">
               <div class="ih-col-3">
-                <div class="ih-field"><label class="ih-field__label">Host</label>
-                  <input class="ih-input" name="db_host" value="<?= htmlspecialchars($company['db_host'] ?? 'localhost') ?>"></div>
+                <div class="ih-field"><label class="ih-field__label">Servidor</label>
+                  <input class="ih-input" name="db_host" placeholder="Ej.: localhost" value="<?= htmlspecialchars($company['db_host'] ?? 'localhost') ?>"></div>
               </div>
               <div class="ih-col-3">
-                <div class="ih-field"><label class="ih-field__label">Nombre DB</label>
-                  <input class="ih-input" name="db_name" value="<?= htmlspecialchars($company['db_name'] ?? '') ?>"></div>
+                <div class="ih-field"><label class="ih-field__label">Nombre de la base</label>
+                  <input class="ih-input" name="db_name" placeholder="Ej.: u566451014_cliente" value="<?= htmlspecialchars($company['db_name'] ?? '') ?>"></div>
               </div>
               <div class="ih-col-3">
                 <div class="ih-field"><label class="ih-field__label">Usuario</label>
-                  <input class="ih-input" name="db_user" value="<?= htmlspecialchars($company['db_user'] ?? '') ?>"></div>
+                  <input class="ih-input" name="db_user" placeholder="Ej.: u566451014_user" value="<?= htmlspecialchars($company['db_user'] ?? '') ?>"></div>
               </div>
               <div class="ih-col-3">
                 <div class="ih-field"><label class="ih-field__label">Contraseña</label>

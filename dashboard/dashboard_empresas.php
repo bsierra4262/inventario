@@ -173,19 +173,19 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">Nombre <span class="req">*</span></label>
-                <input class="ih-input" name="nombre" value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>" required>
+                <input class="ih-input" name="nombre" placeholder="Ej.: Ferretería del Norte" value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>" required>
               </div>
             </div>
             <div class="ih-col-6">
               <div class="ih-field">
                 <label class="ih-field__label">Razón social</label>
-                <input class="ih-input" name="razon_social" value="<?= htmlspecialchars($_POST['razon_social'] ?? '') ?>">
+                <input class="ih-input" name="razon_social" placeholder="Ej.: Ferretería del Norte S.R.L." value="<?= htmlspecialchars($_POST['razon_social'] ?? '') ?>">
               </div>
             </div>
             <div class="ih-col-4">
               <div class="ih-field">
                 <label class="ih-field__label">CUIT</label>
-                <input class="ih-input" name="cuit" placeholder="Opcional" value="<?= htmlspecialchars($_POST['cuit'] ?? '') ?>">
+                <input class="ih-input" name="cuit" placeholder="Ej.: 30-71140975-7" value="<?= htmlspecialchars($_POST['cuit'] ?? '') ?>">
               </div>
             </div>
             <div class="ih-col-4">
@@ -266,25 +266,25 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-grid">
               <div class="ih-col-3">
                 <div class="ih-field">
-                  <label class="ih-field__label">Host</label>
-                  <input class="ih-input" name="db_host" value="<?= htmlspecialchars($_POST['db_host'] ?? 'localhost') ?>">
+                  <label class="ih-field__label">Servidor</label>
+                  <input class="ih-input" name="db_host" placeholder="Ej.: localhost" value="<?= htmlspecialchars($_POST['db_host'] ?? 'localhost') ?>">
                 </div>
               </div>
               <div class="ih-col-3">
                 <div class="ih-field">
-                  <label class="ih-field__label">Nombre DB <span class="req">*</span></label>
+                  <label class="ih-field__label">Nombre de la base <span class="req">*</span></label>
                   <input class="ih-input" name="db_name" placeholder="u566451014_cliente" value="<?= htmlspecialchars($_POST['db_name'] ?? '') ?>">
                 </div>
               </div>
               <div class="ih-col-3">
                 <div class="ih-field">
-                  <label class="ih-field__label">Usuario DB <span class="req">*</span></label>
+                  <label class="ih-field__label">Usuario de la base <span class="req">*</span></label>
                   <input class="ih-input" name="db_user" placeholder="u566451014_user" value="<?= htmlspecialchars($_POST['db_user'] ?? '') ?>">
                 </div>
               </div>
               <div class="ih-col-3">
                 <div class="ih-field">
-                  <label class="ih-field__label">Contraseña DB</label>
+                  <label class="ih-field__label">Contraseña de la base</label>
                   <input class="ih-input" name="db_pass" type="password">
                 </div>
               </div>
@@ -297,7 +297,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <div class="ih-grid">
             <div class="ih-col-6">
               <div class="ih-field">
-                <label class="ih-field__label">Subdominio del cliente</label>
+                <label class="ih-field__label">Subdominio</label>
                 <div class="ih-input-group">
                   <input class="ih-input" name="subdomain" value="<?= htmlspecialchars($_POST['subdomain'] ?? '') ?>" placeholder="cliente">
                   <span class="ih-input-group__addon">.intellihelp.tech</span>
@@ -307,7 +307,7 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
             <div class="ih-col-6">
               <div class="ih-field">
-                <label class="ih-field__label">URL completa de login</label>
+                <label class="ih-field__label">Dirección de acceso</label>
                 <input class="ih-input" name="login_url" value="<?= htmlspecialchars($_POST['login_url'] ?? '') ?>" placeholder="https://desarrollo.intellihelp.tech/auth/login.php?company=cliente">
                 <div class="ih-field__hint">Si lo dejás vacío, se autogenera con el dominio actual + <code>/auth/login.php?company=[subdominio]</code>.</div>
               </div>
@@ -319,7 +319,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <div class="ih-grid">
             <div class="ih-col-6">
               <div class="ih-field">
-                <label class="ih-field__label">Email del admin <span class="req">*</span></label>
+                <label class="ih-field__label">Correo del administrador <span class="req">*</span></label>
                 <input class="ih-input" name="admin_email" type="email" placeholder="admin@empresa.com" value="<?= htmlspecialchars($_POST['admin_email'] ?? '') ?>" required>
                 <div class="ih-field__hint">Se crea el usuario "admin" con este email.</div>
               </div>

@@ -11,6 +11,32 @@ cortes que se veían mal en los dos.
 
 ### Corregido
 
+- **Los dos portales tenían dos sistemas de diseño con los mismos nombres.**
+  `app.css` e `intellihelp.css` definían los MISMOS componentes —botones,
+  campos, tarjetas, tablas, insignias, cifras, avisos, estados vacíos— con las
+  mismas clases y valores distintos: **sesenta y cinco clases con dos caras**.
+  La etiqueta de un campo medía 13 px en minúscula en el cliente y 11 px en
+  MAYÚSCULAS en el panel; el botón «ghost» era blanco con borde en uno y
+  transparente en el otro, donde parecía texto suelto y no algo que se pudiera
+  tocar; la insignia tenía dos radios y dos pesos. Y como `componentes.css` la
+  cargan los dos, un componente escrito una vez se dibujaba de dos formas según
+  dónde cayera.
+
+  Ahora viven una sola vez en `componentes.css`, que carga última y por eso
+  manda. Lo que queda en cada hoja de portal es su **navegación** —barra lateral
+  violeta en el panel, pestañas horizontales en el cliente—, que sí es distinta
+  a propósito.
+
+  Dos cosas que costaron encontrar: puesto al final de la hoja, el
+  `.ih-card__body` base le ganaba por orden al `.ih-card__body--tabla
+  { padding: 0 }` y la tabla de un listado se metía 37 px adentro del relleno
+  (va primero: son reglas base). Y mover una regla no borra lo que la vieja
+  declaraba de más — el `text-transform: uppercase` del panel sobrevivió a la
+  mudanza porque la versión compartida no declara esa propiedad.
+
+  El portal del cliente no se movió un píxel: alto de fila y ancho de tabla,
+  medidos antes y después, dan igual.
+
 - **El panel corría con otra paleta.** Las dos hojas declaran los mismos
   nombres —`--ih-gray-500`, `--ih-success`, `--ih-radius-md`— y los comparte
   `componentes.css`, que cargan los dos portales: **un componente escrito una
@@ -60,6 +86,28 @@ cortes que se veían mal en los dos.
   funciona, y la acción ya queda anotada por su cuenta. «Actividad reciente»
   mostraba tres de cada cinco renglones hablando de tokens. Los **fallos** sí se
   registran: un token que no valida es lo único que hay para mirar.
+
+- **El panel hablaba en otro idioma.** «Tenant» es el nombre interno de una
+  empresa cliente: está bien en el código y mal en la pantalla, donde todas las
+  demás dicen «empresa». Aparecía en el subtítulo del alta («aprovisionar el
+  tenant»), en los títulos de sección, en los avisos de confirmación y en los
+  estados vacíos. Lo mismo «override», «Keys:», «Login URL», «DB Host». Se
+  quedan «Client ID» y «Tenant ID (Directory ID)»: son los nombres que aparecen
+  en la consola de Google y de Microsoft, y traducirlos obligaría a adivinar
+  cuál es cuál al copiarlos.
+
+- **`<td class="ih-text-center" class="ih-table__nowrap">`** — el atributo dos
+  veces, en dos pantallas. El navegador se queda con el primero y descarta el
+  resto sin decir nada, así que la segunda clase no existía. Y los botones de
+  acción eran un icono solo: ni globito para el mouse ni texto para el lector de
+  pantalla.
+
+- **Once campos del panel sin un ejemplo que guíe**, y un «2026-10-06 21:00:24»
+  pelado donde la pregunta es «¿entró hoy?».
+
+- **Los logos de la pantalla de integraciones eran los de almacenamiento**
+  —Drive y OneDrive— donde va la identidad: ahí se configura con qué cuenta se
+  entra, no dónde se guardan los archivos.
 
 - **El KPI «Inactivas» estaba siempre en rojo**, también diciendo cero. Mismo
   criterio que el tablero del cliente: el color sigue al número.
@@ -354,6 +402,17 @@ que es lo que usa Versión para esconder lo que no es del sistema elegido.
   la pregunta más común sobre un activo y vivía a cuatro pantallas de distancia.
 
 ### Agregado en los auditores
+
+Los auditores miraban **cinco de las seis carpetas**: ni `test/colores.php`, ni
+el de estilos de pantalla, ni `test/ayudas.php` incluían `dashboard/`. Por eso
+el panel pudo juntar veinte colores fuera de paleta, 137 atributos `style=` y
+once campos sin ejemplo sin que nada avisara. Entran los tres.
+
+Y `test/diseno/marcado.js` aprendió a ver **atributos repetidos**. Lo primero
+que encontró fueron diecinueve que había dejado el propio reemplazo de `style=`
+por `class=` en elementos que ya tenían clase. Recorre salteando el valor de
+cada atributo: un `onclick` puede traer `class=` adentro de su texto, y contarlo
+sería inventar un error donde no hay ninguno.
 
 `test/diseno/marcado.js` — revisa que el HTML que llega al navegador esté bien
 cerrado. No es prolijidad: cuando una etiqueta se cierra con la que no es, o

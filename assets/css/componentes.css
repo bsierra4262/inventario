@@ -1461,7 +1461,14 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
   cursor: pointer;
   color: var(--ih-purple, #663399);
   font-weight: 600;
+  /* Sin el triangulito del navegador: el bloque ya trae su propia flecha, y
+     con los dos se ven dos indicadores para una sola cosa. */
+  list-style: none;
 }
+.ih-resumen-abrible::-webkit-details-marker { display: none; }
+/* La flecha propia gira al abrir, que es lo que dice si esta abierto o cerrado. */
+.ih-resumen-abrible > .bi { transition: transform .15s; }
+details[open] > .ih-resumen-abrible > .bi { transform: rotate(180deg); }
 
 /* Una tarjeta cuyo contenido no se puede deshacer. El borde de color es lo
    único que la distingue antes de leerla. */
