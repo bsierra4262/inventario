@@ -541,6 +541,29 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-hub__item:hover .ih-hub__icono {
   background: var(--ih-purple, #663399); color: #fff;
 }
+/* La misma tarjeta, pero como <button> dentro de un formulario: elegir la
+   empresa con la que se va a entrar es enviar algo, no navegar. Un <button> no
+   hereda la tipografía ni la alineación del texto, así que sin esto salía en
+   Arial y centrado. */
+button.ih-hub__item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Una lista larga que no empuja la tarjeta hasta abajo de la pantalla. */
+.ih-hub--scroll {
+  max-height: 22rem;
+  overflow-y: auto;
+  /* El respiro es para que el foco del teclado no quede pegado al borde del
+     recorte cuando se recorre la lista con el tabulador. */
+  padding: 2px;
+  margin: -2px;
+}
+/* Las iniciales de una empresa donde va el icono: el nombre no tiene un icono
+   propio, pero dos letras alcanzan para distinguir una fila de la otra. */
+.ih-hub__icono--iniciales { font-size: 15px; font-weight: 700; letter-spacing: .02em; }
+
 .ih-hub__texto { flex: 1 1 auto; min-width: 0; }
 .ih-hub__titulo {
   display: flex; align-items: center; gap: .45rem; flex-wrap: wrap;

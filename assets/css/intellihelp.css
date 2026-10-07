@@ -8,73 +8,86 @@
 /* ---------------------------------------------------------------------
    1. DESIGN TOKENS
    --------------------------------------------------------------------- */
+/* Los MISMOS valores que `app.css`, uno por uno.
+   Las dos hojas declaran los mismos nombres —`--ih-gray-500`, `--ih-success`,
+   `--ih-radius-md`— y los compartía `componentes.css`, que las dos cargan: un
+   componente escrito una vez se dibujaba de dos formas según el portal. Y no
+   eran matices. El panel traía la paleta `zinc` de Tailwind: gris #71717a
+   contra el gris violáceo #6f6a7d de la marca, texto #18181b contra el #161922
+   de la identidad, verde #16a34a —un verde ajeno— al lado del #9CC930 de la
+   marca en la misma pantalla, y naranja #ea580c donde el cliente usa ámbar.
+
+   `test/tokens.php` llevaba la cuenta: veintiocho tokens con dos valores. Esto
+   es esa lista, saldada. Los valores que quedan son los del portal del
+   cliente porque son los de la identidad —el #161922 y el #9CC930 están en la
+   marca— y no al revés. */
 :root {
   /* Paleta INTELLIHELP */
   --ih-purple:        #663399;
-  --ih-purple-dark:   #4E247A;
+  --ih-purple-dark:   #522a7a;
   --ih-purple-light:  #8C5BB8;
-  --ih-purple-50:     #F4F1F9;
-  --ih-purple-100:    #E5DCF1;
-  --ih-purple-200:    #D0BFEA;
-  --ih-purple-300:    #B69BDA;
+  --ih-purple-50:     #f2ecf9;
+  --ih-purple-100:    #e6d9f5;
+  --ih-purple-200:    #d0bfea;
+  --ih-purple-300:    #b69bda;
 
   --ih-green:         #9CC930;
-  --ih-green-dark:    #7AA725;
-  --ih-green-light:   #B7DC5F;
-  --ih-green-50:      #F4F9E5;
-  --ih-green-100:     #E5F1C7;
+  --ih-green-dark:    #5f8a12;
+  --ih-green-light:   #b7dc5f;
+  --ih-green-50:      #eef6dc;
+  --ih-green-100:     #e5f1c7;
 
-  --ih-white:         #FFFFFF;
-  --ih-black:         #111418;
+  --ih-white:         #ffffff;
+  --ih-black:         #161922;
 
-  /* Grises */
-  --ih-gray-50:       #FAFAFA;
-  --ih-gray-100:      #F4F4F5;
-  --ih-gray-200:      #E4E4E7;
-  --ih-gray-300:      #D4D4D8;
-  --ih-gray-400:      #A1A1AA;
-  --ih-gray-500:      #71717A;
-  --ih-gray-600:      #52525B;
-  --ih-gray-700:      #3F3F46;
-  --ih-gray-800:      #27272A;
-  --ih-gray-900:      #18181B;
+  /* Grises: violáceos, no neutros. Es lo que ata el gris al violeta de marca. */
+  --ih-gray-50:       #faf9fc;
+  --ih-gray-100:      #f6f5fa;
+  --ih-gray-200:      #e7e4ef;
+  --ih-gray-300:      #cfcbd8;
+  --ih-gray-400:      #a7a3b4;
+  --ih-gray-500:      #6f6a7d;
+  --ih-gray-600:      #5b566a;
+  --ih-gray-700:      #434050;
+  --ih-gray-800:      #2b2836;
+  --ih-gray-900:      #161922;
 
   /* Estados */
-  --ih-success:       #16A34A;
-  --ih-success-bg:    #DCFCE7;
-  --ih-warning:       #EA580C;
-  --ih-warning-bg:    #FFEDD5;
-  --ih-danger:        #DC2626;
-  --ih-danger-bg:     #FEE2E2;
-  --ih-danger-line:   #FECACA;
-  --ih-info:          #2563EB;
-  --ih-info-bg:       #DBEAFE;
+  --ih-success:       #5f8a12;
+  --ih-success-bg:    #eef6dc;
+  --ih-warning:       #a8620a;
+  --ih-warning-bg:    #fdf3e3;
+  --ih-danger:        #a12a1e;
+  --ih-danger-bg:     #fdeceb;
+  --ih-danger-line:   #f3c9c4;
+  --ih-info:          #1f6f9c;
+  --ih-info-bg:       #e7f2f9;
 
-  /* Sombras */
-  --ih-shadow-xs:     0 1px 2px rgba(17,20,24,.04);
-  --ih-shadow-sm:     0 2px 8px rgba(17,20,24,.06);
-  --ih-shadow-md:     0 4px 16px rgba(102,51,153,.08);
-  --ih-shadow-lg:     0 12px 40px rgba(102,51,153,.12);
-  --ih-shadow-xl:     0 24px 60px rgba(102,51,153,.16);
+  /* Sombras: con tinte violeta, como las del cliente. */
+  --ih-shadow-xs:     0 1px 2px rgba(16,20,30,.05);
+  --ih-shadow-sm:     0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
+  --ih-shadow-md:     0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
+  --ih-shadow-lg:     0 24px 60px -20px rgba(74,36,112,.42);
+  --ih-shadow-xl:     0 24px 60px -20px rgba(74,36,112,.42);
 
   /* Radios */
-  --ih-radius-sm:     8px;
-  --ih-radius-md:     12px;
-  --ih-radius-lg:     16px;
+  --ih-radius-sm:     9px;
+  --ih-radius-md:     10px;
+  --ih-radius-lg:     15px;
 
-  /* Geometria de los controles de formulario — ver el bloque equivalente en
-     app.css. Los valores son los que esta hoja ya usa en .ih-input, para que el
-     desplegable propio no se vea mas alto ni mas redondeado que un campo. */
-  --ih-ctl-pad:       10px 14px;
-  --ih-ctl-min-h:     0;        /* .ih-input no fija alto: lo da el line-height */
-  --ih-ctl-line:      1.4;      /* el que ya declara .ih-input */
-  --ih-ctl-radius:    var(--ih-radius-md);
-  --ih-ctl-border:    var(--ih-gray-300);
-  --ih-ctl-hover:     var(--ih-purple-200);
-  --ih-ctl-ring:      rgba(102, 51, 153, .12);
-  --ih-ctl-font:      var(--ih-text-sm);
-  --ih-ctl-bg:        var(--ih-white);
-  --ih-ctl-placeholder: var(--ih-gray-400);
+  /* Geometría de los controles de formulario. Los lee componentes.css, que es
+     la hoja compartida: con dos juegos de valores, el mismo desplegable salía
+     más alto y más redondeado en un portal que en el otro. */
+  --ih-ctl-pad:       .6rem .75rem;
+  --ih-ctl-min-h:     40px;
+  --ih-ctl-line:      normal;   /* los <input> del navegador usan normal */
+  --ih-ctl-radius:    9px;
+  --ih-ctl-border:    #e7e4ef;
+  --ih-ctl-hover:     #cfcbd8;
+  --ih-ctl-ring:      #f2ecf9;
+  --ih-ctl-font:      14px;
+  --ih-ctl-bg:        #ffffff;
+  --ih-ctl-placeholder: #a7a3b4;
 
   --ih-radius-xl:     20px;
   --ih-radius-full:   9999px;
@@ -91,12 +104,12 @@
   --ih-space-12:      48px;
 
   /* Tipografía */
-  --ih-font:          'Saira', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --ih-font:          'Saira', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ih-text-xs:       11px;
-  --ih-text-sm:       13px;
+  --ih-text-sm:       12.5px;
   --ih-text-base:     14px;
-  --ih-text-md:       15px;
-  --ih-text-lg:       17px;
+  --ih-text-md:       15.5px;
+  --ih-text-lg:       18px;
   --ih-text-xl:       20px;
   --ih-text-2xl:      24px;
   --ih-text-3xl:      30px;

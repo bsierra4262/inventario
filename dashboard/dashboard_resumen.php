@@ -104,15 +104,21 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-stat__value"><?= $kpi['companies'] ?></div>
         <div class="ih-stat__delta">Total registradas</div>
       </div>
-      <div class="ih-stat ih-stat--green">
+      <?php /* El color sigue al número y no a la columna. «Inactivas» estaba
+               siempre en rojo, también diciendo cero: un tablero con una tarjeta
+               en alerta permanente no avisa nada, porque la alerta deja de
+               significar algo. Mismo criterio que el tablero del cliente. */ ?>
+      <div class="ih-stat<?= (int)$kpi['active'] > 0 ? ' ih-stat--green' : '' ?>">
         <div class="ih-stat__label">Activas <i class="bi bi-check-circle"></i></div>
         <div class="ih-stat__value"><?= $kpi['active'] ?></div>
-        <div class="ih-stat__delta is-up">Operando</div>
+        <div class="ih-stat__delta<?= (int)$kpi['active'] > 0 ? ' is-up' : '' ?>">
+          <?= (int)$kpi['active'] > 0 ? 'Operando' : 'Ninguna operando' ?>
+        </div>
       </div>
-      <div class="ih-stat ih-stat--danger">
+      <div class="ih-stat<?= (int)$kpi['inactive'] > 0 ? ' ih-stat--danger' : '' ?>">
         <div class="ih-stat__label">Inactivas <i class="bi bi-pause-circle"></i></div>
         <div class="ih-stat__value"><?= $kpi['inactive'] ?></div>
-        <div class="ih-stat__delta">Suspendidas</div>
+        <div class="ih-stat__delta"><?= (int)$kpi['inactive'] > 0 ? 'Suspendidas' : 'Ninguna suspendida' ?></div>
       </div>
       <div class="ih-stat">
         <div class="ih-stat__label">Usuarios plataforma <i class="bi bi-people"></i></div>

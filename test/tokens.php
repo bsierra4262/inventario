@@ -37,60 +37,18 @@ defined('RAIZ') || define('RAIZ', dirname(__DIR__));
 /**
  * Diferencias que ya existen, con el por qué de cada una.
  *
- * `geometria` = a propósito, el panel es más compacto.
- * `deuda`     = la paleta vieja del panel, que hay que unificar.
+ * **Está vacía, y esa es la noticia.** Durante toda la vida del proyecto tuvo
+ * treinta y siete entradas: el panel superadmin corría con la escala de grises
+ * de Tailwind (zinc) y la del cliente con los grises violáceos de la marca.
+ * No eran matices — el panel usaba verde #16a34a, que es justo el verde ajeno
+ * que hubo que sacar de las pantallas del cliente, y texto #18181b en vez del
+ * #161922 de la identidad. Como `componentes.css` lo cargan los dos portales,
+ * un componente escrito una vez se dibujaba de dos formas según dónde cayera.
+ *
+ * Si volvés a agregar algo acá, escribí al lado por qué: un token compartido
+ * con dos valores es un componente compartido con dos caras.
  */
-const TOKENS_QUE_DIFIEREN = [
-    // ── A propósito: los controles del panel son más compactos ──────────────
-    '--ih-ctl-pad'         => 'geometria',
-    '--ih-ctl-min-h'       => 'geometria',
-    '--ih-ctl-font'        => 'geometria',
-    '--ih-ctl-line'        => 'geometria',
-    '--ih-ctl-border'      => 'geometria',
-    '--ih-ctl-radius'      => 'geometria',
-    '--ih-ctl-hover'       => 'geometria',
-    '--ih-ctl-ring'        => 'geometria',
-    '--ih-ctl-placeholder' => 'geometria',
-
-    // ── Deuda: el panel corre con otra escala, anterior a la identidad visual ─
-    //
-    // No son ajustes finos: el panel usa la escala de grises de Tailwind (zinc)
-    // y la del cliente son los grises violaceos de la marca. Puestos uno al
-    // lado del otro, #52525b es gris y #5b566a tira a violeta —poco, pero lo
-    // suficiente para que un componente compartido se vea prestado.
-    //
-    // Los colores de estado son lo mas visible: el verde del panel es #16a34a,
-    // que es justo el verde ajeno que hubo que sacar de las pantallas del
-    // cliente. Convive con el #9CC930 de la marca en la misma interfaz.
-    '--ih-danger'      => 'deuda',   // #a12a1e  contra #dc2626
-    '--ih-danger-bg'   => 'deuda',   // #fdeceb  contra #fee2e2
-    '--ih-danger-line' => 'deuda',   // #f3c9c4  contra #fecaca
-    '--ih-warning'     => 'deuda',   // #a8620a  contra #ea580c
-    '--ih-warning-bg'  => 'deuda',   // #fdf3e3  contra #ffedd5 — el fondo del otro
-    '--ih-success'     => 'deuda',   // #5f8a12  contra #16a34a — dos verdes distintos
-    '--ih-gray-50'     => 'deuda',   // #faf9fc  contra #fafafa
-    '--ih-gray-100'    => 'deuda',   // #f6f5fa  contra #f4f4f5
-    '--ih-gray-200'    => 'deuda',   // #e7e4ef  contra #e4e4e7
-    '--ih-gray-300'    => 'deuda',   // #cfcbd8  contra #d4d4d8
-    '--ih-gray-400'    => 'deuda',   // #a7a3b4  contra #a1a1aa
-    '--ih-gray-500'    => 'deuda',   // #6f6a7d  contra #71717a
-    '--ih-gray-600'    => 'deuda',   // #5b566a  contra #52525b
-    '--ih-gray-700'    => 'deuda',   // #434050  contra #3f3f46
-    '--ih-gray-800'    => 'deuda',   // #2b2836  contra #27272a
-    '--ih-gray-900'    => 'deuda',   // #161922 (el de la marca) contra #18181b
-    '--ih-purple-50'   => 'deuda',   // #f2ecf9  contra #f4f1f9
-    '--ih-purple-dark' => 'deuda',   // #522a7a  contra #4e247a
-    '--ih-radius-sm'   => 'deuda',   // 9px      contra 8px
-    '--ih-radius-md'   => 'deuda',   // 10px     contra 12px
-    '--ih-radius-lg'   => 'deuda',   // 15px — el radio de la marca — contra 16px
-    '--ih-text-sm'     => 'deuda',   // 12.5px   contra 13px
-    '--ih-text-md'     => 'deuda',   // 15.5px   contra 15px
-    '--ih-text-lg'     => 'deuda',   // 18px     contra 17px
-    '--ih-shadow-xs'   => 'deuda',
-    '--ih-shadow-sm'   => 'deuda',
-    '--ih-shadow-lg'   => 'deuda',
-    '--ih-font'        => 'deuda',   // la misma lista de fuentes, escrita distinto
-];
+const TOKENS_QUE_DIFIEREN = [];
 
 if (!function_exists('tokens_resueltos')) {
 /**

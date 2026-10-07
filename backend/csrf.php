@@ -203,7 +203,6 @@ function generateCsrfToken(?string $scope = null, ?int $ttl = null): string {
                 'fp'    => csrf_client_fingerprint(),
             ];
             csrf_set_cookie_shadow($token);
-            log_event('csrf', 'CSRF', "Token CSRF generado (scope={$scope})", 'transaccion');
         } else {
             $token = $store[$scope]['token'];
         }
@@ -300,15 +299,22 @@ function verifyCsrfToken(?string $token = null, ?string $scope = null, bool $one
         return false;
     }
 
+/* Los exitos del CSRF NO se registran. Eran 736 de las 1467 lineas del log
+   —la mitad— y no dicen nada: se genera un token en cada pantalla que dibuja un
+   formulario, y se valida en cada envio que funciona. La accion en si ya queda
+   anotada («Activo ID 142 eliminado»), asi que la linea de al lado diciendo que
+   el token estaba bien es la misma noticia escrita dos veces.
+   El costo era que la pantalla de auditoria —y «Actividad reciente» del
+   resumen— mostraban tres de cada cinco renglones hablando de tokens, y lo que
+   habia pasado de verdad quedaba abajo. Los FALLOS si se registran: un token
+   que no valida es lo unico que hay para mirar. */
+
     // Rotar si es one-time
     if ($oneTime) {
         $store[$scope]['token'] = csrf_random_token();
         $store[$scope]['iat']   = $now;
         $store[$scope]['fp']    = csrf_client_fingerprint();
         csrf_set_cookie_shadow($store[$scope]['token']);
-        log_event('csrf', 'CSRF', "Token CSRF validado y rotado (scope={$scope})", 'transaccion');
-    } else {
-        log_event('csrf', 'CSRF', "Token CSRF validado correctamente (scope={$scope})", 'transaccion');
     }
 
     return true;
@@ -422,7 +428,7 @@ function oauth_generate_state(string $provider, ?int $ttl = null): string {
         'ten' => csrf_tenant_ns(),
     ];
 
-    log_event('csrf', 'CSRF', "OAuth state generado para {$provider}", 'transaccion');
+    // Idem: el estado de OAuth que SALE bien no es noticia; el que falla, si.
     return $state;
 }
 
@@ -443,7 +449,7 @@ function oauth_verify_state(string $provider, string $state): bool {
 
     if ($ok) {
         unset($_SESSION[$key]); // state de OAuth se usa una sola vez
-        log_event('csrf', 'CSRF', "OAuth state validado para {$provider}", 'transaccion');
+        // (el exito no se registra: ver la nota de arriba)
         return true;
     }
 

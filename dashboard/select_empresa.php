@@ -68,28 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     app_session_cerrar_y_redirigir(tenant_login_url($cid));
 }
+
+/* Esta pantalla se escribía su propio <head> a mano: cargaba la hoja del panel
+   y nada más. Le faltaban la hoja de componentes compartida —por eso el <style>
+   de abajo volvía a dibujar una tarjeta que ya existía—, la versión de los
+   assets (un cambio de CSS quedaba tapado por la caché del navegador y la del
+   CDN hasta un Ctrl+F5) y la tipografía Saira, así que salía en la fuente del
+   sistema. Usa el encabezado del sistema, como las otras veinte pantallas. */
+$page_title  = 'Elegí tu empresa';
+$page_portal = 'superadmin';
+require __DIR__ . '/../includes/layout/head.php';
 ?>
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#663399">
-<title>Elegí tu empresa · Asset Vault · INTELLIHELP</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="/assets/css/intellihelp.css" rel="stylesheet">
-<style>
-  .company-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; padding: 4px; margin: 4px -4px; }
-  .company-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #E4E4E7; border-radius: 12px; background: #fff; cursor: pointer; transition: all .15s; text-align: left; width: 100%; font-family: 'Saira', sans-serif; }
-  .company-item:hover { border-color: #663399; background: #F4F1F9; }
-  .company-item__avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #663399, #4E247A); color: #fff; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .company-item__name { font-weight: 600; color: #18181B; font-size: 14px; }
-  .company-item__razon { font-size: 12px; color: #71717A; margin-top: 2px; }
-  .company-item__arrow { margin-left: auto; color: #A1A1AA; transition: all .15s; }
-  .company-item:hover .company-item__arrow { color: #663399; transform: translateX(3px); }
-</style>
-</head>
-<body>
 <div class="ih-auth">
   <div class="ih-auth__card ih-anim-fade">
     <div class="ih-auth__header">
@@ -114,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="post" id="form-empresa">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8') ?>">
           <input type="hidden" name="company_id" id="company_id">
-          <div class="company-list">
+          <div class="ih-hub ih-hub--scroll">
             <?php foreach ($companies as $c): ?>
               <?php
                 $initials = '';
@@ -122,16 +111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (strlen($initials) < 2) $initials .= strtoupper(substr((string)$p, 0, 1));
                 }
               ?>
-              <button type="button" class="company-item"
+              <button type="button" class="ih-hub__item"
                       onclick="document.getElementById('company_id').value=<?= (int)$c['id'] ?>;document.getElementById('form-empresa').submit()">
-                <span class="company-item__avatar"><?= htmlspecialchars($initials ?: '·') ?></span>
-                <div>
-                  <div class="company-item__name"><?= htmlspecialchars($c['nombre']) ?></div>
+                <span class="ih-hub__icono ih-hub__icono--iniciales"><?= htmlspecialchars($initials ?: '·') ?></span>
+                <span class="ih-hub__texto">
+                  <span class="ih-hub__titulo"><?= htmlspecialchars($c['nombre']) ?></span>
                   <?php if (!empty($c['razon_social'])): ?>
-                    <div class="company-item__razon"><?= htmlspecialchars($c['razon_social']) ?></div>
+                    <span class="ih-hub__desc"><?= htmlspecialchars($c['razon_social']) ?></span>
                   <?php endif; ?>
-                </div>
-                <i class="bi bi-arrow-right company-item__arrow"></i>
+                </span>
+                <i class="bi bi-chevron-right ih-hub__flecha" aria-hidden="true"></i>
               </button>
             <?php endforeach; ?>
           </div>
@@ -150,5 +139,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 </div>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/layout/foot.php'; ?>

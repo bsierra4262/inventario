@@ -85,25 +85,18 @@ require __DIR__ . '/../includes/layout/topbar.php';
 ?>
 <main class="ih-app__main">
 
-<style>
-.role-tab { padding: 10px 18px; border: 1px solid #e5e1ec; background: #fff; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; color: #6b6b7b; }
-.role-tab.is-active { background: #663399; color: #fff; border-color: #663399; }
-.role-tab .badge { font-size: 10px; margin-left: 6px; padding: 2px 6px; border-radius: 8px; background: #f59e0b; color: #fff; }
-.role-tab.is-active .badge { background: rgba(255,255,255,.25); }
-.perm-group { background: #fff; border: 1px solid #e5e1ec; border-radius: 10px; margin-bottom: 14px; }
-.perm-group__title { padding: 12px 16px; border-bottom: 1px solid #f1eef7; font-weight: 700; color: #1a1a2e; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; background: #faf9fc; border-radius: 10px 10px 0 0; }
-.perm-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #f1eef7; }
-.perm-row:last-child { border-bottom: 0; }
-.perm-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; user-select: none; }
-.perm-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
-.perm-row .perm-key { color: #999; font-size: 11px; font-family: monospace; margin-left: auto; }
-</style>
+<?php /* Acá vivía un <style> con doce reglas que volvían a dibujar, con otros
+         nombres y otros colores, componentes que ya existen en la hoja
+         compartida: las pastillas de rol eran `.ih-pill`, y los grupos de
+         permisos, `.ih-permisos`. Las dos pantallas de roles —la del cliente y
+         ésta— hacían lo mismo de dos formas, y los colores escritos a mano
+         (#1a1a2e, #6b6b7b, #999, #f59e0b) no eran los de la identidad. */ ?>
 
-<div class="ih-container" style="max-width:1100px;padding:24px;">
-  <h1 style="font-size:24px;color:#1a1a2e;margin:0 0 6px;font-weight:700;">
-    <i class="bi bi-shield-lock-fill" style="color:#663399;"></i> Roles y permisos
-  </h1>
-  <p style="color:#6b6b7b;margin:0 0 24px;">Configurá qué puede hacer cada rol superadmin en la plataforma.</p>
+<?php /* El título y la bajada estaban escritos DOS veces en la misma pantalla:
+         acá en un <h1> propio y arriba en la barra, que ya recibe
+         `$topbar_title` y `$topbar_subtitle`. Se leía el mismo texto dos veces y
+         ocupaba el doble de alto. Queda el de la barra, que es el que tienen
+         todas las demás pantallas. */ ?>
 
   <?php if ($feedback !== ''): ?>
     <div class="ih-alert <?= $feedbackOk ? 'ih-alert--success' : 'ih-alert--warning' ?>">
@@ -120,45 +113,47 @@ require __DIR__ . '/../includes/layout/topbar.php';
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+  <?php /* Las pastillas eligen el rol que se está editando. No navegan: muestran
+           y esconden los paneles de abajo. Mismo componente que en el portal del
+           cliente. */ ?>
+  <div class="ih-pills" role="group" aria-label="Rol que se está editando">
     <?php foreach (PLATFORM_ROLES as $r): ?>
-      <button class="role-tab" data-role="<?= $r ?>" type="button">
+      <button class="ih-pill" data-role="<?= $r ?>" type="button">
         <?= htmlspecialchars(PLATFORM_ROLE_LABELS[$r] ?? $r) ?>
         <?php if ($r === 'superadmin'): ?>
-          <span class="badge" style="background:#10b981;">PROTEGIDO</span>
+          <span class="ih-badge ih-badge--success">Protegido</span>
         <?php elseif ($roleOverrides[$r]): ?>
-          <span class="badge">CUSTOM</span>
+          <span class="ih-badge ih-badge--warning">Editado</span>
         <?php endif; ?>
       </button>
     <?php endforeach; ?>
   </div>
 
   <?php foreach (PLATFORM_ROLES as $r): ?>
-  <div class="role-panel" data-role-panel="<?= $r ?>" style="display:none;">
+  <div class="role-panel" data-role-panel="<?= $r ?>" hidden>
     <form method="POST" action="/dashboard/superadmin_roles.php" id="form-role-<?= $r ?>">
       <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '') ?>">
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="role" value="<?= $r ?>">
 
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <h3 style="margin:0;font-size:18px;color:#1a1a2e;font-weight:700;">
+      <div class="ih-barra">
+        <div class="ih-barra__texto">
+          <h3 class="ih-barra__titulo">
             <?= htmlspecialchars(PLATFORM_ROLE_LABELS[$r] ?? $r) ?>
             <?php if ($r === 'superadmin'): ?>
-              <span class="ih-badge ih-badge--success" style="margin-left:8px;font-size:11px;">PROTEGIDO</span>
+              <span class="ih-badge ih-badge--success">Protegido</span>
             <?php elseif ($roleOverrides[$r]): ?>
-              <span class="ih-badge ih-badge--warning" style="margin-left:8px;font-size:11px;">Custom</span>
+              <span class="ih-badge ih-badge--warning">Editado</span>
             <?php else: ?>
-              <span class="ih-badge ih-badge--success" style="margin-left:8px;font-size:11px;">Default</span>
+              <span class="ih-badge ih-badge--neutral">Por defecto</span>
             <?php endif; ?>
           </h3>
-          <p style="margin:4px 0 0;color:#6b6b7b;font-size:13px;">
+          <p class="ih-barra__ayuda">
             <?= $r === 'superadmin' ? 'Acceso total — no editable' : (count($rolePerms[$r]) . ' permisos activos') ?>
           </p>
         </div>
         <?php if ($r !== 'superadmin'): ?>
-        <div style="display:flex;gap:8px;">
+        <div class="ih-barra__acciones">
           <button type="submit" class="ih-btn ih-btn--primary">
             <i class="bi bi-check2"></i> Guardar cambios
           </button>
@@ -172,36 +167,44 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <?php endif; ?>
       </div>
 
+      <div class="ih-permisos">
       <?php foreach ($groups as $groupName => $perms): ?>
-        <div class="perm-group">
-          <div class="perm-group__title"><?= htmlspecialchars($groupName) ?></div>
+        <div class="ih-permisos__grupo">
+          <div class="ih-permisos__titulo"><?= htmlspecialchars($groupName) ?></div>
           <?php foreach ($perms as $action => $label):
             $checked = in_array($action, $rolePerms[$r], true);
             $isProtected = ($r === 'superadmin');
           ?>
-            <div class="perm-row">
+            <div class="ih-permisos__fila">
               <label>
                 <input type="checkbox" name="perms[]" value="<?= htmlspecialchars($action) ?>"
                        <?= $checked ? 'checked' : '' ?>
                        <?= $isProtected ? 'disabled' : '' ?>>
                 <span><?= htmlspecialchars($label) ?></span>
               </label>
-              <span class="perm-key"><?= htmlspecialchars($action) ?></span>
+              <span class="ih-permisos__clave"><?= htmlspecialchars($action) ?></span>
             </div>
           <?php endforeach; ?>
         </div>
       <?php endforeach; ?>
+      </div>
     </form>
   </div>
   <?php endforeach; ?>
-</div>
 
 <script>
-const tabs = document.querySelectorAll('.role-tab');
+/* `hidden` y no `style.display`: la hoja compartida declara
+   `[hidden] { display: none !important }`, asi que mezclar las dos formas deja
+   paneles que no se pueden volver a mostrar. El estado vive en el HTML. */
+const tabs = document.querySelectorAll('.ih-pill[data-role]');
 const panels = document.querySelectorAll('.role-panel');
 function showRole(r) {
-  tabs.forEach(t => t.classList.toggle('is-active', t.dataset.role === r));
-  panels.forEach(p => p.style.display = p.dataset.rolePanel === r ? 'block' : 'none');
+  tabs.forEach(t => {
+    const activa = t.dataset.role === r;
+    t.classList.toggle('is-active', activa);
+    t.setAttribute('aria-pressed', activa ? 'true' : 'false');
+  });
+  panels.forEach(p => { p.hidden = p.dataset.rolePanel !== r; });
   try { localStorage.setItem('sa_roles_last_tab', r); } catch {}
 }
 tabs.forEach(t => t.addEventListener('click', () => showRole(t.dataset.role)));
