@@ -584,7 +584,82 @@ las tres aplicaciones se vean como una sola familia.
 
 Shell de topbar con la marca y las acciones, y debajo una fila de pestañas: la misma silueta
 que el CRM y Tickets. Saira se carga con `<link>` en el `<head>` y los assets se versionan por
-fecha de modificación. **El panel superadmin conserva su diseño** (`intellihelp.css`).
+fecha de modificación.
+
+### Tres hojas, y ninguna regla escrita en una pantalla
+
+```
+assets/css/app.css          los tokens y los componentes del portal del cliente
+assets/css/intellihelp.css  los tokens y los componentes del panel de superadmin
+assets/css/componentes.css  lo que usan LAS DOS, cargada por las dos
+```
+
+Ninguna pantalla del portal del cliente define estilos propios: ni un bloque `<style>` ni un
+atributo `style`. Las dos excepciones están permitidas explícitamente y una prueba las nombra:
+un dato que sólo el PHP conoce —el nivel de sangría de un árbol, que viaja como `--nivel`— y el
+color de un logo ajeno, que pintado de violeta deja de ser el logo.
+
+No es prolijidad. Son dos problemas concretos:
+
+1. **Una regla escrita en una pantalla no la ve ninguna otra**, así que el mismo componente
+   termina con dos formas. Pasó con el paginador —tres versiones, una de ellas dibujaba un botón
+   por página—, con las pastillas de rol —dos, una por portal, con valores distintos— y con el
+   rótulo de sección —tres, con tres nombres distintos—.
+2. **La hoja de la página carga después de la del sistema**, así que le gana sin pedir permiso.
+   El listado tenía un `<style>` que repintaba `.ih-flash` con `#16a34a`: en la misma pantalla
+   convivían dos verdes.
+
+Y hay una tercera, propia de este proyecto: `backend/view_details.php` y `backend/edit.php` son
+pantallas **compartidas** por los dos portales —la cabecera elige la hoja según la sesión—, así
+que una regla definida ahí se apoyaba en tokens que cada portal resuelve distinto.
+
+### Los componentes compartidos
+
+`componentes.css` nació para los controles que el navegador dibuja por su cuenta y ninguna regla
+alcanza: la lista de un `<select>`, el calendario de un `input[type=date]`, el cuadro de
+`confirm()`. Hoy tiene además todo lo que dos pantallas necesitaban igual:
+
+| Qué | Para qué |
+| --- | --- |
+| `.ih-pager` | el paginador, con el rango acotado y el «mostrando X–Y de Z» |
+| `.ih-barra` | título de sección con sus botones, que en pantalla angosta bajan y se ensanchan |
+| `.ih-pills` / `.ih-pill` | elegir entre cosas del mismo tipo sin salir de la pantalla |
+| `.ih-permisos` | la lista de permisos de un rol |
+| `.ih-opciones` / `.ih-opcion` | dos o tres acciones con su explicación y su botón |
+| `.ih-foco` | la pantalla de una sola decisión: archivar, confirmar, el resultado |
+| `.ih-caminos` / `.ih-camino` | dos salidas entre las que elegir, una al lado de la otra |
+| `.ih-datos` / `.ih-dato` | etiqueta a la izquierda, valor a la derecha |
+| `.ih-seccion__titulo` | el rótulo que parte una pantalla larga en bloques |
+| `.ih-buscador` | el campo de búsqueda del encabezado, con o sin lupa adentro |
+| `.ih-pasos` | instrucciones en orden |
+| `.ih-nota` | lo que una persona escribió sobre un activo |
+| `.ih-resumen` | la cajita que resume lo que ya está configurado |
+| `.ih-etiquetas` | una lista de nombres — que no es lo mismo que una insignia |
+| `.ih-alert--accion` | un aviso que trae el botón que lo resuelve |
+| `.ih-menu` | un menú que cuelga de un botón |
+
+Las utilidades de disposición —filas, separaciones, márgenes— también viven ahí. Estaban en las
+dos hojas de portal y **con distinto alcance**: `app.css` tenía la escala de márgenes de 1 a 6 y
+el panel sólo los pares, así que una pantalla compartida usaba clases que en el panel no existen.
+Los tamaños de texto y los colores siguen viniendo de cada portal, porque todavía difieren.
+
+### Esconder algo: siempre `hidden`
+
+`componentes.css` declara `[hidden] { display: none !important }`, así que **mezclar `hidden` con
+`style.display` rompe**: un `style.display = ''` no limpia el atributo y el bloque no vuelve a
+aparecer. Todo el portal usa `hidden`, en el HTML y en el JavaScript — los campos por categoría
+del alta y de la edición, los paneles de reportes y de integraciones, el selector de columnas del
+listado.
+
+### La deuda del panel, medida
+
+`php test/tokens.php` compara los tokens que usa la hoja compartida resueltos en cada portal.
+Difieren 36: nueve a propósito —los `--ih-ctl-*`, porque los controles del panel son más
+compactos— y veintisiete que son deuda. El panel todavía corre con la escala de grises de
+Tailwind y con `--ih-success: #16a34a`, que es justo el verde ajeno que hubo que sacar de las
+pantallas del cliente. Cada diferencia está anotada una por una, y la batería **no exige que la
+deuda esté pagada: exige que no crezca**.
+
 
 ## Stack técnico
 
@@ -645,17 +720,42 @@ Detalle completo, permisos de directorios y configuración de Drive en [INSTALL.
 
 ## Tests
 
+Seis baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
+
 ```bash
-php test/run_tests.php            # todo
+php test/run_tests.php            # 401 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
+
+php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible
+php test/ayudas.php               # campos de formulario sin un ejemplo que guíe
+php test/colores.php              # colores escritos a mano fuera de la identidad visual
+php test/tokens.php               # tokens que valen distinto en cada portal
+
+node test/componentes.js          # 144 chequeos — los componentes, ejecutados en jsdom
+
+AV_TEST_DB_HOST=127.0.0.1 AV_TEST_DB_PORT=3307 \
+AV_TEST_DB_USER=root AV_TEST_DB_NAME=av_tenant \
+php test/integracion.php          # 260 chequeos — contra una base descartable
 ```
 
-Corre **sin base de datos ni servidor**: es análisis estático sobre el árbol del repositorio.
-Verifica sintaxis, tipos de `bind_param`, uso de la API de Drive, exposición y permisos,
-catálogos, papelera, migraciones, identidad visual **y que esta documentación esté al día**.
+`run_tests.php` incluye a las cuatro del medio, así que correrla sola ya las cubre; se invocan
+aparte cuando hace falta ver *cuáles* son los hallazgos y no sólo que hay.
 
-**Regla del proyecto: cada defecto detectado incorpora un test.** Los grupos SEGURIDAD y
-CODIGO son, casi uno a uno, los agujeros y los bugs que ya aparecieron.
+Qué verifica la estática: sintaxis, tipos de `bind_param`, uso de la API de Drive, exposición y
+permisos, catálogos, papelera, migraciones, identidad visual, que ninguna pantalla del cliente
+defina estilos propios, que no haya bytes de control en el código **y que esta documentación
+esté al día**.
+
+`integracion.php` trabaja sobre una base **descartable**: al empezar borra las tablas del
+esquema que se le indique, y aborta si encuentra activos cargados. Además se lee a sí misma y
+aborta si alguna consulta nombra una tabla sin prefijar — pasó una vez, y tres activos de prueba
+terminaron en el inventario de desarrollo.
+
+**Regla del proyecto: cada defecto detectado incorpora un test.** Los grupos SEGURIDAD y CODIGO
+son, casi uno a uno, los agujeros y los bugs que ya aparecieron. Vale también para los
+auditores: cuando uno de ellos resultó estar midiendo mal —un comentario de JavaScript contado
+como campo de formulario, la cola de un atributo leída como prosa— lo que se arregló fue el
+auditor, y el motivo quedó escrito al lado.
 
 ## Seguridad
 

@@ -4,7 +4,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
-## [1.8.0] — 2026-10-06
+## [1.8.0] — 2026-10-07
 
 Repaso del portal del cliente pantalla por pantalla, con una regla: nada de estilos escritos en
 la página. Lo que una pantalla necesitaba y el sistema no tenía, se agregó al sistema; lo que ya
@@ -79,12 +79,136 @@ existía con otro nombre, se unificó. Y la papelera, que se podía llenar y no 
   componente ponía el 6 y la prueba esperaba el 7—. El «hoy» que espera la persona es el de su
   reloj.
 
+### El portal del cliente, pantalla por pantalla
+
+Se recorrieron las dieciocho pantallas en el orden pedido —Activos, Reportes, Papelera, Datos,
+Configuración y lo que cuelga de cada una— con una regla: **ninguna pantalla define estilos
+propios**. Al final quedaron cero bloques `<style>` y cero atributos `style`, salvo dos que la
+prueba acepta por nombre: el nivel de sangría de un árbol, que viaja como `--nivel` porque es un
+dato, y el color de los logos de Google y Microsoft, que pintados de violeta dejan de ser los
+logos.
+
+No es prolijidad. La hoja de la página carga **después** de la del sistema, así que una regla de
+pantalla le gana a la del sistema sin pedir permiso — y una regla escrita en una pantalla no la
+ve ninguna otra, así que el mismo componente termina con dos formas.
+
+Lo que estaba duplicado y ahora está una vez:
+
+- **El paginador, en tres versiones.** Activos lo armaba con botones, Reportes con
+  `.pagination-cool` y la papelera dibujaba **un botón por página**: con tres mil activos
+  archivados eran ciento cincuenta botones.
+- **Las pastillas de rol, en dos.** `inventario/roles.php` las definía en 43 líneas y
+  `dashboard/superadmin_roles.php` en 12, con valores distintos: el mismo selector se veía de una
+  manera en un portal y de otra en el otro.
+- **El rótulo de sección, en tres,** con tres nombres: `.edit-section-title`, `.vd-section-title`
+  y `.ih-resumen__titulo`.
+- **La pantalla de una sola decisión, en tres.** Archivar, el aviso de archivo duplicado y el
+  resultado son el mismo molde: 48 atributos `style` entre las tres, con la tarjeta de 540, 600 y
+  560 px y el relleno de 2, 2 y 2.5 rem. El icono de dos de ellas tenía
+  `linear-gradient(135deg, var(--warn), var(--warn))` — un degradado entre un color y el mismo
+  color.
+- **Las utilidades de disposición, en las dos hojas de portal y con distinto alcance.** `app.css`
+  tenía la escala de márgenes de 1 a 6 y el panel sólo los pares, así que una pantalla compartida
+  usaba clases que en el panel no existen.
+- **El margen inferior de `.ih-alert`,** que el componente ya traía y catorce pantallas volvían a
+  escribir con tres medidas distintas para el mismo hueco.
+- **La cruz de cerrar un aviso,** en el `onclick` de siete botones y de cuatro maneras: tres
+  ponían `display:none` —que deja el margen ocupando lugar—, tres llamaban a `.remove()`, y una
+  dibujaba la cruz con el carácter «×».
+
+### Corregido (bugs que estaban en producción)
+
+- **Dos zonas de arrastrar archivos, una dentro de la otra.** `inventario/agregar.php` e
+  `inventario/importar.php` dibujaban su propia zona con el `<input type="file">` adentro, y
+  `componentes.js` mejora *todos* los campos de archivo: el input se mudaba a su propio envoltorio
+  y la zona de afuera quedaba sin nada que la activara al hacer clic. Las dos pantallas usan ahora
+  el campo del sistema.
+
+- **Un `<style>` de pantalla que pisaba los componentes del sistema.** `agregar.php` redefinía
+  `.ih-alert`, `.ih-label` y `.ih-field__hint` con otros valores, y como su hoja carga después, le
+  ganaba: los avisos de esa pantalla se veían distintos de los de todas las demás.
+
+- **`agregar.php:322` tenía dos atributos `style` en el mismo `<div>`.** El navegador se queda con
+  el primero, así que el margen que pedía el segundo nunca se aplicó.
+
+- **Un permiso que bloqueaba la pantalla a quien tenía el otro.** `importar.php` exigía
+  `asset.backup_full` para entrar, pero la tarjeta de *Datos* dejaba pasar a quien tenía sólo
+  `asset.import_csv`: hacía clic y se chocaba con «acceso denegado». Ahora pide cualquiera de los
+  dos y habilita cada mitad por separado.
+
+- **Estilos de pantallas compartidas apoyados en tokens de otro portal.**
+  `backend/view_details.php` y `backend/edit.php` los carga el inventario **y** el panel —la
+  cabecera elige la hoja según la sesión— y definían `.vd-*` y `.edit-*` en su propio `<style>`.
+
+- **Un grid de dos columnas fijas parcheado con un selector por subcadena del atributo `style`.**
+  `importar.php` tenía `[style*="grid-template-columns:1fr 1fr"] { … !important }` para que en un
+  teléfono no quedara de dos columnas.
+
+- **Nombres internos a la vista de cualquiera.** La pantalla de respaldo mostraba
+  `carpeta_raiz_drive`, `IMPORT_BACKUP_UPDATE` y `export_csv.php` en el texto que lee la persona
+  que sube un archivo. Pasaron al docblock, que es para quien lee la base.
+
+- **«Perdida» sin tilde en un desplegable, y «Scrapping» en una pantalla en castellano.** Los
+  motivos para archivar estaban escritos en dos pantallas que no se hablan: `backend/delete.php`
+  los ofrecía e `inventario/reportes.php` filtraba por ellos. Ahora salen de `PAPELERA_MOTIVOS`,
+  con la etiqueta separada del valor guardado — el valor en la base no se toca, así que los
+  activos ya archivados siguen encontrándose.
+
+- **`esconder` mezclado de dos formas.** `componentes.css` declara
+  `[hidden] { display: none !important }`, así que un `style.display = ''` no vuelve a mostrar un
+  bloque que tenga el atributo. Se unificaron 61 usos en el alta, la edición, los reportes y el
+  selector de columnas del listado.
+
+### Agregado
+
+- **El campo de archivo del sistema valida antes de enviar**: tamaño y formato, contra el `accept`
+  del propio campo, y dice cuál archivo no entró y por qué. Deja **quitar uno** de la lista —antes,
+  elegir cuatro y arrepentirse del tercero obligaba a volver a elegir los cuatro— y **suma** a la
+  selección en lugar de reemplazarla.
+
+- **`test/tokens.php`**, que compara los 43 tokens que usa la hoja compartida resueltos en cada
+  portal. Difieren 36: nueve a propósito —los `--ih-ctl-*`, porque los controles del panel son más
+  compactos— y veintisiete que son deuda. El panel todavía corre con la escala de grises de
+  Tailwind y con `--ih-success: #16a34a`, que es el mismo verde ajeno que hubo que sacar de las
+  pantallas del cliente. Cada diferencia está anotada una por una y la prueba **no exige que la
+  deuda esté pagada: exige que no crezca.**
+
+- **Un chequeo que busca bytes de control en el código.** Existe porque pasó dos veces: un `\b`
+  escrito en una expresión regular llegó al archivo como un byte de retroceso de verdad (0x08), y
+  el patrón quedó buscando algo que no existe en ningún HTML. No rompe, no avisa: simplemente deja
+  de encontrar lo que buscaba.
+
+### Corregido en los auditores
+
+Tres resultaron estar midiendo mal, y en los tres casos lo que se arregló fue el auditor:
+
+- `test/ayudas.php` no miraba dentro de `<script>`, así que un comentario de JavaScript que
+  menciona «`<input>`» contaba como un campo de formulario sin ejemplo.
+- `test/ortografia.php` leía la cola de un atributo partido por una etiqueta PHP como si fuera
+  texto: `ih-alert--accion">` se reportaba como «accion» sin tilde.
+- El chequeo de clases por portal trataba `includes/` entero como compartido, así que una clase
+  del sidebar del cliente se reportaba como faltante en la hoja del panel, que nunca lo dibuja.
+- El chequeo de las tarjetas del alta buscaba `class="ih-card"` exacto, así que al agregarles una
+  clase de separación contaba cero cabeceras y fallaba por no encontrar nada.
+
 ### Pruebas
 
-- Veinte chequeos nuevos de papelera en la batería estática, incluido el que compara la lista de la
-  cascada contra el DDL del esquema; veintiséis de integración que arman un activo con todo colgado
-  y un testigo al lado, corren la cascada y verifican que no quede nada huérfano y que al testigo no
-  lo haya tocado; siete en la batería de componentes para la confirmación escrita.
+La batería estática pasó de 375 a **401** chequeos, la de componentes de 137 a **144** y la de
+integración de 234 a **260**. Más dos auditores nuevos: `test/colores.php`, que busca colores
+escritos a mano fuera de la identidad visual, y `test/tokens.php`, que compara los tokens de los
+dos portales.
+
+Lo que se verificó contra el servidor, no sólo en el repositorio:
+
+- Las dieciocho pantallas del portal responden, traen contenido y **ninguna** define estilos
+  propios — 58 comprobaciones, incluidas las de que los assets lleguen con su `?v=` y no una
+  versión vieja de la caché del CDN.
+- El recorrido completo de un activo, cada paso por su endpoint real y por HTTP: alta con sistema
+  operativo, ficha, detalle, archivar, papelera, restaurar, archivar otra vez y eliminar — 35
+  comprobaciones, y la base vuelve a quedar como estaba.
+- El borrado definitivo, con sus negativos: sin confirmación no borra, con el número equivocado
+  no borra, sin token no borra, un activo del inventario no se elimina desde la papelera, el
+  historial sobrevive y el activo de al lado no se toca — 34 comprobaciones.
 
 ---
 
