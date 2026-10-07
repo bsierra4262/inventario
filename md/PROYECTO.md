@@ -313,6 +313,77 @@ flowchart TD
 Cada cambio deja una fila en `producto_movimientos` con el estado completo del activo en ese
 momento: el historial no depende de reconstruir nada.
 
+### El alta carga todo de una
+
+Dar de alta una computadora era crear el activo y después ir a la ficha a cargar
+componentes, red, relaciones, contratos, documentos y notas: dos pantallas y
+ocho formularios, cada uno con su propio envío — cargabas un disco, se recargaba
+la página, cargabas la memoria, se recargaba otra vez.
+
+Ahora todo eso está en el formulario de alta y entra en el mismo POST. Las filas
+de componentes y de interfaces se agregan y se quitan sin recargar, porque no se
+sabe cuántas hay: una notebook tiene un disco, un servidor tiene seis, un switch
+tiene veinticuatro puertos.
+
+Una fila que no se puede guardar **no aborta el alta**: se anota el motivo y se
+sigue, y el aviso de llegada dice con números qué entró —«Se guardaron 2
+componentes, 1 puerto de red, 1 dirección IP y 1 nota»—. Perder los quince
+campos que estaban bien porque una MAC estaba mal escrita es peor que guardar
+catorce y decir cuál falló.
+
+Lo guarda [`core/tenants/ficha_alta.php`](core/tenants/ficha_alta.php) y lo
+dibuja [`includes/campos_ficha.php`](includes/campos_ficha.php).
+
+### Versión y Edición salen de una lista
+
+Los dos desplegables estaban vacíos, con el cartel «La lista está vacía. Cargá
+los valores en Listas desplegables». Para anotar «Windows 11 · 24H2 · Pro» había
+que ir a otra pantalla, dar de alta «24H2», dar de alta «Pro» y volver. Nadie
+hace eso: escribe cualquier cosa o deja el campo en blanco, y la pregunta que
+motivó todo el módulo —cuántas máquinas siguen en una versión sin soporte—
+vuelve a no poder contestarse.
+
+Ahora se elige el sistema y las dos listas pasan a ser las de ese sistema:
+
+| Sistema | Versiones que trae |
+| --- | --- |
+| Windows 11 | 25H2, 24H2, 23H2, 22H2, 21H2 |
+| Windows 10 | 22H2 … 1507, las catorce |
+| Ubuntu | 25.04, 24.10, 24.04 LTS … 16.04 LTS |
+| Debian | 13 (Trixie) … 9 (Stretch) |
+| macOS | 26 (Tahoe) … 10.14 (Mojave) |
+| VMware ESXi | 8.0, 7.0, 6.7, 6.5 |
+
+Son 63 sistemas con 210 versiones y 98 ediciones, en
+[`core/tenants/so_versiones.php`](core/tenants/so_versiones.php).
+
+**Está en el código y no en la base** porque no es un dato de la empresa: que
+Windows 11 tenga 24H2 no depende de qué inventario sea. Ponerlo en `catalogos`
+obligaría a sembrar mil filas en cada empresa nueva y a migrar cada vez que sale
+una versión.
+
+**La lista llega hasta lo que se puede afirmar.** Una lista de versiones
+inventadas es peor que una corta: alguien elige una de un desplegable, la da por
+buena, y queda un inventario con un dato que no existe. Lo que falte se agrega
+con el botón `+` sin salir de la pantalla, se guarda en el catálogo de la
+empresa y queda disponible para siempre.
+
+### Volver a donde se estaba
+
+Se entraba a editar un activo desde el listado, se cancelaba, y la edición
+devolvía **siempre** al detalle del activo — una pantalla por la que nadie había
+pasado. «Cancelar» tiene que deshacer el paso, no llevar a un lugar nuevo.
+
+Cada pantalla de ida y vuelta recibe de dónde vino en `?volver=` y usa eso para
+su «Cancelar» y su «Volver», conservando la página y los filtros que había. Una
+cadena de tres pantallas —listado → detalle → edición— vuelve al listado y no al
+detalle.
+
+No se usa `HTTP_REFERER`: no llega siempre y lo manda el cliente. El destino se
+valida contra una lista de secciones conocidas, con el camino ya resuelto — un
+`?volver=//otro-sitio.com` es una redirección abierta y el navegador lo trata
+como otro dominio. Está en [`includes/volver.php`](includes/volver.php).
+
 ---
 
 ## 7. Catálogos
@@ -760,7 +831,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Seis baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 401 chequeos — análisis estático del árbol
+php test/run_tests.php            # 405 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible
@@ -768,7 +839,7 @@ php test/ayudas.php               # campos de formulario sin un ejemplo que guí
 php test/colores.php              # colores escritos a mano fuera de la identidad visual
 php test/tokens.php               # tokens que valen distinto en cada portal
 
-node test/componentes.js          # 144 chequeos — los componentes, ejecutados en jsdom
+node test/componentes.js          # 147 chequeos — los componentes, ejecutados en jsdom
 
 AV_TEST_DB_HOST=127.0.0.1 AV_TEST_DB_PORT=3307 AV_TEST_DB_USER=root AV_TEST_DB_NAME=av_tenant php test/integracion.php          # 260 chequeos — contra una base descartable
 ```

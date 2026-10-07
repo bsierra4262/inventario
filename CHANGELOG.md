@@ -4,6 +4,125 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.9.0] — 2026-10-07
+
+Lo que apareció al usar el portal de verdad: un PDF que salía vacío, campos del
+sistema operativo que nunca se guardaban, y un alta que obligaba a pasar por dos
+pantallas para cargar una computadora.
+
+### Corregido
+
+- **El PDF de reportes salía con el encabezado y ninguna fila.** Las filas se
+  pintaban con `color: var(--ink)` y `fillColor: var(--soft)` — variables CSS
+  pasadas a pdfMake, que no es un navegador y no sabe resolverlas. El encabezado
+  usaba `#663399` y por eso sí salía: el PDF bajaba con el título, la franja
+  violeta y nada debajo. El CSV, que no pasa por ahí, siempre estuvo bien.
+
+  Se verifica generando el documento en Chrome y contando lo que tiene adentro,
+  no leyendo el código: la definición ahora trae las filas con su contenido y
+  cero colores sin resolver.
+
+- **La versión, la edición y la arquitectura del sistema operativo nunca se
+  guardaron.** Las columnas se llaman `version`, `edicion` y `arquitectura`; los
+  campos del formulario se llaman `so_version`, `so_edicion` y
+  `so_arquitectura`, porque el nombre lo pone el tipo de catálogo. Las dos
+  pantallas que guardaban buscaban la columna a secas, así que `so` y `kernel`
+  entraban —se llaman igual de los dos lados— y los otros tres se perdían **en
+  silencio**: se elegían, se enviaba el formulario y el campo volvía vacío.
+
+- **«Cancelar» no deshacía el paso.** Se entraba a editar un activo desde el
+  listado, se cancelaba, y la edición devolvía siempre al detalle del activo —
+  una pantalla por la que nadie había pasado. Ahora cada pantalla de ida y
+  vuelta recibe de dónde vino (`?volver=`) y vuelve ahí, conservando la página y
+  los filtros que había. Una cadena de tres pantallas vuelve al principio y no
+  al medio. El destino se valida contra una lista de secciones conocidas: un
+  `?volver=//otro-sitio.com` es una redirección abierta, y no se acepta.
+
+- **«Contraseña» en una empresa que entra sólo con Google o Microsoft.** La
+  opción llevaba a cambiar algo que no sirve para entrar. Ahora no se muestra, y
+  la pantalla tampoco se abre escribiendo la dirección.
+
+### Agregado
+
+- **El alta carga la ficha técnica entera en un solo paso.** Antes creaba el
+  activo y mandaba a la ficha para cargar componentes, red, relaciones,
+  contratos, documentos y notas: dos pantallas y ocho formularios separados para
+  dar de alta UNA computadora, cada uno con su propio envío — cargabas un disco,
+  se recargaba la página, cargabas la memoria, se recargaba otra vez.
+
+  Las filas se agregan y se quitan sin recargar nada, porque no se sabe cuántas
+  hay: una notebook tiene un disco, un servidor tiene seis, un switch tiene
+  veinticuatro puertos. Una fila que no se puede guardar no aborta el alta: se
+  anota el motivo y se sigue, y el aviso de llegada dice con números qué entró.
+
+- **Versión y Edición salen de una lista, atadas al sistema operativo.** Los dos
+  desplegables estaban vacíos, con el cartel «La lista está vacía. Cargá los
+  valores en Listas desplegables»: para anotar «Windows 11 · 24H2 · Pro» había
+  que ir a otra pantalla, dar de alta «24H2», dar de alta «Pro» y volver. Nadie
+  hace eso.
+
+  Ahora se elige el sistema y las dos listas pasan a ser las de ese sistema:
+  Windows 11 trae 25H2, 24H2, 23H2, 22H2 y 21H2; Ubuntu trae las release desde
+  16.04 LTS; macOS trae de Mojave a Tahoe. Son 63 sistemas con 210 versiones y
+  98 ediciones, en `core/tenants/so_versiones.php`.
+
+  La lista llega hasta lo que se puede afirmar. Una lista de versiones
+  inventadas es peor que una corta: alguien elige una de un desplegable, la da
+  por buena, y queda un inventario con un dato que no existe. Lo que falte se
+  agrega con el `+` sin salir de la pantalla, y queda disponible para siempre.
+
+- **`ihAvisar()`**, un aviso de un solo botón con el diseño del sistema.
+  Quedaban tres `alert()` del navegador — dos en la edición y uno en la
+  exportación — que salen con el nombre del dominio arriba y la tipografía del
+  sistema operativo.
+
+### Cambiado
+
+- **Las tablas, compactas y todas a la misma altura.** Medidas en Chrome: una
+  fila del listado de activos medía 87 px y una de reportes 43, y las de campos
+  iban de 88 a 122 según lo que hubiera adentro. La diferencia no era el tamaño
+  de la letra —todas usan la misma clase— sino tres datos apilados uno debajo
+  del otro donde entraban en un renglón, y «Lista de opciones» partido en dos
+  líneas por una columna angosta.
+
+  Ahora: activos 51, reportes 37, campos 55–56 — y parejas dentro de cada tabla.
+  En campos entran catorce filas donde antes entraban siete.
+
+- **Reportes tiene la misma estructura que Activos**: los filtros y la tabla
+  como dos tarjetas pegadas que se leen como una, con el paginador en el pie.
+  Antes eran cuatro bloques sueltos apoyados sobre el fondo, y la misma tabla
+  parecía más chica.
+
+- **El color de los KPI sigue al número.** «Garantía próxima» estaba siempre en
+  ámbar y «Archivados» siempre en rojo, incluso diciendo cero. Un tablero con
+  dos de cinco tarjetas en alerta permanente no avisa nada: la alerta deja de
+  significar algo.
+
+- **Cincuenta y tres campos tenían rótulo y no ejemplo.** «N.º de remito» vacío
+  no ayuda: quien no sabe qué va ahí no lo completa, y quien sabe no sabe en qué
+  formato se espera. Ahora dice «Ej.: 0001-00045212».
+
+- **El cartel de lista vacía apunta al botón `+` de al lado** en lugar de mandar
+  a otra pantalla a cargar el valor y volver.
+
+### Corregido en los auditores
+
+`test/ayudas.php` daba verde con cincuenta y tres campos sin ejemplo, por dos
+motivos que se tapaban entre sí:
+
+- La regla «un `type` armado con PHP no se puede clasificar» descartaba la
+  etiqueta entera si tenía un `<?php` en **cualquier** atributo — y casi todo
+  campo real trae `value="<?= … ?>"`. Se estaba salteando la mayoría de los
+  campos del proyecto.
+- La expresión que recorta la etiqueta se cortaba en el `?>` del primer `value`,
+  así que el `placeholder` que venía después quedaba afuera: campos que SÍ
+  tenían ejemplo se reportaban como que no.
+
+Y el desplegable propio del sistema dibujaba también las opciones con `hidden`,
+que es lo que usa Versión para esconder lo que no es del sistema elegido.
+
+---
+
 ## [1.8.0] — 2026-10-07
 
 Repaso del portal del cliente pantalla por pantalla, con una regla: nada de estilos escritos en
