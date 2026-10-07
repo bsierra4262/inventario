@@ -208,8 +208,9 @@ que todos los accesos pasen por el proveedor.
 
 ### Cómo se da de alta a alguien
 
-**El acceso es una lista, no un dominio.** Ni el callback de empresa ni el de panel aceptan a
-alguien por el dominio de su correo en el plano de empresa: `tenant_callback.php` hace
+**El acceso es una lista, no un dominio.** En el plano de empresa nadie entra por el dominio
+de su correo: `auth/superadmin_callback.php` —que atiende los dos planos— hace, en su rama de
+empresa,
 
 ```sql
 SELECT id, role FROM users WHERE email = ? LIMIT 1
@@ -231,7 +232,14 @@ reflejar:
 El correo tiene que ser **exactamente** el de la cuenta con la que la persona inicia sesión:
 `jperez@intellihelp.tech` y `j.perez@intellihelp.tech` son dos personas distintas para esta
 consulta. Y no puede haber dos usuarios con el mismo correo: el `LIMIT 1` elegiría uno de los
-dos —con su rol— y nadie sabría cuál.
+dos —con su rol— y nadie sabría cuál. La tabla ya lo impide con un `UNIQUE` en `email`, pero
+el chequeo en PHP está igual: una base de empresa en modo `external` puede venir de una
+instalación vieja sin ese índice, y el mensaje de error es legible.
+
+**Ojo con `users.active`.** La columna existe en el DDL pero **hoy no la lee nadie**: ni
+`auth/login.php` ni la rama de empresa del callback la miran, y ninguna pantalla la escribe.
+Darle de baja a alguien se hace borrándolo o quitándole el correo, no apagando esa bandera —
+apagarla no bloquea nada.
 
 Primero se da de alta, después la persona entra. No hay auto-registro: alguien con un correo
 de la empresa que no esté en la tabla llega hasta Google, Google dice que sí, y el sistema
