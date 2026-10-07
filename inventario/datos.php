@@ -108,7 +108,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
       ],
   ]); ?>
 
-  <div class="ih-alert ih-alert--info ih-mt-5" style="max-width:940px">
+  <div class="ih-alert ih-alert--info ih-mt-5 ih-ancho-lectura">
     <i class="bi bi-info-circle-fill"></i>
     <div>
       El archivo que baja «Exportar a CSV» se puede volver a importar tal cual. Las dos

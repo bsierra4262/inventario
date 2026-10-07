@@ -1478,10 +1478,20 @@ chequear('node_modules no se versiona',
 
 // componentes.css la cargan las dos hojas, que definen los tokens por separado:
 // un token que exista en una sola haría que el componente se vea distinto.
+//
+// Los que componentes.css define por su cuenta no cuentan: son constantes del
+// componente y no de la marca —el ancho máximo de algo que se lee de corrido no
+// tiene nada que ver con el color ni con la tipografía—, así que viven en la
+// hoja compartida justamente para no estar escritos dos veces.
 preg_match_all('/var\(\s*(--ih-[a-zA-Z0-9-]+)/', $comp, $mt);
-$ihcss2 = leer('assets/css/intellihelp.css');
+$ihcss2  = leer('assets/css/intellihelp.css');
+$propios = [];
+if (preg_match_all('/^\s*(--ih-[a-zA-Z0-9-]+)\s*:/m', $comp, $mp)) {
+    $propios = array_flip($mp[1]);
+}
 $faltaTok = [];
 foreach (array_unique($mt[1]) as $t) {
+    if (isset($propios[$t])) { continue; }
     if (!str_contains($css, $t . ':') || !str_contains($ihcss2, $t . ':')) { $faltaTok[] = $t; }
 }
 chequear(count(array_unique($mt[1])) . ' tokens que usa componentes.css están en LAS DOS hojas',
@@ -1947,6 +1957,33 @@ chequear('.gitattributes normaliza los finales de línea', str_contains(leer('.g
 chequear('composer.lock está versionado', is_file(RAIZ . '/composer.lock'));
 chequear('vendor/ está ignorado', str_contains(leer('.gitignore'), 'vendor/'));
 chequear('Los uploads temporales están ignorados', str_contains(leer('.gitignore'), 'secure/tmp/'));
+
+/* Ningún byte de control en el código fuente.
+   Esto existe porque pasó, dos veces y de la misma forma: un `\b` escrito en una
+   expresión regular llegó al archivo como un byte de retroceso de verdad (0x08),
+   y el patrón quedó buscando «script» seguido de un carácter que no existe en
+   ningún HTML. No rompe nada, no da error, no se ve al leer el código: la
+   expresión simplemente deja de encontrar lo que buscaba. En test/ayudas.php
+   eso significó que un comentario de JavaScript se contara como un campo de
+   formulario sin ejemplo, y el motivo tardó media hora en aparecer.
+   Lo único que corresponde es tabulador, salto de línea y retorno. */
+$conControl = [];
+$iter = new RecursiveIteratorIterator(
+    new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator(RAIZ, FilesystemIterator::SKIP_DOTS),
+        fn($f) => !in_array($f->getFilename(), ['vendor', 'node_modules', '.git', 'logs', 'uploads'], true)
+    )
+);
+foreach ($iter as $f) {
+    if (!$f->isFile() || !preg_match('/\.(php|js|css|md|json)$/i', $f->getFilename())) { continue; }
+    $txt = (string)file_get_contents($f->getPathname());
+    if (!preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $txt, $m, PREG_OFFSET_CAPTURE)) { continue; }
+    $conControl[] = str_replace(RAIZ . DIRECTORY_SEPARATOR, '', $f->getPathname())
+        . ':' . (substr_count(substr($txt, 0, $m[0][1]), "\n") + 1)
+        . sprintf(' (0x%02X)', ord($m[0][0]));
+}
+chequear('Ningún archivo tiene bytes de control sueltos',
+    $conControl === [], implode(', ', array_slice($conControl, 0, 5)));
 
 // ═══════════════════════════════════════════════════════════════════════════
 echo "\n" . str_repeat('═', 68) . "\n";

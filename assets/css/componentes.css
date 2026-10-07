@@ -29,6 +29,19 @@
    varias pantallas muestran y esconden paneles con ese atributo. */
 [hidden] { display: none !important; }
 
+/* El ancho máximo de algo que se lee de corrido. Un renglón de 1400 px no se
+   lee: el ojo pierde de dónde venía al volver al margen izquierdo. No es un
+   token de marca —no tiene nada que ver con el color ni con la tipografía—,
+   así que vive acá y no en las hojas de cada portal.
+
+   Lo usan las tarjetas de acceso y los avisos largos, y por eso está en una
+   variable: tenían los dos el mismo 940 px escrito aparte, y el día que uno
+   cambiara iban a quedar desalineados en la misma pantalla. */
+:root {
+  --ih-ancho-lectura: 940px;
+}
+.ih-ancho-lectura { max-width: var(--ih-ancho-lectura); }
+
 /* ---------------------------------------------------------------------------
    1. Base común de los desplegables (select y fecha comparten superficie)
    --------------------------------------------------------------------------- */
@@ -468,7 +481,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-hub {
   display: grid;
   gap: .55rem;
-  max-width: 940px;
+  max-width: var(--ih-ancho-lectura, 940px);
 }
 .ih-hub__item {
   display: flex; align-items: center; gap: 1rem;
@@ -837,6 +850,123 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
    es la forma de decir «lo mínimo», porque 0 lo ignora. Lo que sobra se lo
    queda la columna del nombre, que es la que lo necesita. */
 .ih-table__acciones { width: 1%; white-space: nowrap; }
+
+/* ---------------------------------------------------------------------------
+   7 quater. Tarjetas de acción
+   ---------------------------------------------------------------------------
+   Una elección entre dos o tres caminos, cada uno con su icono, su título, una
+   explicación de qué hace y el botón que lo hace. Es lo que necesitan las
+   pantallas de exportar y de respaldo: no son ajustes que se abren en otra
+   pantalla —para eso están las `.ih-hub`—, son acciones que se ejecutan ahí
+   mismo, y por eso cada una termina en un botón y no en una flecha.
+
+   Las dos pantallas la escribían a mano y las dos distinto. Importar llegaba a
+   `grid-template-columns: 1fr 1fr` fijo y lo parcheaba con
+   `[style*="grid-template-columns:1fr 1fr"] { ... !important }` —un selector
+   por subcadena del atributo `style`— para que no quedara de dos columnas en un
+   teléfono. Acá el `auto-fit` lo resuelve sin excepciones.
+
+   El icono NO lleva color propio ni degradado. Uno era verde lima y el otro
+   violeta, y el verde del sistema significa «esto salió bien»: usarlo para
+   distinguir dos botones de descarga le saca el significado que tiene.
+   --------------------------------------------------------------------------- */
+.ih-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 1.15rem;
+  margin-bottom: 1.5rem;
+}
+.ih-opcion {
+  display: flex; flex-direction: column;
+  background: var(--ih-white, #fff);
+  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border-radius: var(--ih-radius-lg, 15px);
+  padding: 1.5rem;
+}
+.ih-opcion__icono {
+  flex: none;
+  width: 3rem; height: 3rem; margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  color: var(--ih-purple, #663399);
+  background: var(--ih-purple-50, #f2ecf9);
+  border-radius: var(--ih-radius-md, 10px);
+}
+.ih-opcion__titulo {
+  margin: 0 0 .4rem;
+  font-size: var(--ih-text-lg, 16px); font-weight: 700;
+  color: var(--ih-gray-800, #2b2836);
+}
+.ih-opcion__texto {
+  margin: 0 0 1.15rem;
+  font-size: var(--ih-text-sm, 12.5px); line-height: 1.6;
+  color: var(--ih-gray-600, #5b566a);
+}
+/* El botón se va al pie, para que dos tarjetas de distinto largo lo tengan a la
+   misma altura: si uno queda más arriba que el otro, la columna más corta
+   parece inacabada. */
+.ih-opcion__accion { margin-top: auto; }
+.ih-opcion__accion .ih-btn { width: 100%; justify-content: center; }
+/* Y lo que no se puede hacer todavía queda visible pero apagado: esconderlo
+   deja a la persona buscando una opción que alguien le dijo que existe. */
+.ih-opcion.es-bloqueada { opacity: .6; }
+.ih-opcion__nota {
+  margin: .6rem 0 0;
+  font-size: var(--ih-text-xs, 11px);
+  color: var(--ih-gray-500, #6f6a7d);
+}
+
+/* ── Una lista de nombres ────────────────────────────────────────────────────
+   Las columnas de un archivo, los campos de un formulario: muchos nombres
+   seguidos que hay que poder recorrer con la vista.
+
+   No son `.ih-badge`. Una insignia dice un estado —«Vencido», «Nuevo»— y por
+   eso va en negrita y con color; treinta y un nombres de columna en negrita son
+   una pared. La pantalla de exportar los dibujaba con `.ih-badge` y tres
+   declaraciones sueltas encima para apagarlos: eso ya era otro componente, sin
+   nombre. ───────────────────────────────────────────────────── */
+.ih-etiquetas { display: flex; flex-wrap: wrap; gap: .4rem; }
+.ih-etiqueta {
+  display: inline-flex; align-items: center;
+  padding: .2rem .55rem;
+  font-size: var(--ih-text-xs, 11px); font-weight: 500;
+  color: var(--ih-gray-600, #5b566a);
+  background: var(--ih-gray-100, #f0edf6);
+  border-radius: var(--ih-radius-sm, 7px);
+  white-space: nowrap;
+}
+
+/* ── Una lista de pasos ──────────────────────────────────────────────────────
+   Instrucciones en orden, de las que hay que seguir una por una. La pantalla de
+   respaldo las tenía como un `<ol>` con cuatro declaraciones sueltas encima
+   —sangría, interlineado, tamaño, color— para que se leyeran.
+
+   El número va afuera del texto y en violeta, porque lo que la persona busca al
+   volver a la pantalla es «¿en cuál estaba?», y para eso tiene que poder
+   contarlos de un vistazo sin leerlos. ───────────────────────────────────── */
+.ih-pasos {
+  margin: 0; padding: 0;
+  list-style: none;
+  counter-reset: ih-paso;
+  display: grid; gap: .7rem;
+}
+.ih-pasos > li {
+  counter-increment: ih-paso;
+  position: relative;
+  padding-left: 2.2rem;
+  font-size: var(--ih-text-base, 14px); line-height: 1.6;
+  color: var(--ih-gray-700, #434050);
+}
+.ih-pasos > li::before {
+  content: counter(ih-paso);
+  position: absolute; left: 0; top: .05rem;
+  width: 1.55rem; height: 1.55rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--ih-text-xs, 11px); font-weight: 800;
+  color: var(--ih-purple, #663399);
+  background: var(--ih-purple-50, #f2ecf9);
+  border-radius: 50%;
+}
 
 /* ---------------------------------------------------------------------------
    8. Pastillas de selección y lista de permisos

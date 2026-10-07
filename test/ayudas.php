@@ -62,6 +62,13 @@ function ayudas_campos_sin_ejemplo(): array {
                     $limpio .= $t;
                 }
             }
+            // Y fuera lo que hay dentro de <script> y <style>. El lexer de PHP no
+            // los ve como comentarios —para él son HTML suelto—, así que un
+            // comentario de JavaScript que menciona «<input>» entraba como si
+            // fuera un campo de formulario sin ejemplo. Pasó en importar.php.
+            $limpio = (string)preg_replace('#<script[^>]*>.*?</script>#is', '', $limpio);
+            $limpio = (string)preg_replace('#<style[^>]*>.*?</style>#is', '', $limpio);
+
             $src = $limpio;
 
             // Cada <input> o <textarea> con su contexto: 400 caracteres después,

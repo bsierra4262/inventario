@@ -120,7 +120,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <div class="ih-alert ih-alert--<?= $feedbackType ?>">
       <i class="bi bi-<?= $feedbackType === 'danger' ? 'exclamation-triangle-fill' : ($feedbackType === 'warning' ? 'exclamation-circle-fill' : 'check-circle-fill') ?>"></i>
       <div><?= $feedbackMsg ?></div>
-      <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
+      <button class="ih-alert__close" type="button" aria-label="Cerrar el aviso"><i class="bi bi-x"></i></button>
     </div>
   <?php endif; ?>
 

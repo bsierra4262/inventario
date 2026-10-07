@@ -1,4 +1,20 @@
 <?php
+/**
+ * Exportar el inventario a una planilla.
+ *
+ * Dos descargas, y la diferencia entre ellas es una sola: si van los
+ * archivados o no. Van separadas porque son dos usos distintos —pasarle a
+ * alguien el inventario de hoy, o tener el historial completo— y no una casilla
+ * que hay que acordarse de tildar.
+ *
+ * El archivo que sale de acá se puede volver a importar tal cual. Las dos
+ * columnas que no vuelven son a propósito: la fecha de carga la pone el
+ * sistema, y el estado de archivado no se toca desde una planilla, para que una
+ * importación no mande activos a la papelera sin avisar.
+ *
+ * Permiso: asset.export.
+ */
+
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
@@ -76,10 +92,10 @@ $csrf_activos    = generateCsrfToken('export_inventario');
 $csrf_archivados = $csrf_activos;
 
 // ── Variables de layout ─────────────────────────────────────────────────────
-$page_title      = 'Exportar CSV — Asset Vault';
+$page_title      = 'Exportar — Asset Vault';
 $page_section    = 'exportar';
-$topbar_title    = 'Exportar inventario';
-$topbar_subtitle = 'Descargá el inventario en formato CSV';
+$topbar_title    = 'Exportar a CSV';
+$topbar_subtitle = 'Bajar el inventario como planilla, para abrirlo en Excel o en Google Sheets';
 $topbar_user     = $user['username'] ?? '';
 $topbar_email    = $user['email']    ?? '';
 $topbar_pic      = $_SESSION['user_picture'] ?? '';
@@ -94,65 +110,68 @@ require __DIR__ . '/../includes/layout/head.php';
 
   <main class="ih-app__main ih-anim-fade">
 
-    <!-- ── Resumen del inventario ─────────────────────────────── -->
-    <div class="ih-stats" style="margin-bottom:24px;">
-      <div class="ih-stat ih-stat--green">
-        <div class="ih-stat__label">Activos en operación <i class="bi bi-box-seam"></i></div>
+    <?php /* ── Qué hay para bajar ───────────────────────────────────────────
+             Los números van arriba porque son la decisión: bajar 1.200 activos
+             o 1.260 no es lo mismo que bajar 12, y si alguien se equivocó de
+             empresa lo ve acá antes de descargar nada. */ ?>
+    <div class="ih-stats ih-mb-5">
+      <div class="ih-stat">
+        <div class="ih-stat__label">En operación <i class="bi bi-box-seam"></i></div>
         <div class="ih-stat__value"><?= number_format($stats['activos']) ?></div>
-        <div class="ih-stat__delta">Se incluirán en el export</div>
-      </div>
-      <div class="ih-stat ih-stat--warn">
-        <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
-        <div class="ih-stat__value"><?= number_format($stats['archivados']) ?></div>
-        <div class="ih-stat__delta">Disponibles en export completo</div>
+        <div class="ih-stat__delta">Los que están en el inventario</div>
       </div>
       <div class="ih-stat">
-        <div class="ih-stat__label">Total registros <i class="bi bi-database"></i></div>
+        <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
+        <div class="ih-stat__value"><?= number_format($stats['archivados']) ?></div>
+        <div class="ih-stat__delta">Los que están en la papelera</div>
+      </div>
+      <div class="ih-stat">
+        <div class="ih-stat__label">Total <i class="bi bi-database"></i></div>
         <div class="ih-stat__value"><?= number_format($stats['total']) ?></div>
-        <div class="ih-stat__delta">Todos los estados</div>
+        <div class="ih-stat__delta">Todo lo que hay cargado</div>
       </div>
     </div>
 
-    <!-- ── Opciones de exportación ───────────────────────────── -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;margin-bottom:32px;">
+    <?php /* Las dos descargas. El icono de las dos es el mismo y del mismo
+             color: la diferencia entre ellas está en el texto, no en el color,
+             y el verde del sistema significa «esto salió bien» — gastarlo para
+             distinguir dos botones de descarga le saca ese significado. */ ?>
+    <div class="ih-opciones">
 
-      <!-- Export activos vigentes -->
-      <div class="ih-card">
-        <div class="ih-card__body" style="text-align:center;padding:32px 24px;">
-          <div style="width:64px;height:64px;background:var(--accent-050);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="bi bi-file-earmark-spreadsheet" style="font-size:28px;color:var(--ih-green);"></i>
-          </div>
-          <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--ih-gray-900);">Activos en operación</h3>
-          <p style="color:var(--ih-gray-500);font-size:14px;margin:0 0 20px;">
-            Exporta únicamente los <strong><?= number_format($stats['activos']) ?> activos</strong> no archivados.
-            Es el reporte habitual para auditorías y revisiones.
-          </p>
+      <div class="ih-opcion">
+        <div class="ih-opcion__icono"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+        <h2 class="ih-opcion__titulo">Sólo lo que está en uso</h2>
+        <p class="ih-opcion__texto">
+          Los <strong><?= number_format($stats['activos']) ?> activos</strong> que están en el
+          inventario, sin los archivados. Es la planilla que se usa para una revisión o para
+          pasarle el inventario a alguien: lo que hay hoy, sin lo que ya salió de circulación.
+        </p>
+        <div class="ih-opcion__accion">
           <form method="POST" action="/backend/export_csv.php">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_activos) ?>">
             <input type="hidden" name="incluir_archivados" value="0">
-            <button type="submit" class="ih-btn ih-btn--primary" style="width:100%;">
-              <i class="bi bi-download"></i> Descargar CSV
+            <button type="submit" class="ih-btn ih-btn--primary">
+              <i class="bi bi-download"></i> Descargar planilla
             </button>
           </form>
         </div>
       </div>
 
-      <!-- Export completo (activos + archivados) -->
-      <div class="ih-card">
-        <div class="ih-card__body" style="text-align:center;padding:32px 24px;">
-          <div style="width:64px;height:64px;background:var(--warn-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="bi bi-file-earmark-spreadsheet-fill" style="font-size:28px;color:var(--ih-warn,var(--warn));"></i>
-          </div>
-          <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:var(--ih-gray-900);">Export completo</h3>
-          <p style="color:var(--ih-gray-500);font-size:14px;margin:0 0 20px;">
-            Exporta los <strong><?= number_format($stats['total']) ?> registros</strong> totales
-            incluyendo activos archivados/dados de baja. Útil para historial completo.
-          </p>
+      <div class="ih-opcion">
+        <div class="ih-opcion__icono"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+        <h2 class="ih-opcion__titulo">Todo, incluidos los archivados</h2>
+        <p class="ih-opcion__texto">
+          Los <strong><?= number_format($stats['total']) ?> registros</strong>, con los
+          <?= number_format($stats['archivados']) ?> que están en la papelera y el motivo por el
+          que se archivaron. Sirve cuando hace falta el historial completo y no sólo la foto de
+          hoy.
+        </p>
+        <div class="ih-opcion__accion">
           <form method="POST" action="/backend/export_csv.php">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_archivados) ?>">
             <input type="hidden" name="incluir_archivados" value="1">
-            <button type="submit" class="ih-btn ih-btn--outline" style="width:100%;">
-              <i class="bi bi-download"></i> Descargar CSV completo
+            <button type="submit" class="ih-btn ih-btn--outline">
+              <i class="bi bi-download"></i> Descargar todo
             </button>
           </form>
         </div>
@@ -160,53 +179,59 @@ require __DIR__ . '/../includes/layout/head.php';
 
     </div>
 
-    <!-- ── Columnas que incluye el CSV ───────────────────────── -->
+    <?php /* ── Las columnas ──────────────────────────────────────────────────
+             Están acá para que quien va a editar la planilla afuera sepa con
+             qué se va a encontrar, y para que quien la va a volver a subir
+             sepa qué encabezados tiene que respetar. */ ?>
     <div class="ih-card">
       <div class="ih-card__header">
-        <h3 class="ih-card__title"><i class="bi bi-table"></i> Columnas del archivo CSV</h3>
+        <h2 class="ih-card__title"><i class="bi bi-table"></i> Qué columnas trae la planilla</h2>
       </div>
       <div class="ih-card__body">
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <div class="ih-etiquetas">
           <?php
           $cols = [
-            'ID','Asignado a','Nombre/Modelo','Marca','Descripción','S/N Service Tag',
-            'Cantidad','Valor USD','Estado','Categoría','Subcategoría',
-            'Garantía (meses)','Inicio garantía','Fecha recepción','Fecha compra',
-            'Ubicación','Fecha carga','Patchcord tipo','Patchcord longitud',
-            'Switch gestión','Antenas tipo','Bobina categoría','Bobina ubicación',
-            'Bobina longitud','Conectores tipo','Detalle conectores','Cintas generación',
-            'Detalle repuesto','Detalle otros','Software','Software detalle',
+            'ID', 'Asignado a', 'Nombre/Modelo', 'Marca', 'Descripción', 'S/N Service Tag',
+            'Cantidad', 'Valor USD', 'Estado', 'Categoría', 'Subcategoría',
+            'Garantía (meses)', 'Inicio garantía', 'Fecha recepción', 'Fecha compra',
+            'Ubicación', 'Fecha carga', 'Patchcord tipo', 'Patchcord longitud',
+            'Switch gestión', 'Antenas tipo', 'Bobina categoría', 'Bobina ubicación',
+            'Bobina longitud', 'Conectores tipo', 'Detalle conectores', 'Cintas generación',
+            'Detalle repuesto', 'Detalle otros', 'Software', 'Software detalle',
           ];
           foreach ($cols as $col): ?>
-            <span class="ih-badge" style="background:var(--ih-gray-100);color:var(--ih-gray-600);font-size:11px;">
-              <?= htmlspecialchars($col) ?>
-            </span>
+            <span class="ih-etiqueta"><?= htmlspecialchars($col) ?></span>
           <?php endforeach; ?>
         </div>
-        <p class="ih-text-sm ih-text-muted" style="margin-top:12px;">
-          <i class="bi bi-info-circle"></i>
-          El archivo se genera en formato UTF-8. Si lo abrís en Excel en Windows,
-          puede que necesites importarlo como texto delimitado para que los tildes se vean bien.
-        </p>
+
+        <div class="ih-alert ih-alert--info ih-mt-4">
+          <i class="bi bi-info-circle-fill"></i>
+          <div>
+            <strong>Si lo abrís con Excel en Windows</strong> y las tildes se ven mal, no es que
+            el archivo esté roto: está en UTF-8 y Excel asume otra codificación. Se arregla
+            abriéndolo desde <em>Datos → Obtener datos → Desde un archivo de texto</em> y
+            eligiendo UTF-8. En Google Sheets y en LibreOffice se abre bien de una.
+          </div>
+        </div>
       </div>
     </div>
 
     <?php if (user_can('asset.import_csv', $user)): ?>
-    <!-- ── Importar CSV (solo si tiene permiso) ───────────────── -->
-    <div class="ih-card" style="margin-top:20px;margin-bottom:40px;">
-      <div class="ih-card__body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <i class="bi bi-upload" style="font-size:28px;color:var(--ih-gray-400);flex-shrink:0;"></i>
-        <div style="flex:1;">
-          <p style="font-weight:600;margin:0 0 4px;">¿Querés importar activos desde un CSV?</p>
-          <p class="ih-text-sm ih-text-muted" style="margin:0;">
-            Subí un archivo CSV con el mismo formato para agregar activos en masa.
-          </p>
+      <?php /* El camino de vuelta. La planilla que baja de acá se puede editar y
+               volver a subir tal cual, así que el enlace a importar va en esta
+               pantalla y no sólo en el índice de Datos. */ ?>
+      <div class="ih-alert ih-alert--info ih-alert--accion ih-mt-4">
+        <i class="bi bi-upload"></i>
+        <div class="ih-alert__cuerpo">
+          <strong>Editaste la planilla y la querés volver a subir</strong><br>
+          El archivo que baja de acá se puede importar tal cual, con los mismos encabezados.
         </div>
-        <a href="/inventario/importar.php" class="ih-btn ih-btn--ghost">
-          <i class="bi bi-upload"></i> Ir a Importar
-        </a>
+        <div class="ih-alert__accion">
+          <a href="/inventario/importar.php" class="ih-btn ih-btn--ghost ih-btn--sm">
+            <i class="bi bi-upload"></i> Ir a Importar
+          </a>
+        </div>
       </div>
-    </div>
     <?php endif; ?>
 
   </main>

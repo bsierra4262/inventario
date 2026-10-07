@@ -847,8 +847,38 @@
     });
   }
 
+  // ==========================================================================
+  //  CERRAR UN AVISO
+  // ==========================================================================
+  /**
+   * La cruz de un `.ih-alert` o un `.ih-flash`.
+   *
+   * Estaba escrita en el atributo `onclick` de cada botón, en siete pantallas y
+   * de cuatro maneras distintas: tres ponían `style.display='none'` —que deja
+   * el margen inferior del aviso ocupando lugar, así que la pantalla queda con
+   * un hueco donde había algo—, tres llamaban a `.remove()`, y una de ellas
+   * dibujaba la cruz con el carácter «×» en lugar del icono.
+   *
+   * Un solo oyente en el documento, delegado: así también funciona en un aviso
+   * que aparezca después, sin tener que volver a enganchar nada.
+   */
+  function escucharCierres() {
+    if (document.documentElement.dataset.ihcCierres === '1') { return; }
+    document.documentElement.dataset.ihcCierres = '1';
+
+    document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (!t || t.nodeType !== 1) { return; }
+      var cruz = t.closest('.ih-alert__close, .ih-flash__close');
+      if (!cruz) { return; }
+      var aviso = cruz.closest('.ih-alert, .ih-flash');
+      if (aviso) { ev.preventDefault(); aviso.remove(); }
+    });
+  }
+
   function mejorar(raiz) {
     raiz = raiz || document;
+    escucharCierres();
     aCadaUno(raiz.querySelectorAll('select'), mejorarSelect);
     aCadaUno(raiz.querySelectorAll('input[type="date"]'), mejorarFecha);
     aCadaUno(raiz.querySelectorAll('input[type="file"]'), mejorarArchivo);

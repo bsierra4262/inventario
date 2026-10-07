@@ -251,19 +251,19 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php if ($flash_ok): ?>
     <div class="ih-flash ih-flash--success" id="flash-ok">
       <i class="bi bi-check-circle-fill"></i> <?= $flash_ok ?>
-      <button class="ih-flash__close" onclick="this.parentElement.remove()">×</button>
+      <button class="ih-flash__close" type="button" aria-label="Cerrar el aviso"><i class="bi bi-x"></i></button>
     </div>
     <?php endif; ?>
     <?php if ($flash_warn): ?>
     <div class="ih-flash ih-flash--warn" id="flash-warn">
       <i class="bi bi-exclamation-triangle-fill"></i> <?= $flash_warn ?>
-      <button class="ih-flash__close" onclick="this.parentElement.remove()">×</button>
+      <button class="ih-flash__close" type="button" aria-label="Cerrar el aviso"><i class="bi bi-x"></i></button>
     </div>
     <?php endif; ?>
     <?php if ($flash_err): ?>
     <div class="ih-flash ih-flash--danger" id="flash-err">
       <i class="bi bi-x-circle-fill"></i> <?= $flash_err ?>
-      <button class="ih-flash__close" onclick="this.parentElement.remove()">×</button>
+      <button class="ih-flash__close" type="button" aria-label="Cerrar el aviso"><i class="bi bi-x"></i></button>
     </div>
     <?php endif; ?>
 

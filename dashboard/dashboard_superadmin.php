@@ -95,7 +95,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-alert ih-alert--success">
         <i class="bi bi-check-circle-fill"></i>
         <div><?= htmlspecialchars($flash) ?></div>
-        <button class="ih-alert__close" onclick="this.parentElement.style.display='none'"><i class="bi bi-x"></i></button>
+        <button class="ih-alert__close" type="button" aria-label="Cerrar el aviso"><i class="bi bi-x"></i></button>
       </div>
     <?php endif; ?>
 
