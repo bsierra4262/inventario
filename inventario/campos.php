@@ -180,10 +180,13 @@ require __DIR__ . '/../includes/layout/topbar.php';
                     <?php endif; ?>
                   </div>
                 </td>
-                <td>
+                <?php /* `nowrap`: «Lista de opciones» partido en dos renglones
+                         estiraba la fila entera, y con la lista de opciones
+                         abajo llegaba a 103 px contra 56 de la de al lado. */ ?>
+                <td class="ih-table__nowrap">
                   <?= htmlspecialchars(CAMPO_TIPOS[(string)$d['tipo']] ?? (string)$d['tipo']) ?>
-                  <?php if ($d['opciones']): ?>
-                    <div class="ih-celda__sub"><?= htmlspecialchars(implode(' · ', $d['opciones'])) ?></div>
+                  <?php if ($d['opciones']): $ops = implode(' · ', $d['opciones']); ?>
+                    <div class="ih-celda__sub" title="<?= htmlspecialchars($ops, ENT_QUOTES) ?>"><?= htmlspecialchars($ops) ?></div>
                   <?php endif; ?>
                 </td>
                 <td><?= $ambito !== '' ? htmlspecialchars($ambito) : '<span class="ih-text-muted">Todos los activos</span>' ?></td>

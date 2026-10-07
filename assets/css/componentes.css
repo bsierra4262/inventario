@@ -1042,6 +1042,10 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
    otro idioma queda corto o sobra. «Lo que ocupe el contenido, sin partirlo»
    dice lo mismo y no deja de ser cierto cuando algo cambia. */
 .ih-table__angosta { width: 1%; white-space: nowrap; }
+/* Una columna cuyo texto no parte. Es lo mismo que `.ih-table__angosta` pero
+   sin encogerla al mínimo: sirve para «Lista de opciones», que partido en dos
+   renglones hace más alta la fila entera. */
+.ih-table__nowrap { white-space: nowrap; }
 
 /* Una fila dada de baja. Sigue estando porque todavía se usa en activos
    viejos, pero no es una de las opciones vigentes. */
@@ -1418,8 +1422,16 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   font-size: var(--ih-text-xs, 11px);
   line-height: 1.35;
   color: var(--ih-gray-500, #6f6a7d);
-  display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
+  display: flex; align-items: center; gap: .35rem;
+  /* Un renglón y no los que haga falta: con `wrap`, la lista de opciones de un
+     campo —«LTO-1 · LTO-2 · LTO-3 · LTO-4 · LTO-5»— partía en tres líneas y
+     estiraba la fila a 103 px mientras la de al lado medía 56. Lo que no entra
+     se corta; el texto completo queda en el `title`. */
+  flex-wrap: nowrap;
+  min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ih-celda__sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ih-celda__sub code { font-size: inherit; }
 .ih-celda__sub .ih-badge { font-size: 10px; padding: 0 5px; }
 
