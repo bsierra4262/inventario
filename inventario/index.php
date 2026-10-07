@@ -269,31 +269,45 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php endif; ?>
 
     <!-- ── KPIs ──────────────────────────────────────────────────── -->
+    <?php /* El color sigue al NUMERO, no a la tarjeta.
+
+             «Garantia proxima» estaba siempre en ambar y «Archivados» siempre
+             en rojo, incluso diciendo cero. Un tablero con dos de cinco
+             tarjetas en alerta permanente no avisa nada: la alerta deja de
+             significar algo. Ahora se pintan cuando hay algo para mirar y se
+             quedan neutras cuando no, y el texto de abajo dice cual de las dos
+             cosas esta pasando. */ ?>
     <div class="ih-stats">
       <div class="ih-stat">
         <div class="ih-stat__label">Total activos <i class="bi bi-box-seam"></i></div>
         <div class="ih-stat__value"><?= number_format($kpi_total) ?></div>
         <div class="ih-stat__delta">En operación</div>
       </div>
-      <div class="ih-stat ih-stat--green">
+      <div class="ih-stat">
         <div class="ih-stat__label">Valor inventario <i class="bi bi-currency-dollar"></i></div>
         <div class="ih-stat__value">USD <?= number_format($kpi_valor, 0, ',', '.') ?></div>
         <div class="ih-stat__delta">valor × cantidad</div>
       </div>
-      <div class="ih-stat ih-stat--warn">
+      <div class="ih-stat<?= $kpi_garantia_30d > 0 ? ' ih-stat--warn' : '' ?>">
         <div class="ih-stat__label">Garantía próxima <i class="bi bi-shield-exclamation"></i></div>
         <div class="ih-stat__value"><?= $kpi_garantia_30d ?></div>
-        <div class="ih-stat__delta">Vencen en 30 días</div>
+        <div class="ih-stat__delta"><?= $kpi_garantia_30d > 0 ? 'Vencen en 30 días' : 'Ninguna vence en 30 días' ?></div>
       </div>
-      <div class="ih-stat ih-stat--info">
+      <div class="ih-stat<?= $kpi_sin_asignar > 0 ? ' ih-stat--info' : '' ?>">
         <div class="ih-stat__label">Sin asignar <i class="bi bi-person-dash"></i></div>
         <div class="ih-stat__value"><?= $kpi_sin_asignar ?></div>
-        <div class="ih-stat__delta">Disponibles</div>
+        <div class="ih-stat__delta"><?= $kpi_sin_asignar > 0 ? 'Disponibles para entregar' : 'Todos tienen responsable' ?></div>
       </div>
-      <div class="ih-stat ih-stat--danger">
+      <div class="ih-stat">
         <div class="ih-stat__label">Archivados <i class="bi bi-archive"></i></div>
         <div class="ih-stat__value"><?= $kpi_archivados ?></div>
-        <div class="ih-stat__delta"><a class="ih-stat__enlace" href="/inventario/reportes.php?tab=archivados">Ver el detalle</a></div>
+        <div class="ih-stat__delta">
+          <?php if ($kpi_archivados > 0): ?>
+            <a class="ih-stat__enlace" href="/inventario/archivados.php">Ver la papelera</a>
+          <?php else: ?>
+            La papelera está vacía
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
