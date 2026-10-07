@@ -24,6 +24,12 @@
   --danger:#a12a1e; --danger-bg:#fdeceb; --danger-line:#f3c9c4;
   --info:#1f6f9c; --info-bg:#e7f2f9;
 
+  /* Los dos que `componentes.css` necesita y que sólo existían acá con nombre
+     local: `--line-soft` era la línea tenue de una fila de tabla, y `--pill` el
+     radio de una insignia. Con nombre `--ih-*` los declaran las dos hojas. */
+  --ih-line-soft:#f0edf6;
+  --ih-pill:20px;
+
   --shadow:0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
   --shadow-lg:0 24px 60px -20px rgba(74,36,112,.42);
 
@@ -76,8 +82,7 @@
   --ih-ctl-bg:        var(--surface);
   --ih-ctl-placeholder: #a7a3b4;
 
-
-  /* Escala tipografica. Los valores NO son inventados: son los que realmente
+/* Escala tipografica. Los valores NO son inventados: son los que realmente
      usa APP Tickets (11 / 12.5 / 13 / 14 / 15.5 / 18 / 20 / 22 / 26), contados
      sobre su hoja. Hasta ahora el panel las tenia como tokens y el portal del
      cliente las escribia a mano, asi que los componentes compartidos no podian
@@ -197,59 +202,27 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
   flex:1;width:100%;max-width:var(--ih-content-max);margin:0 auto;
   padding:1.5rem clamp(1rem,3vw,2rem);
 }
-.ih-container{width:100%;max-width:var(--ih-content-max);margin:0 auto;
-  padding:0 clamp(1rem,3vw,2rem)}
 .ih-backdrop{display:none}
 
 .ih-page-header{display:flex;align-items:flex-end;justify-content:space-between;
   gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap}
-.ih-page-header__title{font-size:20px;font-weight:800;margin:0}
-.ih-page-header__subtitle{color:var(--muted);font-size:13px}
 .ih-section{margin-bottom:var(--sp-6)}
-.ih-section__title{font-size:14px;font-weight:700;margin:0 0 .6rem;color:var(--ink)}
-
-/* ------------------------------------------------------------------
+.ih-section__title{font-size:14px;font-weight:700;margin:0 0 .6rem;color:var(--ink)}/* ------------------------------------------------------------------
    4. BOTONES
    ------------------------------------------------------------------ */
-.ih-btn{
-  display:inline-flex;align-items:center;gap:.45rem;justify-content:center;
-  font-family:inherit;font-size:13.5px;font-weight:600;line-height:1;
-  padding:.5rem .9rem;border-radius:var(--radius-sm);border:1px solid transparent;
-  cursor:pointer;transition:.15s;white-space:nowrap;min-height:36px;text-decoration:none;
-}
-.ih-btn:hover{text-decoration:none}
-.ih-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
 .ih-btn:disabled,.ih-btn.is-disabled{opacity:.5;cursor:not-allowed}
-.ih-btn--primary{background:var(--primary);color:#fff}
-.ih-btn--primary:hover{background:var(--primary-700);color:#fff}
 .ih-btn--accent,.ih-btn--success{background:var(--accent);color:#233010}
 .ih-btn--accent:hover,.ih-btn--success:hover{filter:brightness(.96);color:#233010}
-.ih-btn--ghost,.ih-btn--outline{background:var(--surface);color:var(--primary);border-color:var(--line)}
-.ih-btn--ghost:hover,.ih-btn--outline:hover{background:var(--primary-050);color:var(--primary)}
-.ih-btn--danger{background:#fff;color:var(--danger);border-color:var(--danger-line)}
-.ih-btn--danger:hover{background:var(--danger-bg);color:var(--danger)}
-.ih-btn--warning{background:#fff;color:var(--warn);border-color:#eccfa4}
-.ih-btn--warning:hover{background:var(--warn-bg);color:var(--warn)}
-.ih-btn--google{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
-.ih-btn--google:hover{background:#f7f8fa;color:#3c4043}
-.ih-btn--microsoft{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
-.ih-btn--microsoft:hover{background:#f7f8fa;color:#3c4043}
-.ih-btn--block{width:100%}
-.ih-btn--sm{padding:.34rem .72rem;font-size:12.5px;min-height:30px;border-radius:9px}
-.ih-btn--lg{padding:.7rem 1.1rem;font-size:14.5px;min-height:44px}
 
 /* ------------------------------------------------------------------
    5. FORMULARIOS
    ------------------------------------------------------------------ */
 .ih-form{display:block}
 .ih-field{margin-bottom:var(--sp-4);min-width:0}
-.ih-field__label,.ih-label{display:block;font-size:13px;font-weight:600;
-  margin-bottom:.35rem;color:var(--ink)}
 .ih-field--required > .ih-field__label::after,
 .ih-field--required > .ih-label::after{content:" *";color:var(--danger);font-weight:700}
 .req{color:var(--danger);font-weight:700}
-.ih-field__hint{display:block;font-size:11.5px;color:var(--muted);margin-top:.3rem}
-.ih-field__error{display:block;font-size:11.5px;color:var(--danger);margin-top:.3rem}
 
 input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .ih-input,.ih-select,.ih-textarea,
@@ -260,7 +233,6 @@ input[type=datetime-local],input[type=month],select,textarea{
   border-radius:var(--radius-xs);background:var(--surface);transition:.15s;
   min-height:40px;max-width:100%;
 }
-.ih-input--lg{min-height:46px;font-size:15px}
 textarea,.ih-textarea{min-height:90px;resize:vertical;line-height:1.5}
 input:focus,select:focus,textarea:focus{
   outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-050)}
@@ -282,39 +254,21 @@ select,.ih-select{
 select:focus,.ih-select:focus{
   background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23663399' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
 select::-ms-expand{display:none}
-
-.ih-switch{position:relative;display:inline-flex;align-items:center;width:44px;height:24px;
-  background:var(--line);border-radius:var(--pill);cursor:pointer;transition:.15s;flex:none}
 .ih-switch input{position:absolute;opacity:0;width:0;height:0}
-.ih-switch__slider{position:absolute;left:3px;width:18px;height:18px;border-radius:50%;
-  background:#fff;box-shadow:0 1px 3px rgba(16,20,30,.25);transition:.15s}
 .ih-switch input:checked + .ih-switch__slider{transform:translateX(20px)}
-.ih-switch:has(input:checked){background:var(--primary)}
 
 .ih-dropzone{
   border:1.5px dashed var(--line);border-radius:var(--radius);background:var(--soft);
   padding:1.5rem 1rem;text-align:center;color:var(--muted);font-size:13px;
   transition:.15s;cursor:pointer;
 }
-.ih-dropzone:hover,.ih-dropzone.is-over{border-color:var(--primary);background:var(--primary-050);color:var(--primary-700)}
-
-/* ------------------------------------------------------------------
+.ih-dropzone:hover,.ih-dropzone.is-over{border-color:var(--primary);background:var(--primary-050);color:var(--primary-700)}/* ------------------------------------------------------------------
    6. TARJETAS
    ------------------------------------------------------------------ */
-.ih-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-  box-shadow:var(--shadow);overflow:hidden;margin-bottom:var(--sp-5)}
-.ih-card__header{padding:1rem 1.15rem;border-bottom:1px solid var(--line-soft);
-  display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
-.ih-card__title{font-size:14.5px;font-weight:700;margin:0;color:var(--ink)}
-.ih-card__subtitle{font-size:12.5px;color:var(--muted);margin:.15rem 0 0}
-.ih-card__body{padding:1.15rem}
-.ih-card__footer{padding:.9rem 1.15rem;border-top:1px solid var(--line-soft);background:var(--soft)}
-
 /* ------------------------------------------------------------------
    7. TABLAS  (scroll propio: la página nunca scrollea a lo ancho)
    ------------------------------------------------------------------ */
-.ih-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface)}
-.ih-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface)}
+
 /* El relleno es .5rem y no .7: con .7 una fila de una sola linea mediía 43px,
    de los cuales 22 eran aire. Una tabla de veinte activos ocupaba dos pantallas
    de alto sin decir nada más. */
@@ -330,23 +284,12 @@ select::-ms-expand{display:none}
 .ih-table a{font-weight:600}
 .ih-sort{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem}
 .ih-sort:hover{color:var(--primary);text-decoration:none}
-.ih-sort i{font-size:10px;opacity:.6}
-
-/* ------------------------------------------------------------------
+.ih-sort i{font-size:10px;opacity:.6}/* ------------------------------------------------------------------
    8. BADGES / PILLS
    ------------------------------------------------------------------ */
-.ih-badge{
-  display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;
-  border-radius:var(--pill);font-size:11.5px;font-weight:700;line-height:1.6;
-  background:var(--primary-050);color:var(--primary-700);white-space:nowrap;
-}
-.ih-badge--purple  {background:var(--primary-050);color:var(--primary-700)}
-.ih-badge--success,
-.ih-badge--green   {background:var(--accent-050);color:var(--accent-600)}
+
 .ih-badge--warning,
 .ih-badge--warn    {background:var(--warn-bg);color:var(--warn)}
-.ih-badge--danger  {background:var(--danger-bg);color:var(--danger)}
-.ih-badge--info    {background:var(--info-bg);color:var(--info)}
 /* .ih-badge--neutral esta en componentes.css: la usa backend/view_details.php,
    que es compartido. */
 .ih-badge--dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
@@ -356,17 +299,11 @@ select::-ms-expand{display:none}
    ------------------------------------------------------------------ */
 .ih-stats{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
   margin-bottom:var(--sp-6)}
-.ih-stat{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);
-  border-radius:var(--radius);padding:1rem 1.1rem;box-shadow:var(--shadow)}
 .ih-stat--green{border-left-color:var(--accent)}
 .ih-stat--warn {border-left-color:var(--warn)}
 .ih-stat--danger{border-left-color:var(--danger)}
 .ih-stat--info {border-left-color:var(--info)}
-.ih-stat__label{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
-  font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
 .ih-stat__label i{font-size:15px;opacity:.55}
-.ih-stat__value{font-size:26px;font-weight:800;letter-spacing:-.03em;margin:.25rem 0 .1rem;color:var(--ink)}
-.ih-stat__delta{font-size:11.5px;color:var(--muted)}
 
 /* ------------------------------------------------------------------
    10. ALERTAS Y FLASH
@@ -386,41 +323,17 @@ select::-ms-expand{display:none}
   margin-left:auto;background:none;border:0;color:inherit;opacity:.55;cursor:pointer;
   font-size:18px;line-height:1;padding:0 .1rem;flex:none
 }
-.ih-alert__close:hover,.ih-flash__close:hover{opacity:1}
-
-/* ------------------------------------------------------------------
+.ih-alert__close:hover,.ih-flash__close:hover{opacity:1}/* ------------------------------------------------------------------
    11. ESTADO VACÍO
    ------------------------------------------------------------------ */
-.ih-empty{text-align:center;padding:3rem 1.5rem;color:var(--muted)}
-.ih-empty__icon{font-size:44px;color:var(--primary-100);margin-bottom:.5rem;line-height:1}
-.ih-empty__title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:.2rem}
-.ih-empty__text{font-size:13px;max-width:420px;margin:0 auto}
-
 /* ------------------------------------------------------------------
    12. LOGIN / PANTALLAS DE ACCESO
    ------------------------------------------------------------------ */
-.ih-auth{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;
-  background:radial-gradient(120% 120% at 50% 0,#6b3aa0 0,#3f1f63 100%);
-}
-.ih-auth__card{width:100%;max-width:420px;background:var(--surface);
-  border-radius:var(--radius);box-shadow:var(--shadow-lg);overflow:hidden}
-.ih-auth__header{padding:2rem 1.9rem 1.2rem;text-align:center}
+
 .ih-auth__brand{display:flex;align-items:center;justify-content:center;gap:.7rem;margin-bottom:1rem}
-.ih-auth__logo{width:44px;height:44px;border-radius:12px;background:var(--primary);
-  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;
-  font-size:20px;flex:none;overflow:hidden}
 .ih-auth__brand-text{text-align:left;line-height:1.15}
 .ih-auth__brand-text strong{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em}
 .ih-auth__brand-text span{display:block;font-size:12px;color:var(--muted)}
-.ih-auth__title{font-size:21px;font-weight:800;margin:.4rem 0 .1rem}
-.ih-auth__subtitle{color:var(--muted);font-size:13px;margin:0}
-.ih-auth__body{padding:0 1.9rem 1.6rem}
-.ih-auth__footer{padding:1rem 1.9rem;border-top:1px solid var(--line-soft);
-  background:var(--soft);text-align:center;color:var(--muted);font-size:11.5px}
-.ih-auth__divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0;
-  color:var(--muted);font-size:12px}
-.ih-auth__divider::before,.ih-auth__divider::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* ------------------------------------------------------------------
    13. UTILIDADES
@@ -432,9 +345,7 @@ select::-ms-expand{display:none}
 @media (max-width:860px){
   .ih-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ih-col-1,.ih-col-2,.ih-col-3,.ih-col-4,.ih-col-5,.ih-col-6,.ih-col-8,.ih-col-9,.ih-col-12{grid-column:span 2}
-}
-
-/* Los modales <dialog> (.ih-modal) se fueron a componentes.css: los usan los
+}/* Los modales <dialog> (.ih-modal) se fueron a componentes.css: los usan los
    dos portales y mientras vivieran sólo acá, el panel los quedaba sin estilo.
    Ver assets/css/componentes.css, seccion 4. */
 /* Las utilidades de disposicion --filas, separaciones, margenes, alineacion--
@@ -443,10 +354,8 @@ select::-ms-expand{display:none}
    solo estaban los pares, asi que una pantalla compartida usaba una clase que
    en el otro portal no existia. Ver componentes.css, seccion 7 sexies. */
 
-.ih-text-xs{font-size:11.5px} .ih-text-sm{font-size:12.5px} .ih-text-base{font-size:14px}
 .ih-text-md{font-size:15px}   .ih-text-lg{font-size:17px}    .ih-text-xl{font-size:20px}
 .ih-text-2xl{font-size:24px}  .ih-text-3xl{font-size:28px}
-.ih-text-muted{color:var(--muted)}
 .ih-text-primary{color:var(--primary)}
 .ih-text-success,.ih-text-green{color:var(--accent-600)}
 .ih-text-warning,.ih-text-warn{color:var(--warn)}
@@ -599,13 +508,6 @@ img,svg,video{max-width:100%;height:auto}
 /* Red de seguridad: si algo se escapa igual, se clipea en vez de desplazar la
    pagina entera. Va DESPUES de arreglar la causa, no en lugar de arreglarla. */
 html,body{overflow-x:hidden}
-
-/* El area tactil minima recomendada es 44px. Los iconos de accion de las
-   tablas eran de 28. */
-@media (pointer:coarse){
-  .ih-btn,.ih-sidebar__link{min-height:44px}
-  .ih-btn--sm{min-height:38px}
-}
 
 /* ===========================================================================
    CONTROLES DE FORMULARIO (lo que faltaba)

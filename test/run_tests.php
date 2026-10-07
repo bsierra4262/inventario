@@ -1775,11 +1775,11 @@ foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
     chequear("{$n} limita las imágenes al ancho disponible",
         preg_match('/img\s*,\s*svg\s*,\s*video\s*\{\s*max-width:\s*100%/', $txt) === 1);
 }
-// 44px es el área táctil mínima recomendada; los iconos de acción eran de 28.
-foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
-    chequear("{$n} agranda el área táctil en pantallas sin mouse",
-        str_contains(str_replace(' ', '', $txt), '@media(pointer:coarse)'));
-}
+/* 44px es el área táctil mínima recomendada; los iconos de acción eran de 28.
+   Vive en la hoja compartida y vale para los dos portales: estaba escrito en
+   las dos hojas de portal y no decía lo mismo. */
+chequear('La hoja compartida agranda el área táctil en pantallas sin mouse',
+    str_contains(str_replace(' ', '', leer('assets/css/componentes.css')), '@media(pointer:coarse)'));
 
 // Las grillas del formulario de edición vivían en un <style> dentro de edit.php.
 chequear('Las grillas de edición viven en la hoja, no en la página',
@@ -2015,14 +2015,23 @@ $appc = leer('assets/css/app.css');
 $ihc  = leer('assets/css/intellihelp.css');
 $comp = leer('assets/css/componentes.css');
 
-// 1. El boton chico de las acciones de fila: 34 px fijaba el piso en 51.
-foreach (['assets/css/app.css' => $appc, 'assets/css/intellihelp.css' => $ihc] as $arch => $src) {
-    chequear(basename($arch) . ': el boton chico mide 30 px',
-        preg_match('/\.ih-btn--sm\s*\{[^}]*min-height:\s*30px/', $src) === 1);
-    // El area tactil no se negocia: en una pantalla que se toca con el dedo
-    // vuelve a 38. Sin esto, achicar el boton seria achicar el blanco.
-    chequear(basename($arch) . ': y vuelve a 38 px donde se toca con el dedo',
-        preg_match('/pointer:\s*coarse\)[^@]*\.ih-btn--sm\s*\{[^}]*min-height:\s*38px/s', $src) === 1);
+/* 1. El boton chico de las acciones de fila: 34 px fijaba el piso en 51.
+
+   El valor se declara UNA vez, en la hoja compartida. Antes estaba escrito en
+   las dos hojas de portal y habia que acordarse de cambiar las dos: eso es
+   exactamente lo que las dejaba separarse. */
+chequear('El boton chico mide 30 px, en la hoja compartida',
+    preg_match('/\.ih-btn--sm\s*\{[^}]*min-height:\s*30px/', $comp) === 1);
+// El area tactil no se negocia: en una pantalla que se toca con el dedo vuelve
+// a 38. Sin esto, achicar el boton seria achicar el blanco. Tambien una sola
+// vez: estaba en las dos hojas y NO decia lo mismo —la del panel le daba 44 a
+// todos los botones— asi que una fila de acciones era mas alta ahi.
+chequear('Y recupera el area tactil donde se toca con el dedo',
+    preg_match('/pointer:\s*coarse\)[^@]*\.ih-btn--sm\s*\{[^}]*min-height:\s*38px/s', $comp) === 1);
+foreach (['app.css' => $appc, 'intellihelp.css' => $ihc] as $hoja => $src) {
+    chequear("{$hoja} ya no redefine el boton por su cuenta",
+        !str_contains($src, '.ih-btn--sm'),
+        'lo declara de nuevo y las dos hojas vuelven a separarse');
 }
 
 // 2. Un campo dentro de una celda: suelto mide 40 y dejaba la fila en 60.
@@ -2210,14 +2219,12 @@ chequear('Los botones con icono declaran su tipografía',
    tabla de reportes se ve —y se dijo— como dos tamaños distintos. El mínimo
    táctil sigue garantizado por el `@media (pointer: coarse)`, que lo sube a 38;
    lo cuida el grupo «DISENO · una fila de tabla». */
-foreach ([
-    'assets/css/app.css'         => $css,
-    'assets/css/intellihelp.css' => $ihcss2,
-] as $hoja => $txt) {
-    $plano2 = str_replace([" ", "\n"], '', $txt);
-    chequear(basename($hoja) . ' declara el alto mínimo de los botones',
-        str_contains($plano2, 'min-height:36px') && str_contains($plano2, 'min-height:30px'));
-}
+/* El alto mínimo se declara una sola vez, en la hoja compartida. Estaba escrito
+   en las dos hojas de portal, y eso es justamente lo que las dejaba separarse. */
+$planoComp = str_replace([" ", "
+", ""], '', leer('assets/css/componentes.css'));
+chequear('La hoja compartida declara el alto mínimo de los botones',
+    str_contains($planoComp, 'min-height:36px') && str_contains($planoComp, 'min-height:30px'));
 
 // Una insignia de 9px no se lee. El tamaño lo da la hoja, no un style suelto.
 $conStyleChico = [];

@@ -43,6 +43,155 @@
 .ih-ancho-lectura { max-width: var(--ih-ancho-lectura); }
 
 /* ---------------------------------------------------------------------------
+   0. Los componentes, una sola vez
+   ---------------------------------------------------------------------------
+   Botones, campos, tarjetas, tablas, insignias, cifras, avisos y estados
+   vacios. Estaban escritos DOS veces —una en `app.css` y otra en
+   `intellihelp.css`— con las mismas clases y valores distintos, asi que el
+   mismo componente tenia dos caras segun el portal. No eran matices: la
+   etiqueta de un campo medía 13 px en minuscula en el cliente y 11 px en
+   MAYUSCULAS en el panel; el boton «ghost» era blanco con borde en uno y
+   transparente en el otro, donde parecia texto suelto y no algo que se pudiera
+   tocar.
+
+   Esta hoja la cargan los dos portales y carga ULTIMA (ver includes/layout/
+   head.php), asi que lo que se escribe aca manda. Lo que queda en la hoja de
+   cada portal es su NAVEGACION —barra lateral violeta en el panel, pestanas
+   horizontales en el cliente—, que si es distinta a proposito.
+
+   Los valores son los del portal del cliente, que es el que sigue la identidad
+   visual. Las variables son las `--ih-*`, que las dos hojas declaran con los
+   mismos valores: lo cuida `test/tokens.php`.
+
+   Va PRIMERO en esta hoja y no al final: son las reglas BASE, y todo lo que
+   viene mas abajo son modificadores que tienen que poder pisarlas. Puesto al
+   final, el `.ih-card__body` base le ganaba por orden al
+   `.ih-card__body--tabla { padding: 0 }` de la seccion 8 —misma
+   especificidad, gana el ultimo— y la tabla de un listado se metia 37 px
+   adentro del relleno de la tarjeta.
+   --------------------------------------------------------------------------- */
+.ih-page-header__title{font-size:20px;font-weight:800;margin:0}
+.ih-page-header__subtitle{color:var(--ih-gray-500);font-size:13px}
+.ih-btn{display:inline-flex;align-items:center;gap:.45rem;justify-content:center;
+  font-family:inherit;font-size:13.5px;font-weight:600;line-height:1;
+  padding:.5rem .9rem;border-radius:var(--ih-radius-md);border:1px solid transparent;
+  cursor:pointer;transition:.15s;white-space:nowrap;min-height:36px;text-decoration:none;}
+.ih-btn:hover{text-decoration:none}
+.ih-btn:focus-visible{outline:2px solid var(--ih-purple);outline-offset:2px}
+.ih-btn:disabled,.ih-btn.is-disabled{opacity:.5;cursor:not-allowed}
+.ih-btn--primary{background:var(--ih-purple);color:#fff}
+.ih-btn--primary:hover{background:var(--ih-purple-dark);color:#fff}
+.ih-btn--accent,.ih-btn--success{background:var(--ih-green);color:#233010}
+.ih-btn--accent:hover,.ih-btn--success:hover{filter:brightness(.96);color:#233010}
+.ih-btn--ghost,.ih-btn--outline{background:var(--ih-white);color:var(--ih-purple);border-color:var(--ih-gray-200)}
+.ih-btn--ghost:hover,.ih-btn--outline:hover{background:var(--ih-purple-50);color:var(--ih-purple)}
+.ih-btn--danger{background:#fff;color:var(--ih-danger);border-color:var(--ih-danger-line)}
+.ih-btn--danger:hover{background:var(--ih-danger-bg);color:var(--ih-danger)}
+.ih-btn--warning{background:#fff;color:var(--ih-warning);border-color:#eccfa4}
+.ih-btn--warning:hover{background:var(--ih-warning-bg);color:var(--ih-warning)}
+.ih-btn--google{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
+.ih-btn--google:hover{background:#f7f8fa;color:#3c4043}
+.ih-btn--microsoft{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
+.ih-btn--microsoft:hover{background:#f7f8fa;color:#3c4043}
+.ih-btn--block{width:100%}
+.ih-btn--sm{padding:.34rem .72rem;font-size:12.5px;min-height:30px;border-radius:9px}
+.ih-btn--lg{padding:.7rem 1.1rem;font-size:14.5px;min-height:44px}
+
+/* El área táctil mínima recomendada es de 44 px, y los iconos de acción de una
+   tabla medían 28. Estaba escrito en las dos hojas de portal y NO decía lo
+   mismo: la del panel le daba 44 a todos los botones, incluido el chico, así
+   que una fila de acciones era más alta ahí que en el portal del cliente. Acá
+   una sola vez, al lado del botón que acota. */
+@media (pointer: coarse) {
+  .ih-btn, .ih-sidebar__link { min-height: 44px; }
+  .ih-btn--sm { min-height: 38px; }
+}
+.ih-field__label,.ih-label{display:block;font-size:13px;font-weight:600;
+  margin-bottom:.35rem;color:var(--ih-gray-900)}
+.ih-field__hint{display:block;font-size:11.5px;color:var(--ih-gray-500);margin-top:.3rem}
+.ih-field__error{display:block;font-size:11.5px;color:var(--ih-danger);margin-top:.3rem}
+.ih-input,.ih-select,.ih-textarea,
+input[type=text],input[type=search],input[type=email],input[type=tel],input[type=url],
+input[type=number],input[type=password],input[type=date],input[type=time],
+input[type=datetime-local],input[type=month],select,textarea{width:100%;padding:.6rem .75rem;border:1px solid var(--ih-gray-200);
+  border-radius:var(--ih-radius-sm);background:var(--ih-white);transition:.15s;
+  min-height:40px;max-width:100%;}
+.ih-input--lg{min-height:46px;font-size:15px}
+textarea,.ih-textarea{min-height:90px;resize:vertical;line-height:1.5}
+select,.ih-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;padding-right:2rem;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b6577' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .7rem center;background-size:14px;}
+select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23663399' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
+.ih-switch{position:relative;display:inline-flex;align-items:center;width:44px;height:24px;
+  background:var(--ih-gray-200);border-radius:var(--ih-pill);cursor:pointer;transition:.15s;flex:none}
+.ih-switch__slider{position:absolute;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(16,20,30,.25);transition:.15s}
+.ih-switch:has(input:checked){background:var(--ih-purple)}
+.ih-card{background:var(--ih-white);border:1px solid var(--ih-gray-200);border-radius:var(--ih-radius-lg);
+  box-shadow:var(--ih-shadow-sm);overflow:hidden;margin-bottom:1.25rem}
+.ih-card__header{padding:1rem 1.15rem;border-bottom:1px solid var(--ih-line-soft);
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.ih-card__title{font-size:14.5px;font-weight:700;margin:0;color:var(--ih-gray-900)}
+.ih-card__subtitle{font-size:12.5px;color:var(--ih-gray-500);margin:.15rem 0 0}
+.ih-card__body{padding:1.15rem}
+.ih-card__footer{padding:.9rem 1.15rem;border-top:1px solid var(--ih-line-soft);background:var(--ih-gray-50)}
+.ih-table-wrap{overflow-x:auto;border-radius:var(--ih-radius-lg);border:1px solid var(--ih-gray-200);background:var(--ih-white)}
+.ih-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--ih-white)}
+.ih-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;
+  border-radius:var(--ih-pill);font-size:11.5px;font-weight:700;line-height:1.6;
+  background:var(--ih-purple-50);color:var(--ih-purple-dark);white-space:nowrap;}
+.ih-badge--purple{background:var(--ih-purple-50);color:var(--ih-purple-dark)}
+.ih-badge--success,
+.ih-badge--green{background:var(--ih-green-50);color:var(--ih-green-dark)}
+.ih-badge--warning,
+.ih-badge--warn{background:var(--ih-warning-bg);color:var(--ih-warning)}
+.ih-badge--danger{background:var(--ih-danger-bg);color:var(--ih-danger)}
+.ih-badge--info{background:var(--ih-info-bg);color:var(--ih-info)}
+.ih-stat{background:var(--ih-white);border:1px solid var(--ih-gray-200);border-left:3px solid var(--ih-purple);
+  border-radius:var(--ih-radius-lg);padding:1rem 1.1rem;box-shadow:var(--ih-shadow-sm)}
+.ih-stat__label{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+  font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ih-gray-500)}
+.ih-stat__value{font-size:26px;font-weight:800;letter-spacing:-.03em;margin:.25rem 0 .1rem;color:var(--ih-gray-900)}
+.ih-stat__delta{font-size:11.5px;color:var(--ih-gray-500)}
+.ih-alert,.ih-flash{display:flex;align-items:flex-start;gap:.65rem;padding:.8rem 1rem;
+  border-radius:var(--ih-radius-md);font-size:13px;margin-bottom:1rem;
+  border:1px solid transparent;}
+.ih-alert--success,.ih-flash--success{background:var(--ih-green-50);color:#3d5a0c;border-color:#d6e8ac}
+.ih-alert--warning,.ih-flash--warn{background:var(--ih-warning-bg);  color:var(--ih-warning); border-color:#eccfa4}
+.ih-alert--danger, .ih-flash--danger{background:var(--ih-danger-bg);color:var(--ih-danger);border-color:var(--ih-danger-line)}
+.ih-alert--info,   .ih-flash--info{background:var(--ih-info-bg);  color:var(--ih-info); border-color:#bcdcee}
+.ih-alert__close,.ih-flash__close{margin-left:auto;background:none;border:0;color:inherit;opacity:.55;cursor:pointer;
+  font-size:18px;line-height:1;padding:0 .1rem;flex:none}
+.ih-alert__close:hover,.ih-flash__close:hover{opacity:1}
+.ih-empty{text-align:center;padding:3rem 1.5rem;color:var(--ih-gray-500)}
+.ih-empty__icon{font-size:44px;color:var(--ih-purple-100);margin-bottom:.5rem;line-height:1}
+.ih-empty__title{font-size:15px;font-weight:700;color:var(--ih-gray-900);margin-bottom:.2rem}
+.ih-empty__text{font-size:13px;max-width:420px;margin:0 auto}
+.ih-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  background:radial-gradient(120% 120% at 50% 0,#6b3aa0 0,#3f1f63 100%);}
+.ih-auth__card{width:100%;max-width:420px;background:var(--ih-white);
+  border-radius:var(--ih-radius-lg);box-shadow:var(--ih-shadow-lg);overflow:hidden}
+.ih-auth__header{padding:2rem 1.9rem 1.2rem;text-align:center}
+.ih-auth__logo{width:44px;height:44px;border-radius:12px;background:var(--ih-purple);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;
+  font-size:20px;flex:none;overflow:hidden}
+.ih-auth__title{font-size:21px;font-weight:800;margin:.4rem 0 .1rem}
+.ih-auth__subtitle{color:var(--ih-gray-500);font-size:13px;margin:0}
+.ih-auth__body{padding:0 1.9rem 1.6rem}
+.ih-auth__footer{padding:1rem 1.9rem;border-top:1px solid var(--ih-line-soft);
+  background:var(--ih-gray-50);text-align:center;color:var(--ih-gray-500);font-size:11.5px}
+.ih-auth__divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0;
+  color:var(--ih-gray-500);font-size:12px}
+.ih-auth__divider::before,.ih-auth__divider::after{content:"";flex:1;height:1px;background:var(--ih-gray-200)}
+.ih-text-xs{font-size:11.5px}
+.ih-text-sm{font-size:12.5px}
+.ih-text-base{font-size:14px}
+.ih-text-muted{color:var(--ih-gray-500)}
+.ih-text-success,.ih-text-green{color:var(--ih-green-dark)}
+.ih-table-wrap,.ih-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ih-card,.ih-card__body,.ih-stats,.ih-form-grid{min-width:0}
+
+/* ---------------------------------------------------------------------------
    1. Base común de los desplegables (select y fecha comparten superficie)
    --------------------------------------------------------------------------- */
 .ihc-pop {
@@ -1878,6 +2027,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   .ih-table td input[type="date"],
   .ih-table td select { min-height: 38px; }
 }
+
 
 /* ---------------------------------------------------------------------------
    9. Nota de cierre: la mejora progresiva

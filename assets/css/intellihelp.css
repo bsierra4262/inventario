@@ -71,6 +71,12 @@
   --ih-shadow-xl:     0 24px 60px -20px rgba(74,36,112,.42);
 
   /* Radios */
+  /* La línea tenue de una fila de tabla y el radio de una insignia: los usa
+     `componentes.css`, que es compartida, así que el nombre tiene que existir
+     en las dos hojas. */
+  --ih-line-soft:    #f0edf6;
+  --ih-pill:         20px;
+
   --ih-radius-sm:     9px;
   --ih-radius-md:     10px;
   --ih-radius-lg:     15px;
@@ -339,33 +345,9 @@ img { max-width: 100%; height: auto; display: block; }
   border-top: 1px solid rgba(255,255,255,.12);
   padding: var(--ih-space-4) var(--ih-space-5);
   font-size: 11px; opacity: .55;
-}
-
-/* ---------------------------------------------------------------------
+}/* ---------------------------------------------------------------------
    6. CARDS
    --------------------------------------------------------------------- */
-.ih-card {
-  background: var(--ih-white);
-  border: 1px solid var(--ih-gray-200);
-  border-radius: var(--ih-radius-lg);
-  box-shadow: var(--ih-shadow-sm);
-  overflow: hidden;
-}
-.ih-card__header {
-  padding: var(--ih-space-4) var(--ih-space-5);
-  border-bottom: 1px solid var(--ih-gray-200);
-  display: flex; align-items: center; justify-content: space-between;
-  gap: var(--ih-space-3);
-  background: var(--ih-white);
-}
-.ih-card__title { margin: 0; font-size: var(--ih-text-md); font-weight: 700; color: var(--ih-gray-900); }
-.ih-card__subtitle { font-size: var(--ih-text-xs); color: var(--ih-gray-500); margin-top: 2px; }
-.ih-card__body { padding: var(--ih-space-5); }
-.ih-card__footer {
-  padding: var(--ih-space-4) var(--ih-space-5);
-  border-top: 1px solid var(--ih-gray-200);
-  background: var(--ih-gray-50);
-}
 
 /* ---------------------------------------------------------------------
    7. STAT CARDS (grid de métricas)
@@ -376,143 +358,38 @@ img { max-width: 100%; height: auto; display: block; }
   gap: var(--ih-space-4);
   margin-bottom: var(--ih-space-6);
 }
-.ih-stat {
-  background: var(--ih-white);
-  border: 1px solid var(--ih-gray-200);
-  border-radius: var(--ih-radius-lg);
-  padding: var(--ih-space-5);
-  box-shadow: var(--ih-shadow-sm);
-  position: relative;
-  overflow: hidden;
-  transition: transform var(--ih-trans-fast), box-shadow var(--ih-trans-fast);
-}
-.ih-stat:hover { transform: translateY(-2px); box-shadow: var(--ih-shadow-md); }
-.ih-stat::before {
-  content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-  background: var(--ih-purple);
-}
 .ih-stat--green::before  { background: var(--ih-green); }
 .ih-stat--info::before   { background: var(--ih-info); }
 .ih-stat--warn::before   { background: var(--ih-warning); }
 .ih-stat--danger::before { background: var(--ih-danger); }
-
-.ih-stat__label {
-  font-size: var(--ih-text-xs);
-  color: var(--ih-gray-500);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  font-weight: 600;
-  display: flex; align-items: center; justify-content: space-between;
-}
 .ih-stat__label i { color: var(--ih-purple); font-size: 18px; opacity: .8; }
 .ih-stat--green .ih-stat__label i { color: var(--ih-green); }
-.ih-stat__value {
-  font-size: var(--ih-text-3xl);
-  font-weight: 700;
-  color: var(--ih-gray-900);
-  line-height: 1.1;
-  margin-top: var(--ih-space-2);
-  letter-spacing: -.5px;
-}
-.ih-stat__delta {
-  font-size: var(--ih-text-xs);
-  margin-top: var(--ih-space-1);
-  color: var(--ih-gray-500);
-}
 .ih-stat__delta.is-up   { color: var(--ih-success); }
-.ih-stat__delta.is-down { color: var(--ih-danger); }
-
-/* ---------------------------------------------------------------------
+.ih-stat__delta.is-down { color: var(--ih-danger); }/* ---------------------------------------------------------------------
    8. BUTTONS
    --------------------------------------------------------------------- */
-.ih-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: var(--ih-space-2);
-  padding: 10px 18px;
-  font-family: var(--ih-font);
-  font-size: var(--ih-text-sm); font-weight: 600;
-  border: 1px solid transparent;
-  border-radius: var(--ih-radius-md);
-  cursor: pointer;
-  text-decoration: none;
-  /* El mismo alto que en el portal del cliente y que en APP Tickets. Sin esto
+/* El mismo alto que en el portal del cliente y que en APP Tickets. Sin esto
      el botón quedaba en 27px: chico para el dedo y distinto en cada portal. */
-  min-height: 36px; line-height: 1;
-  transition: all var(--ih-trans-fast);
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.ih-btn:hover { transform: translateY(-1px); box-shadow: var(--ih-shadow-md); }
-.ih-btn:active { transform: translateY(0); }
+
 /* `.is-disabled` junto a `:disabled`: un <a> no se puede deshabilitar como un
    <button>, y los paginadores que no tienen a dónde ir son enlaces. En la
    hoja del cliente ya estaban los dos. */
 .ih-btn:disabled,
-.ih-btn.is-disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; pointer-events: none; }
-
-.ih-btn--primary {
-  background: var(--ih-purple); color: var(--ih-white); border-color: var(--ih-purple);
-}
-.ih-btn--primary:hover { background: var(--ih-purple-dark); border-color: var(--ih-purple-dark); color: var(--ih-white); }
-
-.ih-btn--accent {
-  background: var(--ih-green); color: var(--ih-white); border-color: var(--ih-green);
-}
-.ih-btn--accent:hover { background: var(--ih-green-dark); border-color: var(--ih-green-dark); color: var(--ih-white); }
-
-.ih-btn--outline {
-  background: var(--ih-white); color: var(--ih-purple); border-color: var(--ih-purple-200);
-}
-.ih-btn--outline:hover { background: var(--ih-purple-50); border-color: var(--ih-purple); color: var(--ih-purple-dark); }
-
-/* Con el borde transparente y el fondo también, un botón «ghost» del panel se
+.ih-btn.is-disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; pointer-events: none; }/* Con el borde transparente y el fondo también, un botón «ghost» del panel se
    veía como texto suelto: «Habilitar» al lado de un dato no parecía algo que se
    pudiera tocar. El del portal del cliente tiene fondo blanco y borde gris —se
    lee como botón sin competir con el principal— y es lo que corresponde cuando
    está solo en una fila. */
-.ih-btn--ghost {
-  background: var(--ih-white); color: var(--ih-purple); border-color: var(--ih-gray-200);
-}
-.ih-btn--ghost:hover { background: var(--ih-purple-50); color: var(--ih-purple); border-color: var(--ih-purple-200); }
-
-.ih-btn--danger {
-  background: var(--ih-danger); color: var(--ih-white); border-color: var(--ih-danger);
-}
 /* El hover de un botón rojo era #B91C1C, otro rojo más: el de la paleta
    oscurecido alcanza, y es el único rojo que hay. */
-.ih-btn--danger:hover { filter: brightness(.9); color: var(--ih-white); }
 
-.ih-btn--sm { padding: 5px 11px; font-size: var(--ih-text-sm); min-height: 30px; border-radius: var(--ih-radius-sm); }
-.ih-btn--lg { padding: 13px 24px; font-size: var(--ih-text-md); }
-.ih-btn--block { width: 100%; }
-
-.ih-btn--google {
-  background: var(--ih-white); color: var(--ih-gray-800); border-color: var(--ih-gray-300);
-}
-.ih-btn--google:hover { background: var(--ih-gray-50); border-color: var(--ih-gray-400); }
 .ih-btn--google img { width: 18px; height: 18px; }
-
-.ih-btn--microsoft {
-  background: var(--ih-white); color: var(--ih-gray-800); border-color: var(--ih-gray-300);
-}
-.ih-btn--microsoft:hover { background: var(--ih-gray-50); border-color: var(--ih-gray-400); }
 
 /* ---------------------------------------------------------------------
    9. FORMS
    --------------------------------------------------------------------- */
 .ih-field { margin-bottom: var(--ih-space-4); }
-.ih-field__label {
-  display: block;
-  font-size: var(--ih-text-xs);
-  font-weight: 600;
-  color: var(--ih-gray-700);
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: .3px;
-}
 .ih-field__label .req { color: var(--ih-danger); margin-left: 2px; }
-.ih-field__hint { font-size: var(--ih-text-xs); color: var(--ih-gray-500); margin-top: 4px; }
-.ih-field__error { font-size: var(--ih-text-xs); color: var(--ih-danger); margin-top: 4px; }
 
 /* Los ELEMENTOS tambien, no solo las clases.
    Esta hoja estilaba unicamente .ih-input / .ih-select / .ih-textarea, asi que
@@ -556,7 +433,6 @@ input:disabled, select:disabled, textarea:disabled {
 }
 .ih-textarea, textarea { resize: vertical; min-height: 90px; }
 .ih-input[type="file"], input[type="file"] { padding: 8px; }
-.ih-input--lg { padding: 14px 18px; font-size: var(--ih-text-md); border-radius: var(--ih-radius-lg); }
 
 .ih-input-group {
   display: flex; align-items: stretch;
@@ -578,20 +454,7 @@ input:disabled, select:disabled, textarea:disabled {
 .ih-check input[type="checkbox"] {
   width: 18px; height: 18px; accent-color: var(--ih-purple);
 }
-
-.ih-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
 .ih-switch input { opacity: 0; width: 0; height: 0; }
-.ih-switch__slider {
-  position: absolute; cursor: pointer; inset: 0;
-  background: var(--ih-gray-300); border-radius: 24px;
-  transition: background var(--ih-trans-fast);
-}
-.ih-switch__slider::before {
-  content: ''; position: absolute; left: 3px; top: 3px;
-  width: 18px; height: 18px; background: var(--ih-white); border-radius: 50%;
-  transition: transform var(--ih-trans-fast);
-  box-shadow: var(--ih-shadow-sm);
-}
 .ih-switch input:checked + .ih-switch__slider { background: var(--ih-green); }
 .ih-switch input:checked + .ih-switch__slider::before { transform: translateX(20px); }
 
@@ -619,17 +482,10 @@ input:disabled, select:disabled, textarea:disabled {
   padding-bottom: var(--ih-space-2);
   border-bottom: 2px solid var(--ih-purple-100);
 }
-.ih-section-title:first-child { margin-top: 0; }
-
-/* ---------------------------------------------------------------------
+.ih-section-title:first-child { margin-top: 0; }/* ---------------------------------------------------------------------
    10. TABLES
    --------------------------------------------------------------------- */
-.ih-table-wrap { overflow-x: auto; }
-.ih-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--ih-text-sm);
-}
+
 .ih-table thead th {
   background: var(--ih-gray-50);
   color: var(--ih-gray-600);
@@ -650,127 +506,33 @@ input:disabled, select:disabled, textarea:disabled {
 }
 .ih-table tbody tr:hover { background: var(--ih-purple-50); }
 .ih-table tbody tr:last-child td { border-bottom: 0; }
-.ih-table--clickable tbody tr { cursor: pointer; }
-
-/* ---------------------------------------------------------------------
+.ih-table--clickable tbody tr { cursor: pointer; }/* ---------------------------------------------------------------------
    11. BADGES / TAGS
    --------------------------------------------------------------------- */
-.ih-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: var(--ih-radius-full);
-  background: var(--ih-gray-100);
-  color: var(--ih-gray-700);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  line-height: 1.4;
-}
-.ih-badge--purple  { background: var(--ih-purple-100); color: var(--ih-purple-dark); }
-.ih-badge--green   { background: var(--ih-green-100); color: var(--ih-green-dark); }
-.ih-badge--success { background: var(--ih-success-bg); color: var(--ih-success); }
-.ih-badge--warning { background: var(--ih-warning-bg); color: var(--ih-warning); }
-.ih-badge--danger  { background: var(--ih-danger-bg); color: var(--ih-danger); }
-.ih-badge--info    { background: var(--ih-info-bg); color: var(--ih-info); }
+
 .ih-badge--dot::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%;
   background: currentColor; display: inline-block;
-}
-
-/* ---------------------------------------------------------------------
+}/* ---------------------------------------------------------------------
    12. ALERTS / NOTICES
    --------------------------------------------------------------------- */
-.ih-alert {
-  display: flex; align-items: flex-start; gap: var(--ih-space-3);
-  padding: var(--ih-space-4) var(--ih-space-5);
-  border-radius: var(--ih-radius-md);
-  border: 1px solid transparent;
-  font-size: var(--ih-text-sm);
-  margin-bottom: var(--ih-space-4);
-}
+
 .ih-alert i { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
 .ih-alert__title { font-weight: 700; margin-bottom: 2px; }
-.ih-alert__close {
-  margin-left: auto;
-  background: transparent; border: 0; padding: 4px; cursor: pointer;
-  color: inherit; opacity: .6;
-  font-size: 18px; line-height: 1;
-}
-.ih-alert__close:hover { opacity: 1; }
-
-.ih-alert--success { background: var(--ih-success-bg); color: #14532D; border-color: #BBF7D0; }
 .ih-alert--success i { color: var(--ih-success); }
-.ih-alert--warning { background: var(--ih-warning-bg); color: #7C2D12; border-color: #FED7AA; }
 .ih-alert--warning i { color: var(--ih-warning); }
-.ih-alert--danger  { background: var(--ih-danger-bg); color: #7F1D1D; border-color: #FECACA; }
 .ih-alert--danger i { color: var(--ih-danger); }
-.ih-alert--info    { background: var(--ih-info-bg); color: #1E3A8A; border-color: #BFDBFE; }
-.ih-alert--info i  { color: var(--ih-info); }
-
-/* ---------------------------------------------------------------------
+.ih-alert--info i  { color: var(--ih-info); }/* ---------------------------------------------------------------------
    13. AUTH SCREENS (login / setup centrados)
    --------------------------------------------------------------------- */
-.ih-auth {
-  min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(circle at top right, rgba(156,201,48,.08), transparent 60%),
-    radial-gradient(circle at bottom left, rgba(102,51,153,.12), transparent 60%),
-    var(--ih-purple-50);
-  padding: var(--ih-space-4);
-}
-.ih-auth__card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--ih-white);
-  border-radius: var(--ih-radius-xl);
-  box-shadow: var(--ih-shadow-xl);
-  overflow: hidden;
-}
-.ih-auth__header {
-  padding: var(--ih-space-8) var(--ih-space-8) var(--ih-space-5);
-  text-align: center;
-}
+
 .ih-auth__brand {
   display: inline-flex; align-items: center; gap: var(--ih-space-3);
   margin-bottom: var(--ih-space-4);
 }
-.ih-auth__logo {
-  width: 56px; height: 56px;
-  background: var(--ih-purple);
-  border-radius: var(--ih-radius-md);
-  color: var(--ih-white);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 22px; letter-spacing: -1px;
-  position: relative;
-}
-.ih-auth__logo::after { display: none; }
 .ih-auth__brand-text { text-align: left; }
 .ih-auth__brand-text strong { display: block; font-size: var(--ih-text-md); color: var(--ih-gray-900); }
 .ih-auth__brand-text span   { font-size: 11px; color: var(--ih-gray-500); text-transform: uppercase; letter-spacing: 1px; }
-
-.ih-auth__title { font-size: var(--ih-text-xl); margin-bottom: var(--ih-space-1); }
-.ih-auth__subtitle { font-size: var(--ih-text-sm); color: var(--ih-gray-500); }
-
-.ih-auth__body { padding: 0 var(--ih-space-8) var(--ih-space-8); }
-.ih-auth__divider {
-  display: flex; align-items: center; gap: var(--ih-space-3);
-  color: var(--ih-gray-400); font-size: var(--ih-text-xs); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 1px;
-  margin: var(--ih-space-5) 0;
-}
-.ih-auth__divider::before, .ih-auth__divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--ih-gray-200);
-}
-.ih-auth__footer {
-  padding: var(--ih-space-4) var(--ih-space-8);
-  background: var(--ih-gray-50);
-  text-align: center;
-  font-size: var(--ih-text-xs);
-  color: var(--ih-gray-500);
-  border-top: 1px solid var(--ih-gray-200);
-}
 
 /* ---------------------------------------------------------------------
    14. PAGE HEADER
@@ -781,26 +543,9 @@ input:disabled, select:disabled, textarea:disabled {
   margin-bottom: var(--ih-space-6);
   flex-wrap: wrap;
 }
-.ih-page-header__title { margin: 0; font-size: var(--ih-text-2xl); font-weight: 700; letter-spacing: -.5px; }
-.ih-page-header__subtitle { font-size: var(--ih-text-sm); color: var(--ih-gray-500); margin-top: 4px; }
-.ih-page-header__actions { display: flex; gap: var(--ih-space-2); flex-wrap: wrap; }
-
-/* ---------------------------------------------------------------------
+.ih-page-header__actions { display: flex; gap: var(--ih-space-2); flex-wrap: wrap; }/* ---------------------------------------------------------------------
    15. EMPTY STATES
    --------------------------------------------------------------------- */
-.ih-empty {
-  text-align: center;
-  padding: var(--ih-space-12) var(--ih-space-5);
-  color: var(--ih-gray-500);
-}
-.ih-empty__icon {
-  font-size: 56px;
-  color: var(--ih-purple-200);
-  margin-bottom: var(--ih-space-3);
-}
-.ih-empty__title { color: var(--ih-gray-700); font-size: var(--ih-text-lg); margin-bottom: var(--ih-space-2); }
-.ih-empty__text { font-size: var(--ih-text-sm); max-width: 360px; margin: 0 auto var(--ih-space-4); }
-
 /* ---------------------------------------------------------------------
    16. UTILITIES
    --------------------------------------------------------------------- */
@@ -808,14 +553,10 @@ input:disabled, select:disabled, textarea:disabled {
    app.css, y con distinto alcance. Ver componentes.css, seccion 7 sexies.
    Lo que queda aca es lo que SI depende del portal: los tamaños de texto y los
    colores, que el panel todavia resuelve con otra escala. */
-.ih-text-muted  { color: var(--ih-gray-500); }
-.ih-text-purple { color: var(--ih-purple); }
-.ih-text-green  { color: var(--ih-green); }
-.ih-text-sm     { font-size: var(--ih-text-sm); }
-.ih-text-xs     { font-size: var(--ih-text-xs); }
-/* Le faltaba el escalón del medio, que es el tamaño del cuerpo: la hoja del
+
+.ih-text-purple { color: var(--ih-purple); }/* Le faltaba el escalón del medio, que es el tamaño del cuerpo: la hoja del
    cliente lo tiene y el panel lo escribía con `style="font-size:14px"`. */
-.ih-text-base   { font-size: var(--ih-text-base); }
+
 .ih-hidden-mobile { display: inherit; }
 .ih-hidden-desktop { display: none; }
 @media (max-width: 767px) {
@@ -887,22 +628,12 @@ input:disabled, select:disabled, textarea:disabled {
   object-fit: cover; display: block; flex-shrink: 0;
 }
 
-.ih-container {
-  width: 100%; max-width: 1280px; margin: 0 auto;
-  padding: 0 clamp(1rem, 3vw, 2rem);
-}
 .ih-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: var(--ih-space-4);
   margin-bottom: var(--ih-space-4);
 }
-.ih-label {
-  display: block; margin-bottom: var(--ih-space-2);
-  font-size: var(--ih-text-sm); font-weight: 600; color: var(--ih-gray-700);
-}
-.ih-btn--warning { background: var(--ih-white); color: var(--ih-warning); border-color: #eccfa4; }
-.ih-btn--warning:hover { background: #fdf6ec; color: var(--ih-warning); }
 
 /* En pantallas chicas la marca del topbar se reduce al logo. */
 @media (max-width: 640px) {
@@ -926,30 +657,21 @@ input:disabled, select:disabled, textarea:disabled {
 }
 
 @media (max-width: 767px) {
-  .ih-form-grid { grid-template-columns: 1fr; }
-  /* La cabecera envuelve en vez de apilarse en columna: apilandola, el
+  .ih-form-grid { grid-template-columns: 1fr; }/* La cabecera envuelve en vez de apilarse en columna: apilandola, el
      `justify-content: space-between` de la regla base pasa a repartir en
      vertical y el enlace de accion quedaba suelto en el medio. Envolviendo,
      titulo y accion siguen alineados a la izquierda. */
-  .ih-card__header { flex-wrap: wrap; justify-content: flex-start; }
   .ih-card__header .ih-btn { flex: 1 1 100%; justify-content: center; }
 }
 
 @media (max-width: 480px) {
   .ih-app__main { padding: var(--ih-space-3); }
-  .ih-card__body, .ih-card__header { padding: var(--ih-space-4); }
-  .ih-stat__value { font-size: var(--ih-text-xl); }
 }
 
 /* Igual que en el portal: nada empuja la pagina en horizontal. */
 .ih-table-wrap, .ih-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 html, body { overflow-x: hidden; }
 img, svg, video { max-width: 100%; height: auto; }
-
-@media (pointer: coarse) {
-  .ih-btn, .ih-sidebar__link { min-height: 44px; }
-  .ih-btn--sm { min-height: 38px; }
-}
 
 /* ===========================================================================
    CONTROLES DE FORMULARIO
