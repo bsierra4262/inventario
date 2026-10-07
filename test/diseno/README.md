@@ -45,6 +45,25 @@ Conviene repetirlo en 1440, 1024, 768 y 500 px. Por debajo de 500 Chrome en modo
 headless no hace layout: achica la ventana y recorta la captura, así que medir
 ahí no dice nada.
 
+## El medidor de tablas
+
+`test/diseno/medir_tablas.js` se inyecta igual y escribe su informe en el
+`<title>` con el prefijo `TABLA|`: alto de fila por tabla, relleno y tipografía
+de la celda, qué celda es la que estira la fila más alta y cuánto mide el
+contenido de cada una.
+
+Está aparte del auditor porque **no decide nada**. No hay un alto de fila
+«correcto»: una tabla con botones de acción en cada fila no puede ser tan baja
+como una de sólo texto. Esto informa, y la decisión sale de comparar una tabla
+con la de al lado — que es justamente cómo se ve el problema al usar la
+aplicación.
+
+Mide del borde de arriba del primer hijo de la celda al de abajo del último, y
+no el más alto de los hijos: cuando una celda apila dos renglones —la fecha y
+quién la hizo, el nombre y la clave— lo que estira la fila es la **suma**.
+Tomando el máximo informaba 19 px donde había 34, y con ese número la celda
+culpable parecía la inocente.
+
 ## Dos detalles que cuestan una tarde si no se saben
 
 **El auditor tiene que esperar.** `assets/js/componentes.js` se carga con

@@ -2052,6 +2052,13 @@ grupo('DISENO · medido en el navegador');
 
 chequear('La auditoría de diseño está en el repositorio',
     is_file(RAIZ . '/test/diseno/auditor.js') && is_file(RAIZ . '/test/diseno/README.md'));
+// El medidor de tablas también: vivía suelto en una carpeta temporal y su
+// corrección —medir lo que ocupan los renglones apilados y no el más alto— se
+// habría perdido con la sesión.
+chequear('Y el medidor de tablas, con lo que aprendió',
+    is_file(RAIZ . '/test/diseno/medir_tablas.js')
+    && str_contains(leer('test/diseno/medir_tablas.js'), 'abajo del ultimo')
+    && str_contains(leer('test/diseno/README.md'), 'medir_tablas.js'));
 
 // Un <button> no hereda la tipografía: el icono del «+» de los catálogos y el
 // del calendario salían en la fuente por omisión del navegador, Arial 13,33px,
