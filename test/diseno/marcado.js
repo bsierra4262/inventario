@@ -66,7 +66,42 @@ function revisar(html) {
       continue;
     }
 
-    if (!cierra) { pila.push({ tag, i: m.index }); continue; }
+    if (!cierra) {
+      /* Un atributo repetido: el navegador se queda con el primero y descarta el
+         resto, sin decir nada. Pasó con `<td class="ih-text-center"
+         class="ih-table__nowrap">`, donde la segunda clase simplemente no
+         existía — y eso se busca en el CSS, que estaba bien. */
+      /* Se recorre saltando el valor de cada atributo: un `onclick` puede
+         traer `class=` adentro de su texto —`this.innerHTML='<i class=...>'`—
+         y contarlo seria inventar un error donde no hay ninguno. */
+      const vistos = new Set();
+      let k = 0;
+      while (k < attrs.length) {
+        const resto = attrs.slice(k);
+        const nom = /^\s*([a-zA-Z_:][-a-zA-Z0-9_:.]*)/.exec(resto);
+        if (!nom) { k++; continue; }
+        k += nom[0].length;
+        const nombre = nom[1].toLowerCase();
+        const igual = /^\s*=\s*/.exec(attrs.slice(k));
+        if (igual) {
+          k += igual[0].length;
+          const q = attrs[k];
+          if (q === '"' || q === "'") {
+            const fin = attrs.indexOf(q, k + 1);
+            k = fin === -1 ? attrs.length : fin + 1;
+          } else {
+            const sinComillas = /^[^\s]*/.exec(attrs.slice(k));
+            k += sinComillas ? sinComillas[0].length : 0;
+          }
+        }
+        if (vistos.has(nombre)) {
+          fallas.push(`linea ${linea(m.index)}: <${tag}> repite el atributo ${nombre}`);
+        }
+        vistos.add(nombre);
+      }
+      pila.push({ tag, i: m.index });
+      continue;
+    }
 
     // Un cierre. Buscarlo en la pila, de adentro hacia afuera.
     let k = pila.length - 1;

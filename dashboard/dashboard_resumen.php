@@ -88,7 +88,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <?php if (!$ssoStatus['google'] && !$ssoStatus['microsoft']): ?>
       <div class="ih-alert ih-alert--warning">
-        <i class="bi bi-shield-exclamation" class="ih-flex-none"></i>
+        <i class="bi bi-shield-exclamation ih-flex-none"></i>
         <div>
           <div class="ih-alert__title">SSO no configurado</div>
           El acceso al panel usa solo contraseña. Configurá Google Workspace o Microsoft 365 para mayor seguridad.
@@ -127,11 +127,11 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
     </div>
 
-    <div class="ih-grid" class="ih-mt-5">
+    <div class="ih-grid ih-mt-5">
 
       <!-- SSO Status -->
       <div class="ih-col-6">
-        <div class="ih-card" class="ih-alto-completo">
+        <div class="ih-card ih-alto-completo">
           <div class="ih-card__header">
             <h2 class="ih-card__title"><i class="bi bi-shield-check"></i> Estado SSO</h2>
             <a href="/dashboard/superadmin_integraciones.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-pencil"></i> Editar</a>
@@ -171,7 +171,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
       <!-- Acciones rápidas -->
       <div class="ih-col-6">
-        <div class="ih-card" class="ih-alto-completo">
+        <div class="ih-card ih-alto-completo">
           <div class="ih-card__header">
             <h2 class="ih-card__title"><i class="bi bi-lightning-charge"></i> Acciones rápidas</h2>
           </div>
@@ -198,7 +198,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <!-- Últimas empresas -->
     <?php if (!empty($lastCompanies)): ?>
-      <div class="ih-card" class="ih-mt-5">
+      <div class="ih-card ih-mt-5">
         <div class="ih-card__header">
           <h2 class="ih-card__title"><i class="bi bi-clock-history"></i> Empresas recientes</h2>
           <a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--ghost ih-btn--sm">Ver todas</a>
@@ -229,7 +229,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <!-- Log reciente -->
     <?php if (!empty($recentLogs)): ?>
-      <div class="ih-card" class="ih-mt-5">
+      <div class="ih-card ih-mt-5">
         <div class="ih-card__header">
           <h2 class="ih-card__title"><i class="bi bi-list-ul"></i> Actividad reciente</h2>
           <a href="/dashboard/superadmin_logs.php" class="ih-btn ih-btn--ghost ih-btn--sm">Ver auditoría</a>

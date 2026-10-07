@@ -1778,6 +1778,18 @@ foreach (['app.css' => $css, 'intellihelp.css' => $ihcss] as $n => $txt) {
 /* 44px es el área táctil mínima recomendada; los iconos de acción eran de 28.
    Vive en la hoja compartida y vale para los dos portales: estaba escrito en
    las dos hojas de portal y no decía lo mismo. */
+/* Ninguna hoja huérfana. `assets/css/styles.css` sobrevivió desde el primer
+   commit sin que ninguna pantalla la pidiera: 2 KB que pintaban el texto del
+   body de violeta y que nadie podía ver, pero que el día que alguien los
+   encuentre parecen la hoja de estilos del proyecto. */
+$hojasUsadas = ['app.css', 'intellihelp.css', 'componentes.css'];
+$huerfanas = [];
+foreach (glob(RAIZ . '/assets/css/*.css') ?: [] as $f) {
+    if (!in_array(basename($f), $hojasUsadas, true)) { $huerfanas[] = basename($f); }
+}
+chequear('No hay hojas de estilo que no cargue nadie',
+    $huerfanas === [], implode(', ', $huerfanas));
+
 chequear('La hoja compartida agranda el área táctil en pantallas sin mouse',
     str_contains(str_replace(' ', '', leer('assets/css/componentes.css')), '@media(pointer:coarse)'));
 

@@ -181,7 +181,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <tr<?= $isActive ? '' : ' class="es-inactiva"' ?>>
                 <td><strong>#<?= (int)$c['id'] ?></strong></td>
                 <td>
-                  <a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" class="ih-fw-700" class="ih-enlace-plano">
+                  <a class="ih-fw-700 ih-enlace-plano" href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>">
                     <?= htmlspecialchars($c['nombre']) ?>
                   </a>
                   <?php if (!empty($c['razon_social'])): ?>

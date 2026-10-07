@@ -90,7 +90,7 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       </div>
       <h2 class="ih-auth__title">Elegí tu empresa</h2>
-      <p class="ih-auth__subtitle">Tenés acceso a más de un tenant</p>
+      <p class="ih-auth__subtitle">Tenés acceso a más de una empresa</p>
     </div>
 
     <div class="ih-auth__body">

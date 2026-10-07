@@ -279,7 +279,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php if ($tenantError): ?>
       <div class="ih-alert ih-alert--warning">
         <i class="bi bi-exclamation-triangle-fill"></i>
-        <div>No se pudo conectar a la base de datos del tenant: <?= htmlspecialchars($tenantError) ?></div>
+        <div>No se pudo conectar a la base de datos de la empresa: <?= htmlspecialchars($tenantError) ?></div>
       </div>
     <?php endif; ?>
 
@@ -365,7 +365,7 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-card__body">
           <div class="ih-datos">
             <div class="ih-dato"><span class="ih-dato__label">Subdominio</span><span class="ih-dato__valor"><?= $company['subdomain'] ? htmlspecialchars($company['subdomain']) . '.intellihelp.tech' : '<span class="ih-text-muted">—</span>' ?></span></div>
-            <div class="ih-dato"><span class="ih-dato__label">Login URL</span><span class="ih-dato__valor"><?php if (!empty($company['login_url'])): ?>
+            <div class="ih-dato"><span class="ih-dato__label">Dirección de acceso</span><span class="ih-dato__valor"><?php if (!empty($company['login_url'])): ?>
                   <a href="<?= htmlspecialchars($company['login_url']) ?>" target="_blank" rel="noopener" class="ih-text-sm">
                     <i class="bi bi-box-arrow-up-right"></i> <?= htmlspecialchars($company['login_url']) ?>
                   </a>
@@ -373,9 +373,9 @@ require __DIR__ . '/../includes/layout/head.php';
                   <span class="ih-text-muted">— sin URL —</span>
                 <?php endif; ?></span></div>
             <?php if ($company['tenant_mode'] === 'external'): ?>
-            <div class="ih-dato"><span class="ih-dato__label">DB Host</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_host'] ?? 'localhost') ?></span></div>
-            <div class="ih-dato"><span class="ih-dato__label">DB Name</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_name'] ?? '') ?></span></div>
-            <div class="ih-dato"><span class="ih-dato__label">DB User</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_user'] ?? '') ?></span></div>
+            <div class="ih-dato"><span class="ih-dato__label">Servidor</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_host'] ?? 'localhost') ?></span></div>
+            <div class="ih-dato"><span class="ih-dato__label">Base</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_name'] ?? '') ?></span></div>
+            <div class="ih-dato"><span class="ih-dato__label">Usuario</span><span class="ih-dato__valor"><?= htmlspecialchars($company['db_user'] ?? '') ?></span></div>
             <?php endif; ?>
             <div class="ih-dato"><span class="ih-dato__label">Credenciales</span><span class="ih-dato__valor"><?php
                 $googleKeys    = $cloudConfig['google']    ?? [];
@@ -384,7 +384,7 @@ require __DIR__ . '/../includes/layout/head.php';
                 $hasMicrosoft = in_array('client_id', $microsoftKeys, true) && in_array('client_secret', $microsoftKeys, true);
                 ?>
                 <?php if ($tenantError): ?>
-                  <span class="ih-badge ih-badge--warning">Sin acceso al tenant</span>
+                  <span class="ih-badge ih-badge--warning">Sin acceso a su base</span>
                 <?php elseif ($company['provider'] === 'google' && $hasGoogle): ?>
                   <span class="ih-badge ih-badge--success"><i class="bi bi-check-circle"></i> Google OK</span>
                 <?php elseif ($company['provider'] === 'microsoft' && $hasMicrosoft): ?>
@@ -410,7 +410,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-shield-fill-exclamation"></i> Control superadmin</h2>
-          <div class="ih-card__subtitle">Acciones de recuperación / gestión sobre la configuración del tenant</div>
+          <div class="ih-card__subtitle">Lo que se puede tocar de esta empresa desde acá</div>
         </div>
       </div>
       <div class="ih-card__body">
@@ -446,11 +446,11 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-fila-lista__texto">
               <strong>Cloud config Google</strong><br>
               <span class="ih-text-muted ih-text-sm">
-                Keys: <?= htmlspecialchars(implode(', ', $cloudConfig['google'])) ?>
+                Claves guardadas: <?= htmlspecialchars(implode(', ', $cloudConfig['google'])) ?>
               </span>
             </div>
             <div>
-              <form method="POST" onsubmit="return confirm('Borrar TODAS las credenciales Google de este tenant?');">
+              <form method="POST" onsubmit="return confirm('¿Borrar todas las credenciales de Google de esta empresa?');">
                 <?php csrf_input(); ?>
                 <input type="hidden" name="admin_action" value="clear_cloud_config">
                 <input type="hidden" name="provider" value="google">
@@ -467,11 +467,11 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-fila-lista__texto">
               <strong>Cloud config Microsoft</strong><br>
               <span class="ih-text-muted ih-text-sm">
-                Keys: <?= htmlspecialchars(implode(', ', $cloudConfig['microsoft'])) ?>
+                Claves guardadas: <?= htmlspecialchars(implode(', ', $cloudConfig['microsoft'])) ?>
               </span>
             </div>
             <div>
-              <form method="POST" onsubmit="return confirm('Borrar TODAS las credenciales Microsoft de este tenant?');">
+              <form method="POST" onsubmit="return confirm('¿Borrar todas las credenciales de Microsoft de esta empresa?');">
                 <?php csrf_input(); ?>
                 <input type="hidden" name="admin_action" value="clear_cloud_config">
                 <input type="hidden" name="provider" value="microsoft">
@@ -489,7 +489,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <strong>Provider configurado en master</strong><br>
               <span class="ih-text-muted ih-text-sm">
                 <code class="ih-text-xs"><?= htmlspecialchars($company['provider'] ?? '') ?></code>
-                — si el cliente cambió el provider y la lista lo muestra desactualizado, sincronizalo desde el cloud_config del tenant.
+                — si la empresa cambió de nube y la lista quedó vieja, se sincroniza desde su configuración.
               </span>
             </div>
             <div>
@@ -518,7 +518,7 @@ require __DIR__ . '/../includes/layout/head.php';
               </span>
             </div>
             <div>
-              <?= $tenantPermOverrides ?> override(s) de permisos
+              <?= $tenantPermOverrides ?> permisos cambiados
             </div>
           </div>
           <?php endif; ?>
@@ -526,7 +526,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <!-- Backup completo -->
           <div class="ih-fila-lista">
             <div class="ih-fila-lista__texto">
-              <strong>Respaldo completo del tenant</strong><br>
+              <strong>Respaldo completo de la empresa</strong><br>
               <span class="ih-text-muted ih-text-sm">
                 Descarga un JSON con TODOS los datos: productos, movimientos, usuarios (hashes), cloud_config,
                 tenant_settings, roles personalizados y overrides de permisos. Sin archivos binarios (los archivos viven en Drive/OneDrive).
@@ -552,7 +552,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <div class="ih-card ih-mt-6">
       <div class="ih-card__header">
         <div>
-          <h2 class="ih-card__title"><i class="bi bi-people"></i> Usuarios del tenant</h2>
+          <h2 class="ih-card__title"><i class="bi bi-people"></i> Usuarios de la empresa</h2>
           <div class="ih-card__subtitle"><?= count($tenantUsers) ?> usuarios</div>
         </div>
       </div>
@@ -560,7 +560,7 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-empty">
           <div class="ih-empty__icon"><i class="bi bi-person-x"></i></div>
           <div class="ih-empty__title">Sin usuarios</div>
-          <div class="ih-empty__text">Este tenant no tiene usuarios registrados.</div>
+          <div class="ih-empty__text">Esta empresa todavía no tiene usuarios.</div>
         </div>
       <?php else: ?>
         <div class="ih-table-wrap">
@@ -603,8 +603,9 @@ require __DIR__ . '/../includes/layout/head.php';
                       <input type="hidden" name="admin_action" value="reset_user_password">
                       <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                       <input type="hidden" name="new_password" value="">
-                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Restablecer contraseña">
+                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Poner una contraseña nueva">
                         <i class="bi bi-key"></i>
+                        <span class="ih-sr-only">Poner una contraseña nueva a <?= htmlspecialchars((string)$u['username']) ?></span>
                       </button>
                     </form>
                     <!-- Toggle activo -->
@@ -612,8 +613,9 @@ require __DIR__ . '/../includes/layout/head.php';
                       <?php csrf_input(); ?>
                       <input type="hidden" name="admin_action" value="toggle_user_active">
                       <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
-                      <button type="submit" class="ih-btn <?= $isActive ? 'ih-btn--ghost' : 'ih-btn--success' ?> ih-btn--sm" title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
+                      <button type="submit" class="ih-btn <?= $isActive ? 'ih-btn--ghost' : 'ih-btn--accent' ?> ih-btn--sm" title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
                         <i class="bi <?= $isActive ? 'bi-person-slash' : 'bi-person-check' ?>"></i>
+                        <span class="ih-sr-only"><?= $isActive ? 'Desactivar' : 'Activar' ?> a <?= htmlspecialchars((string)$u['username']) ?></span>
                       </button>
                     </form>
                     </div>

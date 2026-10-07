@@ -193,7 +193,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php if ($cloudConfigError): ?>
       <div class="ih-alert ih-alert--warning">
         <i class="bi bi-info-circle-fill"></i>
-        <div>No se pudo leer cloud_config del tenant: <?= htmlspecialchars($cloudConfigError) ?></div>
+        <div>No se pudo leer la configuración de nube de la empresa: <?= htmlspecialchars($cloudConfigError) ?></div>
       </div>
     <?php endif; ?>
 
@@ -241,11 +241,11 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-4">
               <div class="ih-field">
                 <label class="ih-field__label">Estado</label>
-                <label class="ih-switch" class="ih-mt-1">
+                <label class="ih-switch ih-mt-1">
                   <input type="checkbox" name="active" value="1" <?= (int)($company['active'] ?? 1) === 1 ? 'checked' : '' ?>>
                   <span class="ih-switch__slider"></span>
                 </label>
-                <span class="ih-text-sm ih-text-muted" class="ih-ml-2">Empresa activa</span>
+                <span class="ih-text-sm ih-text-muted ih-ml-2">Empresa activa</span>
               </div>
             </div>
           </div>
@@ -321,7 +321,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <?php if ($company['tenant_mode'] === 'external'): ?>
-            <div class="ih-section-title">Base de datos del tenant</div>
+            <div class="ih-section-title">Base de datos de la empresa</div>
             <div class="ih-grid">
               <div class="ih-col-3">
                 <div class="ih-field"><label class="ih-field__label">Host</label>

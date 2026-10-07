@@ -300,33 +300,53 @@ require __DIR__ . '/../includes/layout/head.php';
                       <span class="ih-badge ih-badge--danger ih-badge--dot">Inactivo</span>
                     <?php endif; ?>
                   </td>
-                  <td class="ih-text-xs ih-text-muted"><?= htmlspecialchars((string)($u['created_at'] ?? '')) ?></td>
+                  <td class="ih-table__nowrap">
+                    <?php $alta = strtotime((string)($u['created_at'] ?? '')); ?>
+                    <?php if ($alta): ?>
+                      <div class="ih-celda__texto">
+                        <div class="ih-celda__nombre"><?= date('d/m/Y', $alta) ?></div>
+                        <div class="ih-celda__sub"><?= date('H:i', $alta) ?></div>
+                      </div>
+                    <?php else: ?><span class="ih-text-muted">—</span><?php endif; ?>
+                  </td>
                   <?php if ($canManage): ?>
-                  <td class="ih-text-center" class="ih-text-nowrap">
-                    <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
+                  <?php /* Tenía `class` dos veces y el navegador se queda con el
+                           primero. Y los botones eran un icono solo: ni globito ni
+                           texto para el lector de pantalla. */ ?>
+                  <td class="ih-table__acciones">
+                    <div class="ih-acciones">
+                    <button class="ih-btn ih-btn--outline ih-btn--sm" type="button" title="Editar el rol y el correo"
                             onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
                       <i class="bi bi-pencil"></i>
+                      <span class="ih-sr-only">Editar a <?= htmlspecialchars((string)$u['username']) ?></span>
                     </button>
                     <form method="post" 
                           onsubmit="return confirm('<?= $isActive ? '¿Desactivar usuario?' : '¿Activar usuario?' ?>')">
                       <?php csrf_input(); ?>
                       <input type="hidden" name="action" value="toggle">
                       <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                      <button class="ih-btn ih-btn--<?= $isActive ? 'ghost' : 'accent' ?> ih-btn--sm" type="submit">
+                      <button class="ih-btn ih-btn--<?= $isActive ? 'ghost' : 'accent' ?> ih-btn--sm" type="submit"
+                              title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
                         <?= $isActive ? '<i class="bi bi-pause"></i>' : '<i class="bi bi-play-fill"></i>' ?>
+                        <span class="ih-sr-only"><?= $isActive ? 'Desactivar' : 'Activar' ?> a <?= htmlspecialchars((string)$u['username']) ?></span>
                       </button>
                     </form>
-                    <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
+                    <button class="ih-btn ih-btn--outline ih-btn--sm" type="button" title="Poner una contraseña nueva"
                             onclick="abrirReset(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>')">
                       <i class="bi bi-key"></i>
+                      <span class="ih-sr-only">Poner una contraseña nueva a <?= htmlspecialchars((string)$u['username']) ?></span>
                     </button>
                     <form method="post" 
                           onsubmit="return confirm('¿Eliminar a <?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>?')">
                       <?php csrf_input(); ?>
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                      <button class="ih-btn ih-btn--danger ih-btn--sm" type="submit"><i class="bi bi-trash"></i></button>
+                      <button class="ih-btn ih-btn--danger ih-btn--sm" type="submit" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                        <span class="ih-sr-only">Eliminar a <?= htmlspecialchars((string)$u['username']) ?></span>
+                      </button>
                     </form>
+                    </div>
                   </td>
                   <?php endif; ?>
                 </tr>
@@ -378,7 +398,7 @@ require __DIR__ . '/../includes/layout/head.php';
   </form>
 </dialog>
 
-<dialog class="ih-modal" id="modalReset" class="ih-ancho-modal">
+<dialog class="ih-modal ih-ancho-modal" id="modalReset">
   <div class="ih-modal__header">
     <h2 class="ih-modal__title"><i class="bi bi-key" aria-hidden="true"></i> Restablecer contraseña</h2>
     <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
@@ -388,7 +408,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <input type="hidden" name="action" value="reset_pass">
     <input type="hidden" name="id" id="resetId">
     <div class="ih-modal__body">
-      <p class="ih-text-sm ih-text-muted" class="ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
+      <p class="ih-text-sm ih-text-muted ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
       <div class="ih-field">
         <label class="ih-field__label" for="resetPass">Nueva contraseña</label>
         <input class="ih-input" type="password" name="new_password" id="resetPass" minlength="8" required

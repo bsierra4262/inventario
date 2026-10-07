@@ -160,7 +160,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-building-add"></i> Datos de la empresa</h2>
-          <div class="ih-card__subtitle">Completá la información para aprovisionar el tenant</div>
+          <div class="ih-card__subtitle">Completá los datos y la empresa queda lista para usar</div>
         </div>
       </div>
 
@@ -199,7 +199,7 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
             <div class="ih-col-4">
               <div class="ih-field">
-                <label class="ih-field__label">Modo de tenant <span class="req">*</span></label>
+                <label class="ih-field__label">Dónde viven sus datos <span class="req">*</span></label>
                 <select class="ih-select" name="tenant_mode" onchange="ihToggleDB(this.value)">
                   <option value="external" <?= (($_POST['tenant_mode'] ?? 'external') === 'external') ? 'selected' : '' ?>>DB separada (recomendado)</option>
                   <option value="prefix" <?= (($_POST['tenant_mode'] ?? '') === 'prefix') ? 'selected' : '' ?>>Tablas con prefijo</option>
@@ -262,7 +262,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <!-- DB externa -->
           <div id="db-ext" hidden>
-            <div class="ih-section-title">Base de datos del tenant</div>
+            <div class="ih-section-title">Base de datos de la empresa</div>
             <div class="ih-grid">
               <div class="ih-col-3">
                 <div class="ih-field">
@@ -315,7 +315,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Admin del tenant -->
-          <div class="ih-section-title">Administrador del tenant</div>
+          <div class="ih-section-title">Quién va a administrarla</div>
           <div class="ih-grid">
             <div class="ih-col-6">
               <div class="ih-field">

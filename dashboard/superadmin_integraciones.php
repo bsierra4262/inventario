@@ -118,7 +118,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <?php if ($pendingSetup): ?>
       <div class="ih-alert ih-alert--warning">
-        <i class="bi bi-shield-exclamation" class="ih-flex-none"></i>
+        <i class="bi bi-shield-exclamation ih-flex-none"></i>
         <div>
           <div class="ih-alert__title">Configuración de SSO requerida</div>
           Por seguridad, el acceso con usuario y contraseña es solo temporal.<br>
@@ -142,7 +142,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php endif; ?>
 
     <!-- URI de callback (solo lectura) -->
-    <div class="ih-card" class="ih-mb-5">
+    <div class="ih-card ih-mb-5">
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-link-45deg"></i> URI de Callback OAuth</h2>
@@ -156,7 +156,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <i class="bi bi-clipboard"></i> Copiar
           </button>
         </div>
-        <p class="ih-text-xs ih-text-muted" class="ih-mt-2">
+        <p class="ih-text-xs ih-text-muted ih-mt-2">
           <i class="bi bi-info-circle"></i>
           En <strong>Google Console</strong>: Credentials → OAuth client → Authorized redirect URIs.<br>
           En <strong>Azure</strong>: App registrations → Authentication → Redirect URIs.
@@ -168,7 +168,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <?php csrf_input(); ?>
 
       <!-- ── Google Workspace SSO ────────────────────────────────────────── -->
-      <div class="ih-card" class="ih-mb-5">
+      <div class="ih-card ih-mb-5">
         <div class="ih-card__header">
           <div>
             <h2 class="ih-card__title"><?= cloud_icon_svg('google', 22) ?> Google Workspace SSO</h2>
@@ -216,7 +216,7 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Microsoft 365 SSO ──────────────────────────────────────────── -->
-      <div class="ih-card" class="ih-mb-5">
+      <div class="ih-card ih-mb-5">
         <div class="ih-card__header">
           <div>
             <h2 class="ih-card__title"><?= cloud_icon_svg('microsoft', 22) ?> Microsoft 365 / Azure AD SSO</h2>

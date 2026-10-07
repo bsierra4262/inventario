@@ -240,7 +240,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <th>Rol</th>
               <th>SSO</th>
               <th>Estado</th>
-              <th>Último login</th>
+              <th>Último acceso</th>
               <?php if (platform_can('platform_user.manage')): ?>
               <th class="ih-text-center">Acciones</th>
               <?php endif; ?>
@@ -257,7 +257,7 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?php if (!empty($u['google_pic'])): ?>
                       <img src="<?= htmlspecialchars($u['google_pic']) ?>" alt="" class="ih-avatar-chico">
                     <?php else: ?>
-                      <span class="ih-user-chip__avatar" class="ih-flex-none"><?= htmlspecialchars(strtoupper(substr((string)$u['username'], 0, 1))) ?></span>
+                      <span class="ih-user-chip__avatar ih-flex-none"><?= htmlspecialchars(strtoupper(substr((string)$u['username'], 0, 1))) ?></span>
                     <?php endif; ?>
                     <div>
                       <div class="ih-fw-600"><?= htmlspecialchars((string)$u['username']) ?></div>
@@ -285,15 +285,31 @@ require __DIR__ . '/../includes/layout/head.php';
                     <span class="ih-badge ih-badge--danger ih-badge--dot">Inactivo</span>
                   <?php endif; ?>
                 </td>
-                <td class="ih-text-xs ih-text-muted">
-                  <?= $u['last_login'] ? htmlspecialchars((string)$u['last_login']) : '—' ?>
+                <td class="ih-table__nowrap">
+                  <?php /* Un «2026-10-06 21:00:24» pelado obliga a leer catorce cifras
+                           para contestar «¿entró hoy?». La fecha arriba y la hora
+                           abajo, como en la auditoría. */ ?>
+                  <?php if ($u['last_login']): $t = strtotime((string)$u['last_login']); ?>
+                    <div class="ih-celda__texto">
+                      <div class="ih-celda__nombre"><?= date('d/m/Y', $t) ?></div>
+                      <div class="ih-celda__sub"><?= date('H:i', $t) ?></div>
+                    </div>
+                  <?php else: ?>
+                    <span class="ih-text-muted">Nunca entró</span>
+                  <?php endif; ?>
                 </td>
                 <?php if (platform_can('platform_user.manage')): ?>
-                <td class="ih-text-center" class="ih-text-nowrap">
-                  <!-- Editar rol/email -->
-                  <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
+                <?php /* Tenía el atributo `class` DOS veces —`class="ih-text-center"
+                         class="ih-text-nowrap"`— y el navegador se queda con el
+                         primero: el segundo no hacía nada. Y los botones no decían
+                         qué hacen: un icono solo, sin texto ni para el lector de
+                         pantalla ni para el globito del mouse. */ ?>
+                <td class="ih-table__acciones">
+                  <div class="ih-acciones">
+                  <button class="ih-btn ih-btn--outline ih-btn--sm" type="button" title="Editar el rol y el correo"
                           onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)$u['email'], ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
                     <i class="bi bi-pencil"></i>
+                    <span class="ih-sr-only">Editar a <?= htmlspecialchars((string)$u['username']) ?></span>
                   </button>
 
                   <!-- Toggle activo -->
@@ -303,16 +319,19 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?php csrf_input(); ?>
                     <input type="hidden" name="action" value="toggle">
                     <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                    <button class="ih-btn ih-btn--<?= $isActive ? 'ghost' : 'accent' ?> ih-btn--sm" type="submit">
+                    <button class="ih-btn ih-btn--<?= $isActive ? 'ghost' : 'accent' ?> ih-btn--sm" type="submit"
+                            title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
                       <?= $isActive ? '<i class="bi bi-pause"></i>' : '<i class="bi bi-play-fill"></i>' ?>
+                      <span class="ih-sr-only"><?= $isActive ? 'Desactivar' : 'Activar' ?> a <?= htmlspecialchars((string)$u['username']) ?></span>
                     </button>
                   </form>
                   <?php endif; ?>
 
                   <!-- Reset pass -->
-                  <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
+                  <button class="ih-btn ih-btn--outline ih-btn--sm" type="button" title="Poner una contraseña nueva"
                           onclick="abrirReset(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>')">
                     <i class="bi bi-key"></i>
+                    <span class="ih-sr-only">Poner una contraseña nueva a <?= htmlspecialchars((string)$u['username']) ?></span>
                   </button>
 
                   <!-- Eliminar -->
@@ -322,9 +341,13 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?php csrf_input(); ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
-                    <button class="ih-btn ih-btn--danger ih-btn--sm" type="submit"><i class="bi bi-trash"></i></button>
+                    <button class="ih-btn ih-btn--danger ih-btn--sm" type="submit" title="Eliminar">
+                      <i class="bi bi-trash"></i>
+                      <span class="ih-sr-only">Eliminar a <?= htmlspecialchars((string)$u['username']) ?></span>
+                    </button>
                   </form>
                   <?php endif; ?>
+                  </div>
                 </td>
                 <?php endif; ?>
               </tr>
@@ -376,7 +399,7 @@ require __DIR__ . '/../includes/layout/head.php';
   </form>
 </dialog>
 
-<dialog class="ih-modal" id="modalReset" class="ih-ancho-modal">
+<dialog class="ih-modal ih-ancho-modal" id="modalReset">
   <div class="ih-modal__header">
     <h2 class="ih-modal__title"><i class="bi bi-key" aria-hidden="true"></i> Restablecer contraseña</h2>
     <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
@@ -386,7 +409,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <input type="hidden" name="action" value="reset_pass">
     <input type="hidden" name="id" id="resetId">
     <div class="ih-modal__body">
-      <p class="ih-text-sm ih-text-muted" class="ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
+      <p class="ih-text-sm ih-text-muted ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
       <div class="ih-field">
         <label class="ih-field__label" for="resetPass">Nueva contraseña</label>
         <input class="ih-input" type="password" name="new_password" id="resetPass" minlength="8" required
