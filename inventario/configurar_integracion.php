@@ -279,8 +279,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
             </div>
 
             <div class="ih-field">
-              <label class="ih-field__label">ID de carpeta raíz en Google Drive <span class="ih-field__req" aria-hidden="true">*</span></label>
-              <input class="ih-input" type="text" name="google_root_folder" required
+              <label class="ih-field__label" for="g-carpeta">ID de la carpeta raíz en Google Drive <span class="ih-field__req" aria-hidden="true">*</span></label>
+              <input class="ih-input" type="text" id="g-carpeta" name="google_root_folder" required
                      value="<?= htmlspecialchars($googleCfg['root_folder_id'] ?? '') ?>"
                      placeholder="Ej: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
               <div class="ih-field__hint">El ID de la carpeta de Drive donde se guardarán los archivos adjuntos.</div>
@@ -349,8 +349,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
 
             <!-- root_folder_id siempre visible -->
             <div class="ih-field">
-              <label class="ih-field__label" for="g-root-2">ID de la carpeta raíz en Drive <span class="ih-field__opcional">(se puede dejar vacío)</span></label>
-              <input class="ih-input" type="text" name="google_root_folder"
+              <label class="ih-field__label" for="g-carpeta-propia">ID de la carpeta raíz en Drive <span class="ih-field__opcional">(se puede dejar vacío)</span></label>
+              <input class="ih-input" type="text" id="g-carpeta-propia" name="google_root_folder"
                      value="<?= htmlspecialchars($googleCfg['root_folder_id'] ?? '') ?>"
                      placeholder="1BxiMVs...">
               <div class="ih-field__hint">La carpeta de Drive donde se guardarán los archivos adjuntos de esta empresa.</div>

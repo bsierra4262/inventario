@@ -109,15 +109,69 @@
     anotar('TAMAÑO FUERA DE ESCALA', f + ' en ' + fuera[f].length + ': ' + fuera[f].slice(0, 3).join(' + '));
   });
 
-  // ── 4. Desborde horizontal ───────────────────────────────────────────────
-  if (document.documentElement.scrollWidth > window.innerWidth + 1) {
-    var culpables = [].slice.call(document.querySelectorAll('body *')).filter(function (e) {
+  // ── 4. Contenido al que no se llega ──────────────────────────────────────
+  //
+  // «La página no scrollea a lo ancho» es la mitad de la pregunta. La otra es
+  // si lo que se pasa del borde se puede alcanzar. Hay tres casos y sólo uno
+  // está mal:
+  //
+  //   dentro de algo con `overflow-x: auto`  → se llega arrastrando. Bien: es
+  //       la tabla de treinta columnas dentro de su `.ih-table-wrap`.
+  //   dentro de algo con `overflow-x: hidden` → queda recortado y NO se llega.
+  //       Mal: hay contenido perdido y nadie se enteró.
+  //   sin nada que lo contenga → arrastra la página entera. Mal.
+  //
+  // Esto se midió dos veces mal antes de quedar así, y las dos equivocaciones
+  // valen la pena anotarlas:
+  //
+  //   1. Comparar `documentElement.scrollWidth` con `innerWidth` reportaba el
+  //      listado de activos, donde la tabla mide 1048 px dentro de un
+  //      contenedor de 966 que la scrollea — funcionando como se diseñó.
+  //   2. Intentar un scroll por código y ver si se movió tampoco sirve: un
+  //      contenedor con `overflow: hidden` SÍ se puede scrollear por código.
+  //      Lo que no se puede es scrollearlo con el dedo o con la rueda, que es
+  //      lo único que importa acá. La página se "movía" 29 px y no había nada
+  //      roto.
+  (function () {
+    var W = window.innerWidth;
+
+    /** El primer ancestro que decide qué pasa con lo que se desborda. */
+    function contenedorX(e) {
+      for (var p = e.parentElement; p; p = p.parentElement) {
+        var ox = getComputedStyle(p).overflowX;
+        if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') { return { el: p, modo: ox }; }
+      }
+      return null;
+    }
+
+    var recortados = [];
+    var sueltos = [];
+
+    [].slice.call(document.querySelectorAll('body *')).forEach(function (e) {
+      if (!visible(e)) { return; }
       var r = e.getBoundingClientRect();
-      return r.right > window.innerWidth + 1 && visible(e);
-    }).slice(0, 3).map(nombrar);
-    anotar('DESBORDE HORIZONTAL',
-      document.documentElement.scrollWidth + 'px > ' + window.innerWidth + 'px — ' + culpables.join(', '));
-  }
+      if (r.right <= W + 1) { return; }
+
+      var c = contenedorX(e);
+      if (c === null) { sueltos.push(nombrar(e)); return; }
+      // Si el contenedor también se pasa, el problema es del contenedor y ya
+      // va a aparecer por su cuenta.
+      if (c.el.getBoundingClientRect().right > W + 1) { return; }
+      if (c.modo === 'hidden') {
+        recortados.push(nombrar(e) + ' dentro de ' + nombrar(c.el));
+      }
+      // 'auto' o 'scroll': se llega arrastrando. Es lo esperado.
+    });
+
+    if (sueltos.length) {
+      anotar('SE PASA DEL BORDE Y NADA LO CONTIENE',
+        sueltos.slice(0, 3).join(', ') + ' (ventana ' + W + 'px)');
+    }
+    if (recortados.length) {
+      anotar('CONTENIDO RECORTADO AL QUE NO SE LLEGA',
+        recortados.slice(0, 3).join(' | ') + ' (ventana ' + W + 'px)');
+    }
+  })();
 
   // ── 5. Botones: área táctil mínima ───────────────────────────────────────
   var chicos = [].slice.call(document.querySelectorAll('button, .ih-btn, a.ih-btn'))
