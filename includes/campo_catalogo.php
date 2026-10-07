@@ -176,8 +176,13 @@ function campo_catalogo(mysqli $conn, string $tipo, ?string $valorActual, bool $
       </small>
     <?php endif; ?>
     <?php if (!$lista && $puedeGestionar): ?>
+      <?php /* El botón + está justo al lado y agrega sin salir de la pantalla,
+               así que eso es lo que conviene decir primero. El cartel mandaba a
+               otra pantalla a cargar el valor y volver, que es la friccion que
+               hace que nadie complete el campo. */ ?>
       <small class="cat-huerfano">
-        La lista está vacía. Cargá los valores en
+        Todavía no hay ninguno. Agregá el primero con el botón <strong>+</strong> de al lado,
+        o cargá varios juntos en
         <a href="/inventario/catalogos.php?tipo=<?= htmlspecialchars($tipo) ?>">Listas desplegables</a>.
       </small>
     <?php endif;

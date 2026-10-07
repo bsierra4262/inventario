@@ -790,6 +790,7 @@ function migraciones_tenant(): array {
                         SELECT DISTINCT 'so_edicion', TRIM(edicion), 1 FROM `{$p}activo_so`
                          WHERE edicion IS NOT NULL AND TRIM(edicion) <> ''");
         },
+
     ];
 }
 }
