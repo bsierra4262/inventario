@@ -206,6 +206,37 @@ se le había atribuido a `session_regenerate_id()`, y por eso la rotación estab
 Una empresa con SSO puede **deshabilitar el login local** (`disable_local_login`), forzando
 que todos los accesos pasen por el proveedor.
 
+### Cómo se da de alta a alguien
+
+**El acceso es una lista, no un dominio.** Ni el callback de empresa ni el de panel aceptan a
+alguien por el dominio de su correo en el plano de empresa: `tenant_callback.php` hace
+
+```sql
+SELECT id, role FROM users WHERE email = ? LIMIT 1
+```
+
+en la tabla de **esa** empresa, y si no encuentra nada rechaza con «tu cuenta no tiene permiso
+para acceder a esta empresa». El filtro por dominio (`sa_google_hd`) existe sólo en el callback
+del **panel** (`users_platform`), y es un filtro *adicional*: tampoco da acceso por sí mismo.
+
+Consecuencias para el alta, que es lo que la pantalla `inventario/usuarios.php` tiene que
+reflejar:
+
+| | Empresa con `disable_local_login = 1` | Empresa con login local |
+|---|---|---|
+| Lo que da acceso | el **correo**, exacto | usuario + contraseña, y el correo si lo tiene |
+| Correo | obligatorio | opcional |
+| Contraseña | no se pide (se genera al azar: la columna no admite nulos) | obligatoria, mínimo 8 |
+
+El correo tiene que ser **exactamente** el de la cuenta con la que la persona inicia sesión:
+`jperez@intellihelp.tech` y `j.perez@intellihelp.tech` son dos personas distintas para esta
+consulta. Y no puede haber dos usuarios con el mismo correo: el `LIMIT 1` elegiría uno de los
+dos —con su rol— y nadie sabría cuál.
+
+Primero se da de alta, después la persona entra. No hay auto-registro: alguien con un correo
+de la empresa que no esté en la tabla llega hasta Google, Google dice que sí, y el sistema
+igual lo rechaza.
+
 ---
 
 ## 5. Permisos
@@ -840,7 +871,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 461 chequeos — análisis estático del árbol
+php test/run_tests.php            # 467 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

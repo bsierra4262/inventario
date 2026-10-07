@@ -11,6 +11,10 @@ require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../includes/hub.php';
 require_once __DIR__ . '/../core/security/permissions_db.php';
+/* Como entra la gente a esta empresa. No es un detalle de presentacion: cambia
+   cual es el dato que de verdad da acceso. */
+require_once __DIR__ . '/../core/tenants/tenant_settings.php';
+$soloSSO = tenant_local_login_disabled($conn);
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!$user_id) {
@@ -83,10 +87,34 @@ require __DIR__ . '/../includes/layout/head.php';
     <div class="ih-card__header">
       <div>
         <h2 class="ih-card__title"><i class="bi bi-person-plus"></i> Crear nuevo usuario</h2>
-        <div class="ih-card__subtitle">Asignale rol Admin o Usuario regular</div>
+        <div class="ih-card__subtitle">
+          <?= $soloSSO
+              ? 'Entra con su cuenta de Google o Microsoft; vos le dec&iacute;s qu&eacute; puede hacer'
+              : 'Entra con usuario y contrase&ntilde;a, o con su cuenta de Google o Microsoft' ?>
+        </div>
       </div>
     </div>
     <div class="ih-card__body">
+      <?php /* Lo que mas se pregunta de esta pantalla: si alcanza con tener un
+               correo de la empresa. No alcanza. El acceso es una lista, no un
+               dominio: si el correo no esta en esta tabla, la persona entra a
+               Google, Google dice que si, y el sistema igual la rechaza. */ ?>
+      <div class="ih-alert ih-alert--info ih-mb-4">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>
+          <strong>C&oacute;mo entra una persona.</strong>
+          <?php if ($soloSSO): ?>
+            Aprieta &laquo;Continuar con Google&raquo; (o Microsoft) y el sistema busca su correo
+            <strong>en esta lista</strong>. Tener un correo de la empresa no alcanza:
+            si no est&aacute; ac&aacute;, no entra. Y el correo tiene que ser
+            <strong>exactamente</strong> el de la cuenta con la que inicia sesi&oacute;n.
+          <?php else: ?>
+            Puede entrar con el usuario y la contrase&ntilde;a que le pongas ac&aacute;, o con
+            &laquo;Continuar con Google&raquo;. Para lo segundo, el correo tiene que ser
+            <strong>exactamente</strong> el de la cuenta con la que inicia sesi&oacute;n.
+          <?php endif; ?>
+        </div>
+      </div>
       <form method="POST" action="/backend/users_crud.php" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
         <input type="hidden" name="action" value="create">
@@ -103,10 +131,19 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
           <div class="ih-col-3">
             <div class="ih-field">
-              <label class="ih-field__label">Email</label>
-              <input class="ih-input" type="email" name="email" placeholder="usuario@empresa.com">
+              <label class="ih-field__label">
+                Correo con el que entra <?= $soloSSO ? '<span class="req">*</span>' : '' ?>
+              </label>
+              <input class="ih-input" type="email" name="email" placeholder="Ej.: jperez@intellihelp.tech"
+                     <?= $soloSSO ? 'required' : '' ?>>
+              <div class="ih-field__hint">
+                <?= $soloSSO
+                    ? 'El mismo de su cuenta de Google o Microsoft. Es lo &uacute;nico que le da acceso.'
+                    : 'Si lo pon&eacute;s, tambi&eacute;n va a poder entrar con Google o Microsoft.' ?>
+              </div>
             </div>
           </div>
+          <?php if (!$soloSSO): ?>
           <div class="ih-col-3">
             <div class="ih-field">
               <label class="ih-field__label">Contraseña <span class="req">*</span></label>
@@ -114,6 +151,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <div class="ih-field__hint">Mínimo 8 caracteres.</div>
             </div>
           </div>
+          <?php endif; ?>
           <div class="ih-col-3">
             <div class="ih-field">
               <label class="ih-field__label">Rol <span class="req">*</span></label>
@@ -158,7 +196,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <tr>
               <th>ID</th>
               <th>Usuario</th>
-              <th>Email</th>
+              <th>Correo con el que entra</th>
               <th>Rol</th>
               <th>Creado</th>
               <th class="ih-text-center">Acciones</th>
@@ -174,7 +212,20 @@ require __DIR__ . '/../includes/layout/head.php';
                     <span class="ih-badge ih-badge--purple">Sos vos</span>
                   <?php endif; ?>
                 </td>
-                <td class="ih-text-sm"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
+                <?php /* Un usuario sin correo en una empresa que entra sólo con
+                         Google no puede entrar nunca, y antes no había forma de
+                         darse cuenta mirando la lista. */ ?>
+                <td class="ih-text-sm">
+                  <?php if (trim((string)($u['email'] ?? '')) !== ''): ?>
+                    <?= htmlspecialchars($u['email']) ?>
+                  <?php elseif ($soloSSO): ?>
+                    <span class="ih-badge ih-badge--warning" title="En esta empresa se entra con Google o Microsoft, y el correo es lo que da el acceso">
+                      <i class="bi bi-exclamation-triangle"></i> Sin correo: no puede entrar
+                    </span>
+                  <?php else: ?>
+                    <span class="ih-text-muted">Entra con usuario y contraseña</span>
+                  <?php endif; ?>
+                </td>
                 <td>
                   <?php
                     $roleClass = match ($u['role']) {
@@ -187,7 +238,17 @@ require __DIR__ . '/../includes/layout/head.php';
                   ?>
                   <span class="ih-badge <?= $roleClass ?>"><?= htmlspecialchars(role_label($u['role'])) ?></span>
                 </td>
-                <td class="ih-text-xs ih-text-muted"><?= htmlspecialchars($u['created_at'] ?? '') ?></td>
+                <?php /* Un «2026-05-25 22:42:46» pelado hace leer catorce cifras para
+                         contestar «¿es de ahora?». Fecha arriba, hora abajo. */ ?>
+                <td class="ih-table__nowrap">
+                  <?php $alta = strtotime((string)($u['created_at'] ?? '')); ?>
+                  <?php if ($alta): ?>
+                    <div class="ih-celda__texto">
+                      <div class="ih-celda__nombre"><?= date('d/m/Y', $alta) ?></div>
+                      <div class="ih-celda__sub"><?= date('H:i', $alta) ?></div>
+                    </div>
+                  <?php else: ?><span class="ih-text-muted">—</span><?php endif; ?>
+                </td>
                 <td class="ih-text-center">
                   <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
                           onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['email'] ?? '', ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
@@ -228,7 +289,11 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <div class="ih-field">
             <label class="ih-field__label">Email</label>
-            <input type="email" name="email" id="editEmail" class="ih-input" placeholder="usuario@empresa.com">
+            <input type="email" name="email" id="editEmail" class="ih-input"
+                   placeholder="Ej.: jperez@intellihelp.tech" <?= $soloSSO ? 'required' : '' ?>>
+            <?php if ($soloSSO): ?>
+              <div class="ih-field__hint">Es lo que le da acceso: si lo sacás o no coincide con su cuenta de Google, no entra.</div>
+            <?php endif; ?>
           </div>
           <div class="ih-field">
             <label class="ih-field__label">Rol</label>
@@ -238,11 +303,16 @@ require __DIR__ . '/../includes/layout/head.php';
               <?php endforeach; ?>
             </select>
           </div>
+          <?php /* Sin el campo de contraseña cuando no se puede entrar con ella:
+                   ofrecer cambiar algo que no sirve para entrar hace pensar que
+                   sí sirve. Es lo mismo que se sacó del menú de la cuenta. */ ?>
+          <?php if (!$soloSSO): ?>
           <div class="ih-field">
             <label class="ih-field__label">Nueva contraseña</label>
             <input type="password" name="password" class="ih-input" minlength="8" autocomplete="new-password" placeholder="(dejá vacío para no cambiar)">
             <div class="ih-field__hint">Mínimo 8 caracteres si la modificás.</div>
           </div>
+          <?php endif; ?>
         </div>
         <div class="ih-modal__footer">
           <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>

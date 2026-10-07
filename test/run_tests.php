@@ -1923,6 +1923,46 @@ chequear('El detalle no dibuja tarjetas vacías',
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────
+grupo('ACCESO · dar de alta a alguien que despues pueda entrar');
+//
+// En una empresa que entra SOLO con Google o Microsoft —que es como esta
+// configurada ITH— la llave es el correo: `auth/superadmin_callback.php` busca
+// `WHERE email = ?` en la tabla de esa empresa y, si no encuentra nada,
+// rechaza. No hay chequeo de dominio: tener un correo de la empresa no alcanza,
+// hay que estar en la lista.
+//
+// La pantalla de alta pedia la CONTRASEÑA como obligatoria y el CORREO como
+// opcional, o sea exactamente al reves de lo que da acceso. Se podia crear un
+// usuario sin correo —que no iba a poder entrar jamas, sin que nada lo
+// dijera— y habia que inventarle una contraseña que no se usa nunca.
+$cb  = leer('auth/superadmin_callback.php');
+$uc  = leer('backend/users_crud.php');
+$upl = leer('inventario/usuarios.php');
+
+chequear('El acceso es una lista, no un dominio: se busca el correo exacto',
+    str_contains($cb, 'WHERE email = ?')
+    && str_contains($cb, 'no tiene permiso para acceder a esta empresa'));
+
+chequear('Sin contraseña local, el correo es obligatorio para crear',
+    str_contains($uc, 'tenant_local_login_disabled($conn)')
+    && str_contains($uc, 'es lo único que le da acceso'));
+chequear('Y no se pide una contraseña que no se va a usar',
+    str_contains($uc, 'random_bytes(24)')
+    && str_contains($upl, '<?php if (!$soloSSO): ?>'));
+
+/* Dos filas con el mismo correo dejan al login sin saber cual es: hace
+   `WHERE email = ? LIMIT 1` y entra una de las dos, con su rol. */
+chequear('Dos usuarios no pueden compartir el correo',
+    substr_count($uc, 'Dos usuarios con el mismo correo') === 2,
+    'tiene que estar en crear Y en editar');
+
+chequear('La lista avisa quien no puede entrar',
+    str_contains($upl, 'Sin correo: no puede entrar'));
+chequear('Y la pantalla explica como entra una persona',
+    str_contains($upl, 'C&oacute;mo entra una persona'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────────────────
 grupo('CUANDO ALGO FALLA · la pantalla sigue siendo la aplicación');
 //
 // Son las pantallas que casi nadie ve y que, por eso mismo, se escriben con un

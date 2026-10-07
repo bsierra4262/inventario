@@ -10,6 +10,7 @@ require_once __DIR__ . '/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
 require_once __DIR__ . '/../core/security/permissions_db.php';
+require_once __DIR__ . '/../core/tenants/tenant_settings.php';
 
 // --- Autenticación y autorización ---
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -99,9 +100,29 @@ switch ($action) {
         if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             redirect_users('Email inválido.', 'error');
         }
-        if (!validate_password($password)) {
+        /* En una empresa que entra SOLO con Google o Microsoft, la llave es el
+           correo: `auth/superadmin_callback.php` busca `WHERE email = ?` en esta
+           tabla y, si no encuentra nada, rechaza. La contraseña no se usa nunca.
+
+           Antes era al revés: la contraseña obligatoria y el correo opcional. Se
+           podía crear un usuario sin correo —que no iba a poder entrar jamás, sin
+           que nada lo dijera— y había que inventarle una contraseña que no servía
+           para nada. */
+        $soloSSO = tenant_local_login_disabled($conn);
+
+        if ($soloSSO) {
+            if ($email === '') {
+                redirect_users('Hace falta el correo: es lo único que le da acceso a esta empresa, '
+                    . 'porque acá se entra con Google o Microsoft.', 'error');
+            }
+            /* Una contraseña que nadie va a usar, pero la columna no admite nulos
+               y dejarla vacía abriría la puerta si mañana se habilita el acceso
+               con contraseña. Aleatoria y descartada. */
+            $password = bin2hex(random_bytes(24));
+        } elseif (!validate_password($password)) {
             redirect_users('La contraseña debe tener al menos 8 caracteres con letras y números.', 'error');
         }
+
         if (!in_array($role, $valid_roles, true)) {
             $role = 'user';
         }
@@ -115,6 +136,21 @@ switch ($action) {
             redirect_users("El usuario '{$username}' ya existe.", 'error');
         }
         $chk->close();
+
+        /* Y el correo también único: el login hace `WHERE email = ? LIMIT 1`, así
+           que dos filas con el mismo correo significan que entra una de las dos y
+           nadie sabe cuál —ni con qué rol—. */
+        if ($email !== '') {
+            $chkE = $conn->prepare("SELECT username FROM `{$usersTable}` WHERE email = ? LIMIT 1");
+            $chkE->bind_param('s', $email);
+            $chkE->execute();
+            $dup = $chkE->get_result()->fetch_assoc();
+            $chkE->close();
+            if ($dup) {
+                redirect_users("Ese correo ya lo usa '{$dup['username']}'. "
+                    . 'Dos usuarios con el mismo correo no pueden entrar: el sistema no sabría cuál es.', 'error');
+            }
+        }
 
         $hashed = password_hash($password, PASSWORD_DEFAULT);
         $emailVal = $email !== '' ? $email : null;
@@ -163,6 +199,25 @@ switch ($action) {
 
         if (!$target) {
             redirect_users('Usuario no encontrado.', 'error');
+        }
+
+        /* Lo mismo que al crear: en una empresa que entra sólo con Google o
+           Microsoft, sacarle el correo a alguien es sacarle el acceso, y dejar
+           dos usuarios con el mismo correo deja el login sin saber cuál es. */
+        if (tenant_local_login_disabled($conn) && $email === '') {
+            redirect_users("Si le sacás el correo, «{$target['username']}» no va a poder entrar: "
+                . 'en esta empresa se entra con Google o Microsoft.', 'error');
+        }
+        if ($email !== '') {
+            $chkE = $conn->prepare("SELECT username FROM `{$usersTable}` WHERE email = ? AND id <> ? LIMIT 1");
+            $chkE->bind_param('si', $email, $target_id);
+            $chkE->execute();
+            $dup = $chkE->get_result()->fetch_assoc();
+            $chkE->close();
+            if ($dup) {
+                redirect_users("Ese correo ya lo usa '{$dup['username']}'. "
+                    . 'Dos usuarios con el mismo correo no pueden entrar: el sistema no sabría cuál es.', 'error');
+            }
         }
 
         $emailVal = $email !== '' ? $email : null;

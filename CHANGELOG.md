@@ -11,6 +11,26 @@ cortes que se veían mal en los dos.
 
 ### Corregido
 
+- **El alta de un usuario pedía lo que no da acceso y no pedía lo que sí.**
+  En una empresa que entra sólo con Google o Microsoft —como está configurada
+  ITH— la llave es el **correo**: el callback busca `WHERE email = ?` en la
+  tabla de esa empresa y, si no encuentra nada, rechaza. **No hay chequeo de
+  dominio**: tener un correo de la empresa no alcanza, hay que estar en la
+  lista.
+
+  La pantalla pedía la contraseña como obligatoria y el correo como opcional,
+  o sea exactamente al revés. Se podía crear un usuario **sin correo —que no
+  iba a poder entrar jamás— sin que nada lo dijera**, y había que inventarle
+  una contraseña que no se usa nunca. Ahora, cuando no se puede entrar con
+  contraseña: el correo es obligatorio, el campo de contraseña no se muestra
+  (se genera una al azar porque la columna no admite nulos), y la pantalla
+  explica en un renglón cómo entra una persona.
+
+  Además, dos usuarios ya no pueden compartir el correo: el login hace
+  `WHERE email = ? LIMIT 1`, así que entraba uno de los dos —con su rol— y
+  nadie sabía cuál. Y la lista marca a quien quedó sin correo y por lo tanto
+  no puede entrar.
+
 - **Los dos portales tenían dos sistemas de diseño con los mismos nombres.**
   `app.css` e `intellihelp.css` definían los MISMOS componentes —botones,
   campos, tarjetas, tablas, insignias, cifras, avisos, estados vacíos— con las
