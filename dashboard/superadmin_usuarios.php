@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
@@ -270,9 +271,9 @@ require __DIR__ . '/../includes/layout/head.php';
                 <td><span class="ih-badge <?= $rl['class'] ?>"><?= $rl['label'] ?></span></td>
                 <td>
                   <?php if (!empty($u['google_sub'])): ?>
-                    <span class="ih-badge ih-badge--success"><i class="bi bi-google"></i> Google</span>
+                    <span class="ih-badge ih-badge--success"><?= marca_svg('google', 13) ?> Google</span>
                   <?php elseif (!empty($u['ms_sub'])): ?>
-                    <span class="ih-badge ih-badge--info"><i class="bi bi-microsoft"></i> Microsoft</span>
+                    <span class="ih-badge ih-badge--info"><?= marca_svg('microsoft', 13) ?> Microsoft</span>
                   <?php else: ?>
                     <span class="ih-badge" style="color:#A1A1AA">No vinculado</span>
                   <?php endif; ?>

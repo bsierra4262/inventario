@@ -798,6 +798,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
    tarjeta mide un tercio del ancho. */
 .ih-card__body--compacto { padding: 1rem; }
 
+/* ---------------------------------------------------------------------------
    7. Barra de título de una sección
    ---------------------------------------------------------------------------
    Un título a la izquierda y los botones a la derecha. Estaba escrito con
@@ -1191,19 +1192,79 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
   color: var(--ih-gray-500, #6f6a7d);
 }
 
-/* Dos columnas de tarjetas que en pantalla angosta pasan a una. Es la misma
-   idea que `.ih-opciones`, pero para bloques que no son una elección: el
-   detalle de un activo, que tiene datos a la izquierda y accesos a la derecha.
-   El corte es por ancho y no por cantidad de columnas, así que no hay que
-   acordarse de cambiarlo si mañana se agrega una tercera. */
-.ih-columnas {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-  gap: 1.5rem;
-  align-items: start;
+/* Tarjetas en dos columnas que se acomodan solas, cada una ocupando lo que
+   necesita y sin huecos entre una y la siguiente.
+
+   Reemplaza a dos `<div>` escritos a mano, uno por columna, con las tarjetas
+   repartidas de antemano en el PHP. Eso tiene un problema que no se ve hasta
+   que los datos cambian: las tarjetas que no tienen nada que mostrar no se
+   dibujan, así que un activo con pocos datos dejaba una columna con dos
+   tarjetas y la otra con cinco, y medio metro de fondo vacío en el medio.
+
+   Es multi-columna y no `grid` a propósito. Con `grid`, las tarjetas se
+   alinean en filas y la más alta de cada fila manda: debajo de las cortas
+   queda un hueco hasta la fila siguiente. Multi-columna apila cada una debajo
+   de la anterior y equilibra el alto de las dos columnas, que es exactamente
+   lo que se quería y lo que no se podía hacer a mano. `break-inside: avoid`
+   es lo que impide que una tarjeta se parta al medio entre dos columnas. */
+.ih-mosaico { column-count: 2; column-gap: 1.5rem; }
+.ih-mosaico > * {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;   /* Safari viejo */
+  page-break-inside: avoid;             /* Firefox viejo */
+}
+/* Debajo de esto una columna mide menos de 35 rem y los datos de adentro
+   —que van en dos columnas propias— quedan apretados. Una sola columna de
+   tarjetas anchas se lee mejor que dos angostas. */
+@media (max-width: 1199px) {
+  .ih-mosaico { column-count: 1; }
 }
 
-/* Una aclaración chica debajo de un botón ancho, centrada con él. */
+/* Una lista de hechos en orden, con una línea que los une.
+   El orden importa y se ve: la línea dice «esto pasó después de aquello», que
+   es lo que una tabla de filas sueltas no logra transmitir. El último punto no
+   lleva línea hacia abajo —no hay nada después— salvo que siga abierto. */
+.ih-linea-tiempo { list-style: none; margin: 0; padding: 0; }
+.ih-linea-tiempo__item {
+  position: relative;
+  display: flex; align-items: flex-start; gap: .7rem;
+  padding: 0 0 .9rem 0;
+}
+.ih-linea-tiempo__item::before {
+  content: "";
+  position: absolute; left: 9px; top: 1.3rem; bottom: 0;
+  width: 1px; background: var(--ih-gray-200, #e7e4ef);
+}
+.ih-linea-tiempo__item:last-child { padding-bottom: 0; }
+.ih-linea-tiempo__item:last-child::before { display: none; }
+.ih-linea-tiempo__icono {
+  flex: none;
+  width: 19px; height: 19px; margin-top: .1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--ih-gray-100, #f0edf6);
+  color: var(--ih-gray-500, #6f6a7d);
+  font-size: 10px;
+}
+/* Lo que todavía está pasando —sigue en la papelera— se marca, porque no es un
+   hecho cerrado como los otros. */
+.ih-linea-tiempo__item.es-abierto > .ih-linea-tiempo__icono {
+  /* Los tokens que la hoja ya define, no un ámbar nuevo: `--ih-warning-050`
+     y `--ih-warning-600` no existen y habrían caído en su color de respaldo,
+     que es un ámbar parecido pero distinto del de las demás advertencias. */
+  background: var(--ih-warning-bg, #fdf4e7);
+  color: var(--ih-warning, #a8620a);
+}
+.ih-linea-tiempo .ih-nota-pie { margin-top: .15rem; }
+
+/* Una aclaración chica al pie de una tarjeta: qué quedó sin cargar, de dónde
+   sale un dato. Es el renglón que se lee último, o no se lee. */
+.ih-nota-pie {
+  margin: .6rem 0 0;
+  font-size: var(--ih-text-xs, 11px);
+  line-height: 1.45;
+  color: var(--ih-gray-400, #a7a3b4);
+}
 /* Un enlace dentro de un KPI. Hereda el color del número de al lado —pintarlo
    de violeta ahí adentro lo hace competir con la cifra, que es lo que la
    persona vino a leer— y se subraya para que se vea que se puede tocar. */
@@ -1242,13 +1303,6 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   text-underline-offset: 2px;
 }
 .ih-stat__enlace:hover { color: inherit; text-decoration: none; }
-
-.ih-pie-centrado {
-  margin: .4rem 0 0;
-  text-align: center;
-  font-size: var(--ih-text-xs, 11px);
-  color: var(--ih-gray-400, #a7a3b4);
-}
 
 /* «Acá no hay nada» dentro de una tarjeta chica —distinto de `.ih-empty`, que
    es el vacío de una pantalla entera y ocupa mucho más. */

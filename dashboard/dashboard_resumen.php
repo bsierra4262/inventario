@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 
@@ -131,7 +132,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
           <div class="ih-card__body">
             <div class="ih-flex ih-items-center ih-gap-3" style="padding:10px 0;border-bottom:1px solid #f0ebf8">
-              <i class="bi bi-google" style="font-size:20px;color:#4285F4;width:24px;text-align:center"></i>
+              <?= marca_svg('google', 20) ?>
               <div style="flex:1">
                 <div class="ih-fw-600" style="font-size:14px">Google Workspace</div>
                 <?php if ($ssoStatus['google_hd']): ?>
@@ -145,7 +146,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <?php endif; ?>
             </div>
             <div class="ih-flex ih-items-center ih-gap-3" style="padding:10px 0">
-              <i class="bi bi-microsoft" style="font-size:20px;color:#00A4EF;width:24px;text-align:center"></i>
+              <?= marca_svg('microsoft', 20) ?>
               <div style="flex:1">
                 <div class="ih-fw-600" style="font-size:14px">Microsoft 365 / Azure AD</div>
                 <?php if ($ssoStatus['ms_hd']): ?>

@@ -82,9 +82,17 @@ try {
     $up->close();
 
     // Dejar rastro en el historial: la papelera no debe borrar el pasado.
-    $quien  = (string)($_SESSION['user_email'] ?? ($me['username'] ?? ('id:' . $user_id)));
+    /* `realizado_por` guarda el ID del usuario, como en el resto de los endpoints
+       que escriben el historial. Acá guardaba el correo, y eso rompía los dos
+       reportes: Trazabilidad une `pm.realizado_por = u.id` y filtra con
+       `realizado_por != 0`, y comparar un correo contra 0 da falso en MySQL, asi
+       que TODA restauración y TODA eliminación se descartaban en silencio. El
+       activo se veía archivado para siempre aunque estuviera de vuelta en el
+       inventario. El texto legible sigue estando, en `descripcion`. */
+    $quien  = (string)$user_id;
+    $legible = (string)($_SESSION['user_email'] ?? ($me['username'] ?? ('id:' . $user_id)));
     $accion = 'Restaurado';
-    $desc   = 'Restaurado desde la papelera'
+    $desc   = 'Restaurado desde la papelera por ' . $legible
             . (!empty($producto['archivado_motivo']) ? ' (se había archivado por: ' . $producto['archivado_motivo'] . ')' : '');
 
     $mov = $conn->prepare("

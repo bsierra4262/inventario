@@ -69,7 +69,19 @@ $_vd_stmt->close();
 $_canEdit    = user_can('asset.edit', $_vd_user);
 $_canArchive = user_can('asset.archive', $_vd_user);
 
+/* Las acciones del activo viven ACA y en ningun otro lado. Estaban las dos
+   veces: arriba «Volver» y «Editar», y abajo una tarjeta «Acciones» con
+   «Editar activo», «Archivar activo» y «Volver al inventario» — tres botones
+   anchos, de tres colores, uno debajo del otro, que ademas repetian dos de los
+   de arriba. Un boton que esta dos veces en la misma pantalla no da dos
+   opciones: hace dudar de si hacen lo mismo. */
 $topbar_actions = volver_boton('/inventario/index.php');
+if ($_canArchive && empty($producto['archivado'])) {
+    /* Archivar no es destructivo —se deshace desde la papelera— asi que no va
+       en rojo. El rojo es para lo que no se puede deshacer. */
+    $topbar_actions .= ' <a href="/backend/delete.php?id=' . $producto_id . '&amp;' . volver_aqui()
+        . '" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-archive"></i> <span class="ih-hidden-mobile">Archivar</span></a>';
+}
 if ($_canEdit) {
     $topbar_actions .= ' <a href="/backend/edit.php?id=' . $producto_id . '&amp;' . volver_aqui()
         . '" class="ih-btn ih-btn--primary ih-btn--sm"><i class="bi bi-pencil"></i> <span class="ih-hidden-mobile">Editar</span></a>';
@@ -158,12 +170,13 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
   </div>
 </div>
 
-<?php /* Dos columnas de tarjetas, que en pantalla angosta pasan a una.
-         Es la misma grilla que usan las tarjetas de accion. */ ?>
-<div class="ih-columnas">
+<?php /* Las tarjetas se acomodan solas en dos columnas y cada una ocupa lo que
+         necesita. Antes habia DOS <div> a mano, uno por columna, con las
+         tarjetas repartidas de antemano: un activo con pocos datos dejaba la
+         columna izquierda corta y la derecha larga, con medio metro de fondo
+         vacio en el medio. Ver `.ih-mosaico` en componentes.css. */ ?>
+<div class="ih-mosaico">
 
-  <!-- Columna izquierda -->
-  <div>
     <!-- Datos principales -->
     <div class="ih-card ih-mb-5">
       <div class="ih-card__body ih-card__body--compacto">
@@ -255,10 +268,7 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
       </div>
     </div>
     <?php endif; ?>
-  </div>
 
-  <!-- Columna derecha -->
-  <div>
     <!-- Detalles de subcategoría -->
     <?php
     $hayExtras = array_filter([
@@ -332,27 +342,10 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     </div>
     <?php endif; ?>
 
-    <!-- Drive -->
-    <div class="ih-card ih-mb-5">
-      <div class="ih-card__body ih-card__body--compacto">
-        <h3 class="ih-seccion__titulo"><i class="bi bi-cloud"></i> Archivos adjuntos</div>
-        <?php if (!empty($producto['carpeta_raiz_drive'])): ?>
-          <a href="https://drive.google.com/drive/folders/<?= htmlspecialchars($producto['carpeta_raiz_drive'], ENT_QUOTES) ?>"
-             target="_blank" rel="noopener" class="ih-btn ih-btn--google ih-btn--block">
-            <?= cloud_icon_svg($cloudProv ?? cloud_provider_actual($conn), 22) ?>
-            Ver archivos de este activo en Drive
-          </a>
-          <p class="ih-pie-centrado">
-            Abre la carpeta de este activo (<?= htmlspecialchars($producto['servis_tag'] ?: 'activo_' . $producto_id, ENT_QUOTES) ?>)
-          </p>
-        <?php else: ?>
-          <div class="ih-vacio-chico">
-            <i class="bi bi-cloud-slash"></i>
-            Todavía no tiene una carpeta de Drive
-          </div>
-        <?php endif; ?>
-      </div>
-    </div>
+    <?php /* Acá vivía una tarjeta «Archivos adjuntos» cuyo único contenido era el
+             mismo botón de Drive que ya está en el encabezado, con otro texto. La
+             carpeta de archivos es parte de la identidad del activo y va arriba,
+             al lado del nombre: una sola vez. */ ?>
 
     <?php
     // ── Ficha técnica ────────────────────────────────────────────────────
@@ -374,48 +367,83 @@ $archivado = !empty($producto['archivado']) && (int)$producto['archivado'] === 1
     $fNot   = documentos_disponible($conn) ? notas_de_activo($conn, $producto_id) : [];
     $fResumenSo = so_resumen($fSo);
     ?>
+    <?php /* Siete renglones diciendo «—» no informan: ocupan el mismo lugar que
+             los que sí dicen algo y hay que leerlos uno por uno para descubrir
+             que están todos vacíos. Se muestra lo que hay cargado, y lo que falta
+             se dice en un renglón al pie. Si no hay nada, se dice una vez. */
+    $fichaItems = [
+        ['Sistema operativo', $fResumenSo],
+        ['Componentes',       count($fComp) > 0 ? count($fComp) . ' cargados' : ''],
+        ['Puertos de red',    count($fRed)  > 0 ? count($fRed) . ' con dirección' : ''],
+        ['Relaciones',        $fRel         > 0 ? $fRel . ' activos vinculados' : ''],
+        ['Contratos',         count($fCon)  > 0 ? count($fCon) . ' que lo cubren' : ''],
+        ['Documentos',        count($fDoc)  > 0 ? (string)count($fDoc) : ''],
+        ['Notas',             count($fNot)  > 0 ? (string)count($fNot) : ''],
+    ];
+    $fichaCargado = array_values(array_filter($fichaItems, fn($x) => trim((string)$x[1]) !== ''));
+    $fichaFalta   = array_values(array_filter($fichaItems, fn($x) => trim((string)$x[1]) === ''));
+    ?>
     <div class="ih-card ih-mb-5">
       <div class="ih-card__body ih-card__body--compacto">
         <h3 class="ih-seccion__titulo"><i class="bi bi-clipboard-data"></i> Ficha técnica</h3>
-        <div class="ih-datos ih-datos--dos-columnas">
-          <?php
-            vd_row('Sistema operativo', $fResumenSo !== '' ? $fResumenSo : '—', 'dot');
-            vd_row('Componentes', count($fComp) > 0 ? count($fComp) . ' cargados' : '—', 'dot');
-            vd_row('Puertos de red', count($fRed) > 0 ? count($fRed) . ' con dirección' : '—', 'dot');
-            vd_row('Relaciones', $fRel > 0 ? $fRel . ' activos vinculados' : '—', 'dot');
-            vd_row('Contratos', count($fCon) > 0 ? count($fCon) . ' que lo cubren' : '—', 'dot');
-            vd_row('Documentos', count($fDoc) > 0 ? count($fDoc) : '—', 'dot');
-            vd_row('Notas', count($fNot) > 0 ? count($fNot) : '—', 'dot');
-          ?>
-        </div>
+        <?php if ($fichaCargado): ?>
+          <div class="ih-datos">
+            <?php foreach ($fichaCargado as [$etiqueta, $valor]) { vd_row($etiqueta, $valor, 'dot'); } ?>
+          </div>
+          <?php if ($fichaFalta): ?>
+            <p class="ih-nota-pie">
+              Sin cargar:
+              <?= htmlspecialchars(mb_strtolower(implode(', ', array_column($fichaFalta, 0)), 'UTF-8')) ?>.
+            </p>
+          <?php endif; ?>
+        <?php else: ?>
+          <div class="ih-vacio-chico">
+            <i class="bi bi-clipboard"></i>
+            La ficha técnica está vacía: ni sistema operativo, ni componentes, ni red.
+          </div>
+        <?php endif; ?>
         <a href="/inventario/ficha.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--outline ih-btn--block ih-mt-3">
-          <i class="bi bi-clipboard-data"></i> Ver y cargar la ficha completa
+          <i class="bi bi-clipboard-data"></i>
+          <?= $fichaCargado ? 'Ver y cargar la ficha completa' : 'Cargar la ficha técnica' ?>
         </a>
       </div>
     </div>
 
-    <!-- Acciones -->
+    <?php
+    // ── Historial ────────────────────────────────────────────────────────
+    //   Qué le pasó a ESTE activo. El detalle mostraba el estado de hoy y
+    //   nada de cómo se llegó, así que para saber si un equipo había estado
+    //   archivado había que ir a Reportes, elegir una pestaña y filtrar por
+    //   modelo. Es la pregunta más común sobre un activo y vivía a cuatro
+    //   pantallas de distancia.
+    require_once __DIR__ . '/../core/tenants/historial.php';
+    $movs = historial_de_activo($conn, $producto_id, 'tn');
+    if ($movs): ?>
     <div class="ih-card ih-mb-5">
-      <div class="ih-card__body ih-card__body--compacto ih-col ih-gap-2">
-        <h3 class="ih-seccion__titulo"><i class="bi bi-lightning"></i> Acciones</div>
-        <?php if ($_canEdit): ?>
-        <a href="/backend/edit.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--primary ih-btn--block">
-          <i class="bi bi-pencil-square"></i> Editar activo
-        </a>
-        <?php endif; ?>
-        <?php if ($_canArchive && empty($producto['archivado'])): ?>
-        <a href="/backend/delete.php?id=<?= $producto_id ?>&amp;<?= volver_aqui() ?>" class="ih-btn ih-btn--danger ih-btn--block">
-          <i class="bi bi-archive"></i> Archivar activo
-        </a>
-        <?php endif; ?>
-        <a href="/inventario/index.php" class="ih-btn ih-btn--ghost ih-btn--block">
-          <i class="bi bi-arrow-left"></i> Volver al inventario
-        </a>
+      <div class="ih-card__body ih-card__body--compacto">
+        <h3 class="ih-seccion__titulo"><i class="bi bi-clock-history"></i> Historial</h3>
+        <ol class="ih-linea-tiempo">
+          <?php foreach ($movs as $mv): $qp = historial_que_paso($mv); $au = historial_autor($mv); ?>
+            <li class="ih-linea-tiempo__item<?= $qp['abierto'] ? ' es-abierto' : '' ?>">
+              <i class="bi bi-<?= $qp['icono'] ?> ih-linea-tiempo__icono" aria-hidden="true"></i>
+              <div class="ih-min-0">
+                <div class="ih-celda__nombre"><?= htmlspecialchars($qp['titulo']) ?></div>
+                <div class="ih-celda__sub">
+                  <?= htmlspecialchars(date('d/m/Y H:i', strtotime((string)$mv['fecha']))) ?>
+                  · <?= htmlspecialchars($au['nombre']) ?>
+                </div>
+                <?php if ($qp['detalle'] !== ''): ?>
+                  <p class="ih-nota-pie"><?= htmlspecialchars($qp['detalle']) ?></p>
+                <?php endif; ?>
+              </div>
+            </li>
+          <?php endforeach; ?>
+        </ol>
       </div>
     </div>
+    <?php endif; ?>
 
-  </div><!-- /col derecha -->
-</div><!-- /grid -->
+</div><!-- /mosaico -->
 
 </main>
 </div><!-- /ih-app -->

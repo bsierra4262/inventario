@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
@@ -124,12 +125,12 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-stat__delta">Suspendidas</div>
       </div>
       <div class="ih-stat ih-stat--info">
-        <div class="ih-stat__label">Google <i class="bi bi-google"></i></div>
+        <div class="ih-stat__label">Google <?= marca_svg('google', 14) ?></div>
         <div class="ih-stat__value"><?= $totalGoogle ?></div>
         <div class="ih-stat__delta">Workspace / Drive</div>
       </div>
       <div class="ih-stat ih-stat--warn">
-        <div class="ih-stat__label">Microsoft <i class="bi bi-microsoft"></i></div>
+        <div class="ih-stat__label">Microsoft <?= marca_svg('microsoft', 14) ?></div>
         <div class="ih-stat__value"><?= $totalMs ?></div>
         <div class="ih-stat__delta">365 / OneDrive</div>
       </div>
@@ -204,9 +205,9 @@ require __DIR__ . '/../includes/layout/head.php';
                 </td>
                 <td>
                   <?php if ($provider === 'google'): ?>
-                    <span class="ih-badge ih-badge--green"><i class="bi bi-google"></i> Google</span>
+                    <span class="ih-badge ih-badge--green"><?= marca_svg('google', 13) ?> Google</span>
                   <?php else: ?>
-                    <span class="ih-badge ih-badge--info"><i class="bi bi-microsoft"></i> Microsoft</span>
+                    <span class="ih-badge ih-badge--info"><?= marca_svg('microsoft', 13) ?> Microsoft</span>
                   <?php endif; ?>
                 </td>
                 <td>

@@ -1901,6 +1901,41 @@ chequear('El detalle no dibuja tarjetas vacías',
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────
+grupo('DISENO · el logo de cada servicio es el suyo');
+//
+// `bi-google` y `bi-microsoft` son los iconos genéricos de Bootstrap: una G y
+// cuatro paneles, de un solo color y con la forma aproximada. La G de Google se
+// reconoce porque es roja, azul, amarilla y verde, y el cuadrado de Microsoft
+// porque son cuatro colores distintos. En gris no dicen de quién son, y estaban
+// justo donde más importa: en el botón con el que alguien decide entrar.
+$ci = leer('includes/cloud_icons.php');
+chequear('Hay una función que devuelve el logotipo de la marca',
+    str_contains($ci, 'function marca_svg('));
+foreach ([
+    'Google'    => ['#ea4335', '#4285f4', '#fbbc05', '#34a853'],
+    'Microsoft' => ['#f25022', '#7fba00', '#00a4ef', '#ffb900'],
+] as $marca => $colores) {
+    $faltan = array_values(array_filter($colores, fn($c) => !str_contains($ci, $c)));
+    chequear("El logo de {$marca} tiene sus cuatro colores",
+        $faltan === [], implode(', ', $faltan));
+}
+// Es un SVG propio y no una imagen de un servidor ajeno: no se cae si el otro
+// cambia la URL, no le avisa a nadie quién entra, y no pide red para un botón.
+chequear('Los logotipos son SVG propios, no imágenes de afuera',
+    !preg_match('#<img[^>]+src="https?://(www\.)?(google|microsoft|gstatic|office)#i', $ci));
+
+$conIconoGenerico = [];
+foreach (archivos_php() as $f) {
+    $rel = str_replace([RAIZ . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR], ['', '/'], $f);
+    if (str_starts_with($rel, 'test/') || $rel === 'includes/cloud_icons.php') { continue; }
+    $src = sin_comentarios((string)file_get_contents($f));
+    if (preg_match('/bi-(google|microsoft)[^a-z-]/', $src)) { $conIconoGenerico[] = $rel; }
+}
+chequear('Ninguna pantalla dibuja a Google o a Microsoft con el icono genérico',
+    $conIconoGenerico === [], implode(', ', $conIconoGenerico));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────────────────
 grupo('DISENO · una fila de tabla, lo mas baja posible');
 //
 // Medido en Chrome, el alto de fila era: activos 51, papelera 54, campos 55-56,
@@ -2049,6 +2084,40 @@ grupo('DISENO · medido en el navegador');
 // es análisis estático) ni en test/componentes.js (jsdom no calcula layout).
 // Lo que sí se puede es dejar clavados los defectos que esa medición encontró,
 // para que no vuelvan en silencio.
+
+/* Un comentario de CSS sin abrir se come la regla que viene después.
+   `componentes.css` tenía un bloque de separación al que le faltaba el `/*`:
+
+       .ih-card__body--compacto { padding: 1rem; }
+
+          7. Barra de título de una sección
+          ------------------------------------------------------------------
+          ... *\/
+       .ih-barra { display: flex; justify-content: space-between; … }
+
+   El navegador lee «7. Barra de título …» como un selector, busca su `{`, y el
+   primero que encuentra es el de `.ih-barra`: la regla entera desaparece. No
+   avisa nada, no rompe el resto de la hoja, y el efecto aparece lejos —el botón
+   de Drive del detalle del activo caía debajo del título en vez de ir a la
+   derecha, en TODA pantalla que use esa barra—. Se buscó en el PHP, que estaba
+   bien.
+
+   Contar los `/*` contra los `*\/` lo encuentra en un segundo. */
+foreach (['assets/css/app.css', 'assets/css/componentes.css', 'assets/css/intellihelp.css'] as $hoja) {
+    $txt = leer($hoja);
+    $abren  = substr_count($txt, '/*');
+    $cierran = substr_count($txt, '*/');
+    chequear(basename($hoja) . ': los comentarios abren y cierran parejo',
+        $abren === $cierran, "{$abren} abiertos contra {$cierran} cerrados");
+}
+
+// Y que el marcado que llega al navegador esté bien cerrado: una etiqueta
+// cerrada con la que no es reacomoda el árbol y la pantalla sale con el
+// contenido en otro lado. Lo mide `test/diseno/marcado.js` sobre las páginas
+// descargadas; acá se verifica que el verificador esté.
+chequear('El verificador de marcado está en el repositorio',
+    is_file(RAIZ . '/test/diseno/marcado.js')
+    && str_contains(leer('test/diseno/marcado.js'), 'function revisar'));
 
 chequear('La auditoría de diseño está en el repositorio',
     is_file(RAIZ . '/test/diseno/auditor.js') && is_file(RAIZ . '/test/diseno/README.md'));

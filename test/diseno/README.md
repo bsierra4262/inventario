@@ -45,6 +45,30 @@ Conviene repetirlo en 1440, 1024, 768 y 500 px. Por debajo de 500 Chrome en modo
 headless no hace layout: achica la ventana y recorta la captura, así que medir
 ahí no dice nada.
 
+## El verificador de marcado
+
+`test/diseno/marcado.js` revisa que el HTML que llega al navegador esté bien
+cerrado:
+
+```
+node test/diseno/marcado.js <carpeta-con-paginas-descargadas>
+```
+
+No es prolijidad. Cuando una etiqueta se cierra con la que no es, o falta un
+`</div>`, el navegador **no avisa**: reacomoda el árbol por su cuenta y la
+pantalla sale con el contenido en otro lado. Aparece como un problema de diseño
+—«esta sección quedó estirada», «la tarjeta se fue a la otra columna»— y se
+busca en el CSS, que está bien.
+
+Encontró dos a la primera: un `<h3 …>Archivos adjuntos</div>` en el detalle del
+activo, cuyo `</div>` cerraba la tarjeta antes de tiempo, y un `</div>` de más
+en la pantalla de integración que cerraba el `<main>` y dejaba media pantalla
+fuera del contenedor.
+
+Mira el HTML **renderizado** y no el `.php`: en el archivo, un `<div>` puede
+abrirse dentro de un `if` y cerrarse dentro de otro, y contar etiquetas ahí da
+falsos positivos sin parar. En lo que sale no hay PHP: o está balanceado o no.
+
 ## El medidor de tablas
 
 `test/diseno/medir_tablas.js` se inyecta igual y escribe su informe en el

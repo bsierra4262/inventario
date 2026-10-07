@@ -66,6 +66,7 @@ const TOKENS_QUE_DIFIEREN = [
     '--ih-danger-bg'   => 'deuda',   // #fdeceb  contra #fee2e2
     '--ih-danger-line' => 'deuda',   // #f3c9c4  contra #fecaca
     '--ih-warning'     => 'deuda',   // #a8620a  contra #ea580c
+    '--ih-warning-bg'  => 'deuda',   // #fdf3e3  contra #ffedd5 — el fondo del otro
     '--ih-success'     => 'deuda',   // #5f8a12  contra #16a34a — dos verdes distintos
     '--ih-gray-50'     => 'deuda',   // #faf9fc  contra #fafafa
     '--ih-gray-100'    => 'deuda',   // #f6f5fa  contra #f4f4f5

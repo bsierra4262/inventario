@@ -14,6 +14,7 @@ require_once __DIR__ . '/../backend/db.php';
 require_once __DIR__ . '/../backend/csrf.php';
 require_once __DIR__ . '/../logs/logger.php';
 require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../includes/hub.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
@@ -152,7 +153,6 @@ require __DIR__ . '/../includes/layout/topbar.php';
         </button>
       </form>
     </div>
-  </div>
   <?php endif; ?>
 
   <!-- Tabs de proveedor -->
@@ -161,11 +161,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <div class="ih-pills" role="group" aria-label="Nube que se está configurando">
     <button type="button" id="tab-google" class="ih-pill is-active"
             aria-pressed="true" onclick="showTab('google')">
-      <i class="bi bi-google"></i> Google Drive
+      <?= marca_svg('drive', 17) ?> Google Drive
     </button>
     <button type="button" id="tab-microsoft" class="ih-pill"
             aria-pressed="false" onclick="showTab('microsoft')">
-      <i class="bi bi-microsoft"></i> Microsoft OneDrive
+      <?= marca_svg('onedrive', 17) ?> Microsoft OneDrive
     </button>
   </div>
 
@@ -206,7 +206,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <div class="ih-card ih-mb-5">
       <div class="ih-card__header">
         <div>
-          <h2 class="ih-card__title"><i class="bi bi-google" style="color:#EA4335"></i> Google Drive</h2>
+          <h2 class="ih-card__title"><?= marca_svg('drive', 20) ?> Google Drive</h2>
           <div class="ih-card__subtitle">
             <?php if (!empty($googleCfg['root_folder_id']) || ($platformGoogleOk && !empty($googleCfg['root_folder_id']))): ?>
               <span class="ih-badge ih-badge--success ih-badge--dot">Carpeta configurada</span>
@@ -370,7 +370,7 @@ require __DIR__ . '/../includes/layout/topbar.php';
     <div class="ih-card">
       <div class="ih-card__header">
         <div>
-          <h2 class="ih-card__title"><i class="bi bi-microsoft" style="color:#0078D4"></i> Microsoft OneDrive</h2>
+          <h2 class="ih-card__title"><?= marca_svg('onedrive', 20) ?> Microsoft OneDrive</h2>
           <div class="ih-card__subtitle">
             <?php if (!empty($msCfg['client_id']) || $platformMsOk): ?>
               <span class="ih-badge ih-badge--success ih-badge--dot">Configurado</span>

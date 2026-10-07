@@ -103,8 +103,14 @@ h1,h2,h3,h4{font-weight:800;letter-spacing:-.02em;margin:0 0 .2rem;line-height:1
 h1{font-size:22px} h2{font-size:15.5px;font-weight:700} h3{font-size:14px;font-weight:700}
 h4{font-size:13px;font-weight:700}
 img{max-width:100%}
+/* `overflow-wrap:anywhere`: un Client ID de OAuth o el ID de una carpeta de
+   Drive son setenta caracteres sin un solo espacio. Sin esto no tienen por
+   dónde cortarse, se salen de la tarjeta, y en una pantalla angosta quedan
+   recortados sin manera de llegar a lo que falta —medido en la pantalla de
+   integración a 500 px—. No se parte una palabra: se parte una matrícula. */
 code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
-  background:var(--primary-050);color:var(--primary-700);padding:.1em .4em;border-radius:6px}
+  background:var(--primary-050);color:var(--primary-700);padding:.1em .4em;border-radius:6px;
+  overflow-wrap:anywhere}
 hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
 ::selection{background:var(--primary-100)}
 *{scrollbar-width:thin;scrollbar-color:#d4d7de transparent}

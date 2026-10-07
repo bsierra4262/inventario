@@ -93,6 +93,7 @@ $tenantDbError = '';
 if (!empty($_SESSION['company_id'])) {
     try {
         require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
         if (isset($conn) && $conn instanceof mysqli) { @$conn->set_charset('utf8mb4'); }
     } catch (Throwable $e) {
@@ -432,12 +433,12 @@ require __DIR__ . '/../includes/layout/head.php';
           <div class="ih-auth__divider">o</div>
           <?php if ($googleAuthUrl): ?>
             <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
-              <i class="bi bi-google"></i> Continuar con Google
+              <?= marca_svg('google', 18) ?> Continuar con Google
             </a>
           <?php endif; ?>
           <?php if ($msAuthUrl): ?>
             <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($msAuthUrl) ?>">
-              <i class="bi bi-microsoft"></i> Continuar con Microsoft
+              <?= marca_svg('microsoft', 18) ?> Continuar con Microsoft
             </a>
           <?php endif; ?>
         <?php endif; ?>

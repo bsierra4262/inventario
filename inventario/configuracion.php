@@ -121,7 +121,8 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <?php hub_tarjetas([
       [
           'url'      => '/inventario/configurar_integracion.php',
-          'icono'    => $esOneDrive ? 'bi-microsoft' : 'bi-google',
+          'icono'    => 'bi-cloud',
+          'logo'     => marca_svg($esOneDrive ? 'onedrive' : 'drive', 22),
           'titulo'   => 'Adjuntos en la nube',
           'desc'     => 'Las facturas y fotos de cada activo se suben a la nube de la empresa. '
                       . 'Acá se elige la cuenta y la carpeta.',

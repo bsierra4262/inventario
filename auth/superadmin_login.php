@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../core/config/platform.php';
+require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/security/session_role.php';
@@ -278,7 +279,7 @@ require __DIR__ . '/../includes/layout/head.php';
         <div class="ih-flex ih-flex-col ih-gap-3">
           <?php if ($googleConfigured && $googleAuthUrl): ?>
             <a class="ih-btn ih-btn--google ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($googleAuthUrl) ?>">
-              <i class="bi bi-google"></i> Continuar con Google Workspace
+              <?= marca_svg('google', 18) ?> Continuar con Google Workspace
               <?php if ($googleHd !== ''): ?>
                 <span class="ih-text-xs ih-text-apagado">(@<?= htmlspecialchars($googleHd) ?>)</span>
               <?php endif; ?>
@@ -286,7 +287,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <?php endif; ?>
           <?php if ($msConfigured && $msAuthUrl): ?>
             <a class="ih-btn ih-btn--microsoft ih-btn--lg ih-btn--block" href="<?= htmlspecialchars($msAuthUrl) ?>">
-              <i class="bi bi-microsoft"></i> Continuar con Microsoft 365
+              <?= marca_svg('microsoft', 18) ?> Continuar con Microsoft 365
               <?php if ($msHd !== ''): ?>
                 <span class="ih-text-xs ih-text-apagado">(@<?= htmlspecialchars($msHd) ?>)</span>
               <?php endif; ?>

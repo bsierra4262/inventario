@@ -12,6 +12,7 @@ require_once __DIR__ . '/../logs/logger.php';
 // infocom_amortizacion_anios(): el plazo de amortización guardado por activo,
 // con el del reporte como respaldo.
 require_once __DIR__ . '/../core/tenants/infocom.php';
+require_once __DIR__ . '/../core/tenants/historial.php';
 require_once __DIR__ . '/../core/tenants/papelera.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -144,6 +145,30 @@ function rp_consultar(mysqli $conn, string $sql, string $types = '', array $para
     $st->bind_param($types, ...$params);
     $st->execute();
     return $st->get_result();
+}
+
+/**
+ * Una fecha de la base, escrita como se lee acá.
+ *
+ * MySQL guarda «0000-00-00» cuando no hay fecha, y eso llegaba tal cual a la
+ * pantalla: una columna «Garantía» llena de ceros no dice «no tiene garantía»,
+ * dice que algo está roto. Vacío, nulo o cero es lo mismo: no hay fecha.
+ */
+function rp_fecha($v): string {
+    $v = trim((string)$v);
+    if ($v === '' || str_starts_with($v, '0000-00-00')) { return '—'; }
+    $t = strtotime($v);
+    return $t ? date('d/m/Y', $t) : htmlspecialchars($v);
+}
+
+/** Lo mismo, con la hora: en un historial importa el orden del día. */
+function rp_fecha_hora($v): string {
+    $v = trim((string)$v);
+    if ($v === '' || str_starts_with($v, '0000-00-00')) { return '—'; }
+    $t = strtotime($v);
+    if (!$t) { return htmlspecialchars($v); }
+    return '<div class="ih-celda__texto"><div class="ih-celda__nombre">' . date('d/m/Y', $t)
+         . '</div><div class="ih-celda__sub">' . date('H:i', $t) . '</div></div>';
 }
 
 function is_tab($needle, $tab) { return $needle === $tab ? 'show active' : ''; }
@@ -736,10 +761,18 @@ require __DIR__ . '/../includes/layout/topbar.php';
 <!-- ════════ TRAZABILIDAD ════════ -->
 <div<?= $tab === 'trazabilidad' ? '' : ' hidden' ?>>
   <?php
-  // Lista dinamica de acciones existentes en producto_movimientos
+  /* Las acciones que de verdad se pueden elegir. «Restaurado» no está: una
+     restauración se cuenta junto al archivado que la originó —un renglón por
+     ciclo, no dos— así que filtrar por ella no devolvería nada. Para encontrar
+     las que volvieron está el filtro de situación. */
   $accionesT = [];
   $acRes = $conn->query("SELECT DISTINCT accion FROM `{$movTable}` WHERE accion IS NOT NULL AND accion != '' ORDER BY accion ASC");
-  if ($acRes) { while ($ar = $acRes->fetch_assoc()) $accionesT[] = $ar['accion']; }
+  if ($acRes) { while ($ar = $acRes->fetch_assoc()) { if ($ar['accion'] !== 'Restaurado') { $accionesT[] = $ar['accion']; } } }
+  $situaciones = [
+      'archivada'  => 'Sigue en la papelera',
+      'volvio'     => 'Volvió al inventario',
+      'eliminada'  => 'Terminó eliminada',
+  ];
   ?>
   <?php /* Filtros y tabla son dos tarjetas pegadas que se leen como una, igual
            que en el listado de activos. Antes eran cuatro bloques sueltos
@@ -754,6 +787,15 @@ require __DIR__ . '/../includes/layout/topbar.php';
         <option value="">Todas</option>
         <?php foreach($accionesT as $ac): ?>
           <option value="<?=htmlspecialchars($ac)?>" <?=($_GET['accion']??'')===$ac?'selected':''?>><?=htmlspecialchars($ac)?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div>
+      <label class="ih-label">Situación</label>
+      <select name="situacion" class="ih-select">
+        <option value="">Cualquiera</option>
+        <?php foreach ($situaciones as $k => $txt): ?>
+          <option value="<?= $k ?>" <?= ($_GET['situacion'] ?? '') === $k ? 'selected' : '' ?>><?= htmlspecialchars($txt) ?></option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -801,18 +843,41 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <table class="ih-table" id="tabla-trazabilidad">
     <thead>
       <tr>
-        <th>Fecha</th><th>Acción</th><th>Modelo</th><th>Marca</th><th>S/N Tag</th>
-        <th>Cantidad</th><th>Valor USD</th><th>Estado</th>
-        <th>Garantía</th><th>Ingreso</th><th>Egreso</th>
-        <th>Ubicación</th><th>Detalle Técnico</th>
-        <th>Categoría</th><th>Subcategoría</th><th>Usuario</th>
+        <?php /* Dieciséis columnas dejaban «Usuario» fuera de la pantalla: había
+                 que arrastrar la tabla para ver QUIÉN hizo cada cosa, que es media
+                 pregunta del reporte. Las cuatro que se fueron —garantía, ingreso,
+                 egreso y detalle técnico— no describen el movimiento sino el
+                 activo, y de eso se ocupa «Inventario General». */ ?>
+        <th>Fecha</th><th>Qué pasó</th><th>Activo</th>
+        <th>Categoría</th><th>Cantidad</th><th>Valor USD</th><th>Estado</th>
+        <th>Ubicación</th><th>Usuario</th>
       </tr>
     </thead>
     <tbody>
     <?php
-      $whereT = ["pm.realizado_por != 0"];
+      /* Antes acá decía `pm.realizado_por != 0`, y eso borraba del reporte TODA
+         restauración y TODA eliminación. `realizado_por` es VARCHAR y guardaba
+         el correo en esos dos endpoints: en MySQL, comparar 'alguien@algo.com'
+         contra 0 convierte el texto a 0, y `0 != 0` es falso. La fila se caía
+         sin que nada avisara, y el activo quedaba archivado para siempre en la
+         pantalla aunque estuviera de vuelta en el inventario.
+         Lo que de verdad se quería —no listar movimientos sin autor— se dice
+         mirando el texto, no comparándolo contra un número. */
+      $whereT = ["TRIM(COALESCE(pm.realizado_por,'')) <> ''"];
+      // Y una restauración no va suelta: se cuenta en el archivado que la originó.
+      $whereT[] = historial_sin_restauraciones_sql($movTable);
       $paramsT = []; $typesT = "";
       if (!empty($_GET['accion']))     { $whereT[] = "pm.accion = ?";          $paramsT[] = $_GET['accion'];                $typesT .= "s"; }
+      /* La situación se pregunta sobre lo que vino DESPUÉS del archivado, que es
+         justo lo que el reporte no miraba. */
+      $_sitT = (string)($_GET['situacion'] ?? '');
+      $_despT = "(SELECT m3.accion FROM `{$movTable}` m3
+                   WHERE m3.producto_id = pm.producto_id AND m3.fecha > pm.fecha
+                     AND m3.accion IN ('Restaurado','Eliminado')
+                   ORDER BY m3.fecha ASC LIMIT 1)";
+      if ($_sitT === 'archivada') { $whereT[] = "pm.accion = 'Archivado' AND {$_despT} IS NULL"; }
+      elseif ($_sitT === 'volvio')    { $whereT[] = "pm.accion = 'Archivado' AND {$_despT} = 'Restaurado'"; }
+      elseif ($_sitT === 'eliminada') { $whereT[] = "pm.accion = 'Archivado' AND {$_despT} = 'Eliminado'"; }
       if (!empty($_GET['usuario']))    { $whereT[] = "(u.username LIKE ? OR u.email LIKE ?)"; $paramsT[] = "%".$_GET['usuario']."%"; $paramsT[] = "%".$_GET['usuario']."%"; $typesT .= "ss"; }
       if (!empty($_GET['modelo']))     { $whereT[] = "LOWER(pm.modelo) LIKE LOWER(?)";   $paramsT[] = "%".$_GET['modelo']."%";    $typesT .= "s"; }
       if (!empty($_GET['marca']))      { $whereT[] = "LOWER(pm.marca) LIKE LOWER(?)";    $paramsT[] = "%".$_GET['marca']."%";     $typesT .= "s"; }
@@ -831,7 +896,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
       $per_page_opts_t = [20, 50, 100, 200];
       $per_page_t = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_t, true) ? (int)$_GET['per_page'] : 50;
       $page_t = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
-      $countSqlT = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id $whereSqlT";
+      $countSqlT = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u
+                     ON pm.realizado_por REGEXP '^[0-9]+$'
+                    AND CAST(pm.realizado_por AS UNSIGNED) = u.id $whereSqlT";
       $stmtCT = $conn->prepare($countSqlT);
       if (!empty($paramsT)) $stmtCT->bind_param($typesT, ...$paramsT);
       $stmtCT->execute();
@@ -841,14 +908,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
       if ($page_t > $totalPagesT) $page_t = $totalPagesT;
       $offsetT = ($page_t - 1) * $per_page_t;
 
-      $sql = "SELECT pm.fecha,pm.accion,u.username,u.email,
+      $sql = "SELECT pm.fecha,pm.accion,pm.descripcion,pm.realizado_por,u.username,u.email,"
+              . historial_despues_sql($movTable) . ",
               pm.modelo AS modelo_mod, pm.marca AS marca_mod, pm.servis_tag AS tag_mod, pm.cantidad AS cant_mod,
               pm.valor_usd AS valor_mod, pm.estado AS estado_mod, pm.fecha_garantia AS garant_mod,
               pm.fecha_ingreso AS ingreso_mod, pm.fecha_egreso AS egreso_mod, pm.ubicacion AS ubic_mod,
               pm.detalle_tecnico AS detec_mod, pm.patchcord_tipo AS pctipo_mod, pm.patchcord_longitud AS pclong_mod,
               pm.categoria AS cat_mod, pm.subcategoria AS sub_mod
               FROM `{$movTable}` pm
-              LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
+              LEFT JOIN `{$usersTable}` u
+                     ON pm.realizado_por REGEXP '^[0-9]+$'
+                    AND CAST(pm.realizado_por AS UNSIGNED) = u.id
               $whereSqlT ORDER BY pm.fecha DESC LIMIT $per_page_t OFFSET $offsetT";
       $stmt = $conn->prepare($sql);
       if (!empty($paramsT)) $stmt->bind_param($typesT, ...$paramsT);
@@ -857,32 +927,64 @@ require __DIR__ . '/../includes/layout/topbar.php';
       $hay_datos = false;
       while ($row = $res->fetch_assoc()):
         $hay_datos = true;
-        $dt = trim($row['detec_mod']);
+        $dt = trim((string)$row['detec_mod']);
         if ($dt == '' && $row['pctipo_mod']) $dt = "{$row['pctipo_mod']} – {$row['pclong_mod']} m";
         $dt = htmlspecialchars($dt, ENT_QUOTES);
-        $usr = htmlspecialchars($row['username'], ENT_QUOTES) . '<br><small class="ih-text-apagado">'.htmlspecialchars($row['email'], ENT_QUOTES)."</small>";
+        /* Quién: las filas viejas guardan el correo en vez del ID, así que el
+           JOIN no las encuentra. Antes eso las dejaba fuera del reporte; ahora
+           se muestran igual, con lo que haya. */
+        $aut = historial_autor($row);
+        /* `<small>` da 10,83 px —el 83 % de 13—, que no es ninguno de los tamaños
+           de la escala tipográfica. El renglón de apoyo de una celda ya existe y
+           mide 11, igual que en todas las otras tablas. */
+        $usr = '<div class="ih-celda__texto"><div class="ih-celda__nombre">'
+             . htmlspecialchars($aut['nombre'], ENT_QUOTES) . '</div>'
+             . ($aut['detalle'] !== ''
+                ? '<div class="ih-celda__sub">' . htmlspecialchars($aut['detalle'], ENT_QUOTES) . '</div>'
+                : '')
+             . '</div>';
+        $qp  = historial_que_paso($row);
     ?>
       <tr>
-        <td><?= $row['fecha'] ?></td>
-        <td><?= htmlspecialchars($row['accion']) ?></td>
-        <td><?= htmlspecialchars($row['modelo_mod']) ?></td>
-        <td><?= htmlspecialchars($row['marca_mod']) ?></td>
-        <td><?= htmlspecialchars($row['tag_mod']) ?></td>
+        <td class="ih-table__nowrap"><?= rp_fecha_hora($row['fecha']) ?></td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre">
+              <span class="ih-badge <?= $qp['badge'] ?>"><i class="bi bi-<?= $qp['icono'] ?>"></i> <?= htmlspecialchars($qp['titulo']) ?></span>
+            </div>
+            <?php if ($qp['detalle'] !== ''): ?>
+              <div class="ih-celda__sub" title="<?= htmlspecialchars($qp['detalle'], ENT_QUOTES) ?>"><?= htmlspecialchars($qp['detalle']) ?></div>
+            <?php endif; ?>
+          </div>
+        </td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre"><?= htmlspecialchars($row['modelo_mod']) ?></div>
+            <div class="ih-celda__sub">
+              <?= htmlspecialchars(trim((string)$row['marca_mod'])) ?>
+              <?php if (trim((string)$row['tag_mod']) !== ''): ?>
+                · <code><?= htmlspecialchars($row['tag_mod']) ?></code>
+              <?php endif; ?>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre"><?= htmlspecialchars($row['cat_mod']) ?></div>
+            <?php if (trim((string)$row['sub_mod']) !== ''): ?>
+              <div class="ih-celda__sub"><?= htmlspecialchars($row['sub_mod']) ?></div>
+            <?php endif; ?>
+          </div>
+        </td>
         <td><?= htmlspecialchars($row['cant_mod']) ?></td>
-        <td>$<?= number_format($row['valor_mod'],2) ?></td>
+        <td>$<?= number_format((float)$row['valor_mod'],2) ?></td>
         <td><?= htmlspecialchars($row['estado_mod']) ?></td>
-        <td><?= htmlspecialchars($row['garant_mod']) ?></td>
-        <td><?= htmlspecialchars($row['ingreso_mod']) ?></td>
-        <td><?= htmlspecialchars($row['egreso_mod']) ?></td>
         <td><?= htmlspecialchars($row['ubic_mod']) ?></td>
-        <td><?= $dt ?></td>
-        <td><?= htmlspecialchars($row['cat_mod']) ?></td>
-        <td><?= htmlspecialchars($row['sub_mod']) ?></td>
         <td><?= $usr ?></td>
       </tr>
     <?php endwhile; ?>
     <?php if (!$hay_datos): ?>
-      <tr><td colspan="16" class="ih-table__vacio">No hay datos disponibles</td></tr>
+      <tr><td colspan="9" class="ih-table__vacio">Todavía no hay movimientos registrados</td></tr>
     <?php endif; ?>
     </tbody>
   </table>
@@ -947,6 +1049,17 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <form method="GET" class="ih-filtros" id="form-archivados">
     <input type="hidden" name="tab" value="archivados">
     <div>
+      <?php /* La pregunta que el reporte no contestaba: de lo que se archivó,
+               ¿qué sigue en la papelera y qué volvió? */ ?>
+      <label class="ih-label">Situación</label>
+      <select name="situacion" class="ih-select">
+        <option value="">Todas</option>
+        <option value="archivada" <?= ($_GET['situacion'] ?? '') === 'archivada' ? 'selected' : '' ?>>Sigue en la papelera</option>
+        <option value="volvio"    <?= ($_GET['situacion'] ?? '') === 'volvio'    ? 'selected' : '' ?>>Volvió al inventario</option>
+        <option value="eliminada" <?= ($_GET['situacion'] ?? '') === 'eliminada' ? 'selected' : '' ?>>Terminó eliminada</option>
+      </select>
+    </div>
+    <div>
       <label class="ih-label">Motivo</label>
       <select name="motivo" class="ih-select">
         <option value="">Todos</option>
@@ -991,18 +1104,31 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <table class="ih-table" id="tabla-archivados">
     <thead>
       <tr>
-        <th>Fecha Archivo</th><th>Motivo</th><th>Detalle</th><th>Responsable</th>
-        <th>ID</th><th>Modelo</th><th>Marca</th><th>S/N Tag</th>
-        <th>Categoría</th><th>Subcategoría</th><th>Estado</th>
-        <th>Garantía</th><th>Ingreso</th><th>Egreso</th>
-        <th>Ubicación</th><th>Asignado a</th><th>Valor USD</th><th>Cantidad</th>
-        <th>Detalle Técnico</th>
+        <?php /* Veinte columnas para contestar «qué se archivó y qué pasó con
+                 eso». Las que se fueron describen al activo, no al archivado, y
+                 están enteras en «Inventario General». */ ?>
+        <th>Fecha Archivo</th><th>Situación</th><th>Motivo</th><th>Detalle</th>
+        <th>Activo</th><th>Categoría</th><th>Ubicación</th><th>Asignado a</th>
+        <th>Valor USD</th><th>Responsable</th>
       </tr>
     </thead>
     <tbody>
     <?php
+      /* Esta pestaña lista ARCHIVADOS: un renglón por vez que alguien mandó un
+         activo a la papelera. Lo que faltaba era la otra mitad —qué pasó
+         después—, y sin eso el reporte mentía: un activo archivado y restaurado
+         tres veces se veía como tres activos archivados, y seguía apareciendo
+         como archivado aunque estuviera de vuelta en el inventario. */
       $whereAR = ["pm.accion = 'Archivado'"];
       $paramsAR = []; $typesAR = "";
+      $_sitAR  = (string)($_GET['situacion'] ?? '');
+      $_despAR = "(SELECT m3.accion FROM `{$movTable}` m3
+                    WHERE m3.producto_id = pm.producto_id AND m3.fecha > pm.fecha
+                      AND m3.accion IN ('Restaurado','Eliminado')
+                    ORDER BY m3.fecha ASC LIMIT 1)";
+      if ($_sitAR === 'archivada')     { $whereAR[] = "{$_despAR} IS NULL"; }
+      elseif ($_sitAR === 'volvio')    { $whereAR[] = "{$_despAR} = 'Restaurado'"; }
+      elseif ($_sitAR === 'eliminada') { $whereAR[] = "{$_despAR} = 'Eliminado'"; }
       if (!empty($_GET['motivo']))   { $whereAR[] = "pm.descripcion LIKE ?"; $paramsAR[] = "%Motivo: ".$_GET['motivo']."%"; $typesAR .= "s"; }
       if (!empty($_GET['usuario']))  { $whereAR[] = "(u.username LIKE ? OR u.email LIKE ?)"; $paramsAR[] = "%".$_GET['usuario']."%"; $paramsAR[] = "%".$_GET['usuario']."%"; $typesAR .= "ss"; }
       if (!empty($_GET['fecha_desde']) && !empty($_GET['fecha_hasta'])) {
@@ -1018,7 +1144,9 @@ require __DIR__ . '/../includes/layout/topbar.php';
       $per_page_opts_ar = [20, 50, 100, 200];
       $per_page_ar = isset($_GET['per_page']) && in_array((int)$_GET['per_page'], $per_page_opts_ar, true) ? (int)$_GET['per_page'] : 20;
       $page_ar = isset($_GET['page']) && (int)$_GET['page'] > 0 ? (int)$_GET['page'] : 1;
-      $countSqlAR = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id $whereSqlAR";
+      $countSqlAR = "SELECT COUNT(*) AS total FROM `{$movTable}` pm LEFT JOIN `{$usersTable}` u
+                     ON pm.realizado_por REGEXP '^[0-9]+$'
+                    AND CAST(pm.realizado_por AS UNSIGNED) = u.id $whereSqlAR";
       $stmtCAR = $conn->prepare($countSqlAR);
       if (!empty($paramsAR)) $stmtCAR->bind_param($typesAR, ...$paramsAR);
       $stmtCAR->execute();
@@ -1028,9 +1156,12 @@ require __DIR__ . '/../includes/layout/topbar.php';
       if ($page_ar > $totalPagesAR) $page_ar = $totalPagesAR;
       $offsetAR = ($page_ar - 1) * $per_page_ar;
 
-      $sql = "SELECT pm.*, u.username, u.email
+      $sql = "SELECT pm.*, u.username, u.email,"
+              . historial_despues_sql($movTable) . "
               FROM `{$movTable}` pm
-              LEFT JOIN `{$usersTable}` u ON pm.realizado_por = u.id
+              LEFT JOIN `{$usersTable}` u
+                     ON pm.realizado_por REGEXP '^[0-9]+$'
+                    AND CAST(pm.realizado_por AS UNSIGNED) = u.id
               $whereSqlAR
               ORDER BY pm.fecha DESC LIMIT $per_page_ar OFFSET $offsetAR";
       $stmt = $conn->prepare($sql);
@@ -1048,32 +1179,57 @@ require __DIR__ . '/../includes/layout/topbar.php';
                 $detalle_txt = trim($detalle_txt);
             }
         }
-        $dt = isset($row['detalle_tecnico']) ? htmlspecialchars($row['detalle_tecnico']) : '—';
+        $qp  = historial_que_paso($row);
+        $aut = historial_autor($row);
     ?>
       <tr>
-        <td><?= $row['fecha'] ?></td>
+        <td class="ih-table__nowrap"><?= rp_fecha_hora($row['fecha']) ?></td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre">
+              <span class="ih-badge <?= $qp['badge'] ?>"><i class="bi bi-<?= $qp['icono'] ?>"></i>
+                <?= $qp['abierto'] ? 'En la papelera' : ($row['despues_accion'] === 'Eliminado' ? 'Eliminado' : 'Volvió') ?></span>
+            </div>
+            <?php if ($qp['detalle'] !== ''): ?>
+              <div class="ih-celda__sub" title="<?= htmlspecialchars($qp['detalle'], ENT_QUOTES) ?>"><?= htmlspecialchars($qp['detalle']) ?></div>
+            <?php endif; ?>
+          </div>
+        </td>
         <td><?= htmlspecialchars($motivo) ?></td>
         <td><?= htmlspecialchars($detalle_txt) ?></td>
-        <td><?= htmlspecialchars($row['username']) ?><br><small class="ih-text-apagado"><?=htmlspecialchars($row['email'])?></small></td>
-        <td><?= $row['producto_id'] ?></td>
-        <td><?= htmlspecialchars($row['modelo']) ?></td>
-        <td><?= htmlspecialchars($row['marca']) ?></td>
-        <td><?= htmlspecialchars($row['servis_tag']) ?></td>
-        <td><?= htmlspecialchars($row['categoria']) ?></td>
-        <td><?= htmlspecialchars($row['subcategoria']) ?></td>
-        <td><?= htmlspecialchars($row['estado']) ?></td>
-        <td><?= htmlspecialchars($row['fecha_garantia']) ?></td>
-        <td><?= htmlspecialchars($row['fecha_ingreso']) ?></td>
-        <td><?= htmlspecialchars($row['fecha_egreso']) ?></td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre"><?= htmlspecialchars($row['modelo']) ?></div>
+            <div class="ih-celda__sub">
+              #<?= (int)$row['producto_id'] ?>
+              <?php if (trim((string)$row['marca']) !== ''): ?> · <?= htmlspecialchars($row['marca']) ?><?php endif; ?>
+              <?php if (trim((string)$row['servis_tag']) !== ''): ?> · <code><?= htmlspecialchars($row['servis_tag']) ?></code><?php endif; ?>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre"><?= htmlspecialchars($row['categoria']) ?></div>
+            <?php if (trim((string)$row['subcategoria']) !== ''): ?>
+              <div class="ih-celda__sub"><?= htmlspecialchars($row['subcategoria']) ?></div>
+            <?php endif; ?>
+          </div>
+        </td>
         <td><?= htmlspecialchars($row['ubicacion']) ?></td>
         <td><?= htmlspecialchars($row['asignado_a']) ?></td>
-        <td>$<?= number_format($row['valor_usd'],2) ?></td>
-        <td><?= $row['cantidad'] ?></td>
-        <td><?= $dt ?></td>
+        <td>$<?= number_format((float)$row['valor_usd'],2) ?></td>
+        <td>
+          <div class="ih-celda__texto">
+            <div class="ih-celda__nombre"><?= htmlspecialchars($aut['nombre']) ?></div>
+            <?php if ($aut['detalle'] !== ''): ?>
+              <div class="ih-celda__sub"><?= htmlspecialchars($aut['detalle']) ?></div>
+            <?php endif; ?>
+          </div>
+        </td>
       </tr>
     <?php endwhile; ?>
     <?php if (!$hay_datos): ?>
-      <tr><td colspan="19" class="ih-table__vacio">No hay datos disponibles</td></tr>
+      <tr><td colspan="10" class="ih-table__vacio">Todavía no se archivó ningún activo</td></tr>
     <?php endif; ?>
     </tbody>
   </table>

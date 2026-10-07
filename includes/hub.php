@@ -36,7 +36,12 @@ if (!function_exists('hub_tarjetas')) {
  * Una grilla de tarjetas.
  *
  * Cada opción: ['url', 'icono' (clase de Bootstrap Icons), 'titulo', 'desc',
- * 'puede' => bool, 'insignia' => string|null].
+ * 'puede' => bool, 'insignia' => string|null, 'logo' => string|null].
+ *
+ * `logo` es para las tarjetas de un servicio ajeno: ahí va el logotipo de
+ * verdad —`marca_svg('drive')`— y no un icono parecido. La tarjeta de adjuntos
+ * usaba `bi-google`, la G genérica de un solo color, y lo que tiene que
+ * reconocerse de un vistazo es de quién es la nube.
  */
 function hub_tarjetas(array $opciones): void {
     ?>
@@ -52,7 +57,11 @@ function hub_tarjetas(array $opciones): void {
              title="Tu rol no tiene permiso para esta opción">
       <?php endif; ?>
           <span class="ih-hub__icono" aria-hidden="true">
-            <i class="bi <?= htmlspecialchars((string)$o['icono'], ENT_QUOTES, 'UTF-8') ?>"></i>
+            <?php if (!empty($o['logo'])): ?>
+              <?= $o['logo'] /* SVG propio del proyecto, no viene de afuera */ ?>
+            <?php else: ?>
+              <i class="bi <?= htmlspecialchars((string)$o['icono'], ENT_QUOTES, 'UTF-8') ?>"></i>
+            <?php endif; ?>
           </span>
           <span class="ih-hub__texto">
             <span class="ih-hub__titulo">

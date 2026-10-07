@@ -115,8 +115,16 @@ try {
     /* El historial NO se borra: es el único rastro de que el equipo existió. Se
        le agrega una última fila con todo lo que el activo era, para que las
        filas anteriores no queden colgando de un número sin nombre. */
-    $quien = (string)($_SESSION['user_email'] ?? ($me['username'] ?? ('id:' . $user_id)));
-    $desc  = 'Eliminado definitivamente desde la papelera'
+    /* `realizado_por` guarda el ID del usuario, como en el resto de los endpoints
+       que escriben el historial. Acá guardaba el correo, y eso rompía los dos
+       reportes: Trazabilidad une `pm.realizado_por = u.id` y filtra con
+       `realizado_por != 0`, y comparar un correo contra 0 da falso en MySQL, asi
+       que TODA restauración y TODA eliminación se descartaban en silencio. El
+       activo se veía archivado para siempre aunque estuviera de vuelta en el
+       inventario. El texto legible sigue estando, en `descripcion`. */
+    $quien   = (string)$user_id;
+    $legible = (string)($_SESSION['user_email'] ?? ($me['username'] ?? ('id:' . $user_id)));
+    $desc  = 'Eliminado definitivamente desde la papelera por ' . $legible
            . (!empty($producto['archivado_motivo'])
               ? ' (se había archivado por: ' . $producto['archivado_motivo'] . ')' : '')
            . '. La carpeta de Drive no se borró.';

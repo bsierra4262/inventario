@@ -12,6 +12,80 @@ pantallas para cargar una computadora.
 
 ### Corregido
 
+- **Un activo restaurado seguía figurando como archivado en los dos reportes.**
+  La restauración **sí** quedaba guardada; lo que fallaba era leerla.
+  Trazabilidad empezaba con `WHERE pm.realizado_por != 0`, y `realizado_por` es
+  VARCHAR: `backend/restaurar.php` y `backend/eliminar_definitivo.php`
+  guardaban ahí el correo, mientras los otros cinco endpoints guardaban el ID.
+  En MySQL, comparar `'alguien@algo.com'` contra `0` convierte el texto a `0`, y
+  `0 != 0` es falso: **toda restauración y toda eliminación se caían del
+  reporte**, sin un error, sin una fila de menos visible. Un equipo archivado y
+  restaurado tres veces se veía como tres equipos archivados.
+
+  Los dos endpoints guardan ahora el ID como el resto —el texto legible sigue,
+  en `descripcion`—, y los reportes resuelven el autor con lo que haya, así que
+  las filas viejas con correo tampoco se pierden.
+
+- **Y la otra mitad: los reportes no contaban qué pasó después.** «Archivados»
+  listaba un renglón por archivado y nada más; «Trazabilidad», una palabra
+  suelta por hecho. Ahora cada archivado se empareja con lo que vino después y
+  se cuenta en un renglón: «Se archivó por «Venta» y volvió al inventario 17
+  días después», «Motivo: Robo. Sigue en la papelera». Con un filtro de
+  situación —sigue en la papelera, volvió, terminó eliminada— que es la pregunta
+  que el reporte no podía contestar.
+
+  **No se borra nada**: la base sigue teniendo los dos hechos, porque es el
+  único rastro que queda si mañana hay que revisar qué pasó con un bien. Lo que
+  cambia es cómo se lee: nueve filas crudas, cinco renglones legibles. El
+  criterio vive en `core/tenants/historial.php` y lo usan las dos pestañas y el
+  detalle del activo, para que no haya tres respuestas distintas a la misma
+  pregunta.
+
+- **El detalle del activo tenía cada botón dos veces.** «Ver archivos en Drive»
+  arriba y otra vez en una tarjeta «Archivos adjuntos» cuyo único contenido era
+  ese botón; «Editar» y «Volver» en la barra de arriba y otra vez abajo, en una
+  tarjeta «Acciones» con tres botones anchos de tres colores, uno debajo del
+  otro. Un botón que está dos veces en la misma pantalla no da dos opciones:
+  hace dudar de si hacen lo mismo. Quedó uno de cada: las acciones del activo
+  —Volver, Archivar, Editar— en la barra de arriba, y los archivos al lado del
+  nombre.
+
+  Las tarjetas, además, estaban repartidas a mano en dos `<div>`, uno por
+  columna. Como las que no tienen datos no se dibujan, un activo con pocos
+  campos dejaba una columna con dos tarjetas y la otra con cinco, y medio metro
+  de fondo vacío en el medio. Ahora se acomodan solas.
+
+  Y la ficha técnica mostraba siete renglones diciendo «—». Ahora muestra lo que
+  hay cargado, dice en un renglón qué falta, y si no hay nada lo dice una vez.
+
+- **Dos pantallas tenían el HTML mal cerrado, y se veía como un problema de
+  diseño.** El detalle del activo tenía `<h3 …>Archivos adjuntos</div>`: el
+  `</div>` cerraba el cuerpo de la tarjeta antes de tiempo y las tarjetas
+  siguientes se escapaban de su columna. La pantalla de integración tenía un
+  `</div>` de más que cerraba el `<main>`: todo lo que venía después quedaba
+  **fuera del contenedor de la página**, sin márgenes y con un hueco de
+  setecientos píxeles en el medio.
+
+  El navegador no avisa: reacomoda el árbol por su cuenta y sigue. Lo encuentra
+  `test/diseno/marcado.js`, abajo.
+
+- **Un comentario de CSS sin abrir se comía una regla entera.** A la sección 7
+  de `componentes.css` le faltaba el `/*`, así que el navegador leía
+  «7. Barra de título de una sección …» como un selector, buscaba su `{`, y el
+  primero que encontraba era el de `.ih-barra`: la regla desaparecía. El botón
+  de Drive del detalle caía debajo del título en vez de ir a la derecha, en toda
+  pantalla que use esa barra. Se buscó en el PHP, que estaba bien.
+
+- **Los logos de Google y de Microsoft no eran los suyos.** El botón de
+  «Continuar con Google», el de Microsoft, las pestañas de la pantalla de
+  integración y las insignias del panel usaban `bi-google` y `bi-microsoft`: los
+  iconos genéricos de Bootstrap, de un solo color y con la forma aproximada. La
+  G de Google se reconoce porque es roja, azul, amarilla y verde, y el cuadrado
+  de Microsoft porque son cuatro colores distintos; en gris no dicen de quién
+  son, y estaban justo en el botón con el que alguien decide entrar. Ahora son
+  los logotipos oficiales, en SVG propio —no una imagen de un servidor ajeno,
+  que se cae si cambian la URL y le avisa a un tercero quién entra—.
+
 - **La papelera se cortaba a la mitad en cuanto tenía un activo.** El botón
   «Ver el detalle» de cada fila pasó a llevar `volver_aqui()` —para que
   «Cancelar» devuelva ahí— y faltó el `require_once` de
@@ -181,7 +255,30 @@ motivos que se tapaban entre sí:
 Y el desplegable propio del sistema dibujaba también las opciones con `hidden`,
 que es lo que usa Versión para esconder lo que no es del sistema elegido.
 
+### Agregado
+
+- **El detalle del activo muestra su historial.** Cuándo se dio de alta, cuándo
+  se archivó y por qué, cuándo volvió. Para saber si un equipo había estado
+  archivado había que ir a Reportes, elegir una pestaña y filtrar por modelo: es
+  la pregunta más común sobre un activo y vivía a cuatro pantallas de distancia.
+
 ### Agregado en los auditores
+
+`test/diseno/marcado.js` — revisa que el HTML que llega al navegador esté bien
+cerrado. No es prolijidad: cuando una etiqueta se cierra con la que no es, o
+falta un `</div>`, el navegador **reacomoda el árbol por su cuenta** y la
+pantalla sale con el contenido en otro lado. Aparece como un problema de diseño
+—«esta sección quedó estirada», «la tarjeta se fue a la otra columna»— y se
+busca en el CSS, que está bien. Encontró las dos de esta tanda a la primera, con
+el número de línea.
+
+Mira el HTML **renderizado** y no el `.php` a propósito: en el archivo un `<div>`
+puede abrirse dentro de un `if` y cerrarse dentro de otro, y contar etiquetas
+ahí da falsos positivos sin parar. En lo que sale no hay PHP.
+
+Y en la batería estática, dos chequeos más: que los comentarios de cada hoja de
+estilos abran y cierren parejo —lo del `/*` que faltaba—, y que ninguna pantalla
+dibuje a Google o a Microsoft con el icono genérico.
 
 El auditor del navegador medía el alto del contenido de una celda como **el más
 alto de sus hijos** y no como lo que ocupan apilados: informaba 19 px donde
