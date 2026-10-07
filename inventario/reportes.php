@@ -149,18 +149,8 @@ function rp_consultar(mysqli $conn, string $sql, string $types = '', array $para
 function is_tab($needle, $tab) { return $needle === $tab ? 'show active' : ''; }
 function is_tab_btn($needle, $tab) { return $needle === $tab ? 'active' : ''; }
 
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $masterDb  = new MasterDB();
-    $companyId = (int)($_SESSION['company_id'] ?? 0);
-    if ($companyId > 0) {
-        $cs = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-        $cr = $cs->get_result()->fetch_assoc();
-        if ($cr) $tenant_name = $cr['nombre'];
-        $cs->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $page_title      = 'Reportes — Asset Vault';
 $page_section    = 'reportes';

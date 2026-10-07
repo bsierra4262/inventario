@@ -5,6 +5,7 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
+require_once __DIR__ . '/../core/db/empresa_cache.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 
 superadmin_require_login();
@@ -108,6 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Usar los campos correctos según proveedor (nombres separados en el form)
+            /* Lo que acabamos de cambiar es justo lo que el portal del tenant tiene
+               guardado en sesión: el nombre y la base a la que conectarse. Sin esto
+               el cambio tardaría hasta diez minutos en verse. */
+            empresa_cache_olvidar($id);
             $hasCredentials = $provider === 'google'
                 ? ($clientId !== '' || $clientSecret !== '')
                 : ($msClientId !== '' || $msClientSecret !== '');

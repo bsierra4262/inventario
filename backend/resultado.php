@@ -130,17 +130,8 @@ if (isset($_SESSION['form_data']['producto_id'])) {
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 
-$tenant_name = 'Mi empresa';
-try {
-    $mdbR = new MasterDB();
-    $cidR = (int)($_SESSION['company_id'] ?? 0);
-    if ($cidR > 0) {
-        $csR = $mdbR->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidR]);
-        $crR = $csR->get_result()->fetch_assoc();
-        if ($crR) $tenant_name = $crR['nombre'];
-        $csR->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $isSuccess = ($status === 'success');
 

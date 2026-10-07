@@ -25,6 +25,30 @@ pantallas para cargar una computadora.
 
   Lo cubre `test/requires.php`, abajo.
 
+- **Una base ocupada un instante mandaba al instalador.** El servidor corta a
+  las **18 conexiones simultáneas** del usuario de la base de la plataforma, y
+  al pasarse `mysqli` no dice «demasiadas conexiones» sino
+  `Operation not permitted` con errno 2002 —el error genérico de socket—. Eso
+  llegaba a `backend/db.php`, que lo leía como «el entorno no está preparado» y
+  redirigía a `/install.php`: alguien con la sesión abierta, en medio de la
+  papelera, terminaba en el instalador, cuya única acción es instalar.
+
+  Tres cosas. **Una**: el log no decía cuál de las dos conexiones había fallado
+  —son dos bases distintas con credenciales distintas— porque las dos clases
+  comprobaban `connect_errno` después de un `@new mysqli`, y `mysqli` lanza una
+  excepción desde PHP 8.1 que la arroba no suprime: ese `if` nunca se ejecutaba
+  y el mensaje llegaba pelado. **Dos**: se dejó de pedir. La fila de la empresa
+  —a qué base conectarse y cómo se llama— no cambia entre dos clics de la misma
+  persona y se leía dos veces por pantalla; ahora se lee una vez por sesión, así
+  que una pantalla abre **una** conexión en lugar de dos a cuatro. **Tres**: si
+  igual falla, se muestra «el servicio no está disponible» con un 503 y un
+  `Retry-After` —la misma tarjeta que la del acceso— y `/install.php` queda para
+  el único caso que de verdad diagnostica: que falte el esquema.
+
+  Medido: la batería de punta a punta de la papelera fallaba entre 1 y 19
+  comprobaciones por corrida, siempre otras. Cuatro corridas seguidas después:
+  106 de 106, y ni un errno 2002 en el log.
+
 - **El PDF de reportes salía con el encabezado y ninguna fila.** Las filas se
   pintaban con `color: var(--ink)` y `fillColor: var(--soft)` — variables CSS
   pasadas a pdfMake, que no es un navegador y no sabe resolverlas. El encabezado
@@ -98,8 +122,31 @@ pantallas para cargar una computadora.
   del otro donde entraban en un renglón, y «Lista de opciones» partido en dos
   líneas por una columna angosta.
 
-  Ahora: activos 51, reportes 37, campos 55–56 — y parejas dentro de cada tabla.
-  En campos entran catorce filas donde antes entraban siete.
+  Después de eso quedaban seis tablas con seis altos: activos 51, papelera 54,
+  campos 55–56, catálogos 60, usuarios 51, reportes 37. Con el mismo tipo de
+  letra y el mismo relleno en las seis, así que lo que sobraba estaba adentro de
+  la celda, y eran tres cosas:
+
+  - **el botón de acción de una fila**, 34 px, que fijaba el piso en 51. Ahora
+    mide 30, y el mínimo táctil lo sigue poniendo el `@media (pointer: coarse)`
+    que lo sube a 38 donde se toca con el dedo;
+  - **un campo dentro de una celda**: suelto mide 40 px, que es lo que
+    corresponde cuando es lo único que hay que mirar, y en una celda dejaba la
+    fila de catálogos en 60 contra 50 de la de al lado. Dentro de una fila
+    ahora mide 32;
+  - **el renglón de apoyo**, que medía distinto según lo que tuviera: 14,8 px
+    con texto, 17 con un `<code>` y 18 con una insignia, porque es un
+    contenedor flex y el item más alto manda. Mide un renglón, siempre.
+
+  Y la papelera y campos armaban a mano el par «nombre arriba, apoyo abajo» que
+  el listado de activos ya tenía como componente —una con `ih-text-semibold`,
+  que hereda el interlineado de la tabla, la otra con un `<strong>`—: cuatro
+  píxeles de más por fila con exactamente el mismo contenido.
+
+  **Ahora**: activos 50, papelera 50–51, campos 50–51, catálogos 49–50,
+  usuarios 47, reportes 37. Las que tienen botones de acción, todas en 47–51; la
+  de reportes, que no tiene botones ni renglón de apoyo, en 37 — y eso es el
+  contenido, no el diseño.
 
 - **Reportes tiene la misma estructura que Activos**: los filtros y la tabla
   como dos tarjetas pegadas que se leen como una, con el paginador en el pie.
@@ -135,6 +182,16 @@ Y el desplegable propio del sistema dibujaba también las opciones con `hidden`,
 que es lo que usa Versión para esconder lo que no es del sistema elegido.
 
 ### Agregado en los auditores
+
+El auditor del navegador medía el alto del contenido de una celda como **el más
+alto de sus hijos** y no como lo que ocupan apilados: informaba 19 px donde
+había 34, y con ese número la celda que estiraba la fila parecía la inocente.
+Dos tablas se buscaron en el lugar equivocado por eso.
+
+Y aprendió que los controles de formulario son **dos grupos** y no uno: un campo
+suelto y un campo dentro de una fila de tabla no son el mismo componente. Lo que
+sigue siendo un error, y es lo que el chequeo busca, son dos alturas dentro del
+mismo grupo.
 
 `test/requires.php` — para cada pantalla junta todo lo que llama, ella y sus
 parciales, y exige que la función esté definida en algún archivo de su cadena de

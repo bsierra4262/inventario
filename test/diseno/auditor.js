@@ -46,33 +46,37 @@
   }
 
   // ── 1. Controles de formulario: todos tienen que medir lo mismo ──────────
+  /* Dos grupos, y la distincion es deliberada: un campo de formulario y un campo
+     dentro de una fila de tabla no son la misma cosa. Suelto mide 40 px —es lo
+     unico que hay que mirar y hay que poder tocarlo sin errarle—; en una celda
+     con 8 px de relleno arriba y abajo, 40 px dejan una fila de 60 contra 50 de
+     la tabla de al lado con el mismo tipo de letra y el mismo relleno.
+     Lo que no se tolera, y es lo que este chequeo busca, es DOS alturas para el
+     mismo grupo: eso es el mismo componente con dos formas. */
+  function enTabla(c) { return !!c.closest('.ih-table td'); }
+
+  function revisarAlturas(lista, donde) {
+    var alturas = {};
+    lista.forEach(function (c) {
+      if (c.tagName === 'TEXTAREA') { return; }   // alto a proposito
+      var h = Math.round(c.getBoundingClientRect().height * 10) / 10;
+      (alturas[h] = alturas[h] || []).push(nombrar(c));
+    });
+    var hs = Object.keys(alturas);
+    if (hs.length <= 1) { return; }
+    anotar('ALTURAS DE CONTROL' + donde, hs.map(function (h) {
+      return h + 'px: ' + alturas[h].slice(0, 3).join(' + ')
+           + (alturas[h].length > 3 ? ' y ' + (alturas[h].length - 3) + ' mas' : '');
+    }).join(' | '));
+  }
+
   var controles = [].slice.call(document.querySelectorAll(
     'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]),' +
     '.ihc-select__btn, .ihc-fecha__campo, .cat-add, select:not(.ihc-select__nativo)'
   )).filter(visible);
 
-  var alturas = {};
-  controles.forEach(function (c) {
-    var h = Math.round(c.getBoundingClientRect().height * 10) / 10;
-    (alturas[h] = alturas[h] || []).push(nombrar(c));
-  });
-  var distintas = Object.keys(alturas);
-  if (distintas.length > 1) {
-    // Se tolera el textarea, que es alto a propósito.
-    var sinTextarea = {};
-    controles.forEach(function (c) {
-      if (c.tagName === 'TEXTAREA') { return; }
-      var h = Math.round(c.getBoundingClientRect().height * 10) / 10;
-      (sinTextarea[h] = sinTextarea[h] || []).push(nombrar(c));
-    });
-    var hs = Object.keys(sinTextarea);
-    if (hs.length > 1) {
-      anotar('ALTURAS DE CONTROL', hs.map(function (h) {
-        return h + 'px: ' + sinTextarea[h].slice(0, 3).join(' + ')
-             + (sinTextarea[h].length > 3 ? ' y ' + (sinTextarea[h].length - 3) + ' mas' : '');
-      }).join(' | '));
-    }
-  }
+  revisarAlturas(controles.filter(function (c) { return !enTabla(c); }), '');
+  revisarAlturas(controles.filter(enTabla), ' EN TABLA');
 
   // ── 2. Radios de borde: el mismo sistema, no cinco valores sueltos ───────
   var radios = {};

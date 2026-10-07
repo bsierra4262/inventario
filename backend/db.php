@@ -27,15 +27,41 @@ $current_file = basename($_SERVER['PHP_SELF'] ?? '');
 // ============================================================
 // MODO NORMAL: bootstrap multiempresa
 // ============================================================
-try {
-    require_once ROOT_PATH . '/core/tenant_bootstrap.php';
-    // tenant_bootstrap expone: $tenantDb (TenantDB) y $conn (mysqli)
-} catch (Throwable $e) {
-    log_event("db.php", "ERROR", "Fallo al inicializar tenant: " . $e->getMessage(), "bootstrap");
-    error_log("Error en bootstrap multiempresa: " . $e->getMessage());
-    // Si falla el bootstrap, derivamos a install por si falta preparar entorno
-    header('Location: /install.php');
-    exit();
+/* Un fallo acá puede ser de dos cosas muy distintas: el entorno no está
+   preparado —y entonces corresponde el instalador— o la base no contestó este
+   pedido en particular.
+
+   Lo segundo pasa de verdad y es medible: el servidor corta a las **18
+   conexiones simultáneas** por usuario, y al pasarse mysqli no dice «demasiadas
+   conexiones» sino `Operation not permitted` con errno 2002 —el error de socket
+   genérico—, que no se parece a nada. Un pedido de treinta falla y el siguiente
+   anda.
+
+   Así que se reintenta, con una espera corta y creciente. La espera es la parte
+   que importa: reintentar en el mismo instante encuentra el mismo socket
+   ocupado y falla igual. Treinta y cien milisegundos no se notan y alcanzan,
+   porque las conexiones que sobran las está soltando el pedido de al lado.
+   Si igual no entra, se muestra «el servicio no está disponible» y no se manda
+   al instalador a alguien que ya tiene la sesión abierta. */
+$_bootError = null;
+for ($_intento = 1; $_intento <= 3; $_intento++) {
+    try {
+        require ROOT_PATH . '/core/tenant_bootstrap.php';
+        // tenant_bootstrap expone: $tenantDb (TenantDB) y $conn (mysqli)
+        $_bootError = null;
+        break;
+    } catch (Throwable $e) {
+        $_bootError = $e;
+        // Puede haber fallado antes incluso de que la clase se cargara.
+        if (class_exists('MasterDB')) { MasterDB::olvidar(); }
+        if ($_intento < 3) { usleep($_intento * 30000); }
+    }
+}
+if ($_bootError !== null) {
+    log_event("db.php", "ERROR", "Fallo al inicializar tenant: " . $_bootError->getMessage(), "bootstrap");
+    error_log("Error en bootstrap multiempresa: " . $_bootError->getMessage());
+    require_once ROOT_PATH . '/includes/sin_base.php';
+    pantalla_sin_base();
 }
 
 // ============================================================
@@ -106,8 +132,8 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
     try {
         if (!$conn || !$conn->ping()) {
             log_event("db.php", "ERROR", "Ping a la DB del tenant fallido", "bootstrap");
-            header('Location: /install.php');
-            exit();
+            require_once ROOT_PATH . '/includes/sin_base.php';
+            pantalla_sin_base();
         }
 
         $conn->set_charset('utf8mb4');
@@ -140,7 +166,7 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
     } catch (Throwable $e) {
         log_event("db.php", "ERROR", "Verificación fallida: " . $e->getMessage(), "bootstrap");
         error_log("Error verificación DB (tenant): " . $e->getMessage());
-        header('Location: /install.php');
-        exit();
+        require_once ROOT_PATH . '/includes/sin_base.php';
+        pantalla_sin_base();
     }
 }

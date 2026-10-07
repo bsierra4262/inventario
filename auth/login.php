@@ -45,36 +45,16 @@ try {
 }
 
 if ($masterDbError !== '') {
-    header('Location: /install.php');
-    exit();
+    /* La master no contestó. Antes esto iba a /install.php: alguien que entra a
+       iniciar sesión terminaba en el instalador porque la base tardó. */
+    require_once __DIR__ . '/../includes/sin_base.php';
+    pantalla_sin_base('No se puede iniciar sesión en este momento');
 }
 
 if (empty($companies)) {
-    $page_title = 'Servicio no disponible';
-    require __DIR__ . '/../includes/layout/head.php';
-    ?>
-    <div class="ih-auth">
-      <div class="ih-auth__card ih-anim-fade">
-        <div class="ih-auth__header">
-          <div class="ih-auth__brand">
-            <div class="ih-auth__logo"><?= platform_logo_html() ?></div>
-            <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
-          </div>
-          <h2 class="ih-auth__title">Servicio no disponible</h2>
-          <p class="ih-auth__subtitle">No hay empresas activas para iniciar sesión</p>
-        </div>
-        <div class="ih-auth__body">
-          <div class="ih-alert ih-alert--info">
-            <i class="bi bi-info-circle-fill"></i>
-            <div>El servicio se encuentra temporalmente no disponible. Por favor contactá al administrador del sistema.</div>
-          </div>
-        </div>
-        <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
-      </div>
-    </div>
-    <?php
-    require __DIR__ . '/../includes/layout/foot.php';
-    exit;
+    require_once __DIR__ . '/../includes/sin_base.php';
+    pantalla_sin_base('No hay empresas activas para iniciar sesión',
+        'No hay ninguna empresa habilitada en este momento. Avisale al administrador del sistema.');
 }
 
 // Pre-seleccionar empresa desde ?company=id o subdomain
@@ -123,33 +103,8 @@ if (!empty($_SESSION['company_id'])) {
 }
 
 if (!empty($_SESSION['company_id']) && !($conn instanceof mysqli)) {
-    $page_title = 'Empresa no disponible';
-    require __DIR__ . '/../includes/layout/head.php';
-    ?>
-    <div class="ih-auth">
-      <div class="ih-auth__card ih-anim-fade">
-        <div class="ih-auth__header">
-          <div class="ih-auth__brand">
-            <div class="ih-auth__logo"><?= function_exists('platform_logo_html') ? platform_logo_html() : 'i' ?></div>
-            <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
-          </div>
-          <h2 class="ih-auth__title">Servicio no disponible</h2>
-          <p class="ih-auth__subtitle">No se puede acceder al inventario en este momento</p>
-        </div>
-        <div class="ih-auth__body">
-          <div class="ih-alert ih-alert--warning">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <div>
-              El servicio se encuentra temporalmente no disponible. Por favor contactá al administrador del sistema.
-            </div>
-          </div>
-        </div>
-        <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
-      </div>
-    </div>
-    <?php
-    require __DIR__ . '/../includes/layout/foot.php';
-    exit;
+    require_once __DIR__ . '/../includes/sin_base.php';
+    pantalla_sin_base();
 }
 
 // ── 3) Leer config OAuth del tenant ──────────────────────────────────────────

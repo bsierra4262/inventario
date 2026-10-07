@@ -683,18 +683,8 @@ if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG])) {
     header('Location: /dashboard/dashboard_superadmin.php'); exit;
 }
 
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $mdbE = new MasterDB();
-    $cidE = (int)($_SESSION['company_id'] ?? 0);
-    if ($cidE > 0) {
-        $csE = $mdbE->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidE]);
-        $crE = $csE->get_result()->fetch_assoc();
-        if ($crE) $tenant_name = $crE['nombre'];
-        $csE->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $nombreModelo    = $producto['modelo'] ?? 'Activo #' . $producto_id;
 $page_title      = 'Editar · ' . $nombreModelo;

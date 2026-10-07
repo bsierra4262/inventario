@@ -458,7 +458,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .ih-btn--danger:hover { background: #B91C1C; border-color: #B91C1C; color: var(--ih-white); }
 
-.ih-btn--sm { padding: 6px 12px; font-size: var(--ih-text-sm); min-height: 34px; border-radius: var(--ih-radius-sm); }
+.ih-btn--sm { padding: 5px 11px; font-size: var(--ih-text-sm); min-height: 30px; border-radius: var(--ih-radius-sm); }
 .ih-btn--lg { padding: 13px 24px; font-size: var(--ih-text-md); }
 .ih-btn--block { width: 100%; }
 

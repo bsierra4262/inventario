@@ -35,18 +35,8 @@ if (!function_exists('log_event')) { function log_event(...$a) {} }
 
 $user = require_tenant_permission('catalog.manage');
 
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $masterDb  = new MasterDB();
-    $companyId = (int)($_SESSION['company_id'] ?? 0);
-    if ($companyId > 0) {
-        $cst = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-        $crow = $cst->get_result()->fetch_assoc();
-        if ($crow) { $tenant_name = $crow['nombre']; }
-        $cst->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $defs   = campos_definiciones($conn, true);
 $okMsg  = (string)($_GET['ok']  ?? '');
@@ -171,23 +161,31 @@ require __DIR__ . '/../includes/layout/topbar.php';
                          a 122 px —casi tres veces una fila normal— y catorce
                          campos no entraban en la pantalla. */ ?>
                 <td>
-                  <strong><?= htmlspecialchars((string)$d['etiqueta'], ENT_QUOTES, 'UTF-8') ?></strong>
-                  <div class="ih-celda__sub">
-                    <code><?= htmlspecialchars((string)$d['clave']) ?></code>
-                    <?php if ($heredado): ?>
-                      <span class="ih-badge ih-badge--info"
-                            title="Guarda en la columna <?= htmlspecialchars((string)$d['columna_legacy']) ?> de productos">columna propia</span>
-                    <?php endif; ?>
+                  <div class="ih-celda__texto">
+                    <div class="ih-celda__nombre"><?= htmlspecialchars((string)$d['etiqueta'], ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="ih-celda__sub">
+                      <code><?= htmlspecialchars((string)$d['clave']) ?></code>
+                      <?php if ($heredado): ?>
+                        <span class="ih-badge ih-badge--info"
+                              title="Guarda en la columna <?= htmlspecialchars((string)$d['columna_legacy']) ?> de productos">columna propia</span>
+                      <?php endif; ?>
+                    </div>
                   </div>
                 </td>
                 <?php /* `nowrap`: «Lista de opciones» partido en dos renglones
                          estiraba la fila entera, y con la lista de opciones
                          abajo llegaba a 103 px contra 56 de la de al lado. */ ?>
                 <td class="ih-table__nowrap">
-                  <?= htmlspecialchars(CAMPO_TIPOS[(string)$d['tipo']] ?? (string)$d['tipo']) ?>
-                  <?php if ($d['opciones']): $ops = implode(' · ', $d['opciones']); ?>
-                    <div class="ih-celda__sub" title="<?= htmlspecialchars($ops, ENT_QUOTES) ?>"><?= htmlspecialchars($ops) ?></div>
-                  <?php endif; ?>
+                  <?php /* El tipo arriba y sus opciones abajo, con el mismo par de clases
+                           que el resto: el nombre del tipo como texto suelto traía el
+                           interlineado de la tabla (20 px) y las filas con opciones
+                           medían 54 contra 51 de las que no tienen. */ ?>
+                  <div class="ih-celda__texto">
+                    <div class="ih-celda__nombre"><?= htmlspecialchars(CAMPO_TIPOS[(string)$d['tipo']] ?? (string)$d['tipo']) ?></div>
+                    <?php if ($d['opciones']): $ops = implode(' · ', $d['opciones']); ?>
+                      <div class="ih-celda__sub" title="<?= htmlspecialchars($ops, ENT_QUOTES) ?>"><?= htmlspecialchars($ops) ?></div>
+                    <?php endif; ?>
+                  </div>
                 </td>
                 <td><?= $ambito !== '' ? htmlspecialchars($ambito) : '<span class="ih-text-muted">Todos los activos</span>' ?></td>
                 <td>

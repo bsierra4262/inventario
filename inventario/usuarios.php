@@ -50,18 +50,8 @@ $feedbackMsg  = $_GET['msg']  ?? '';
 $feedbackType = ($_GET['type'] ?? 'success') === 'error' ? 'danger' : 'success';
 
 // Nombre de la empresa para la marca del topbar
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $masterDb  = new MasterDB();
-    $companyId = (int)($_SESSION['company_id'] ?? 0);
-    if ($companyId > 0) {
-        $cst  = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-        $crow = $cst->get_result()->fetch_assoc();
-        if ($crow) { $tenant_name = $crow['nombre']; }
-        $cst->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $page_title      = 'Usuarios';
 $page_section    = 'usuarios';

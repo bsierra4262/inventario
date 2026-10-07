@@ -45,17 +45,8 @@ if (!$producto) {
 log_event($user_id, 'CONSULTA', "Visualización de producto ID:{$producto_id}", 'consulta');
 
 // Nombre de empresa (MasterDB ya disponible via db.php → tenant_bootstrap → master_connection)
-$tenant_name = 'Mi empresa';
-try {
-    $masterDb   = new MasterDB();
-    $cidTn      = (int)($_SESSION['company_id'] ?? 0);
-    if ($cidTn > 0) {
-        $cs = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidTn]);
-        $cr = $cs->get_result()->fetch_assoc();
-        if ($cr) $tenant_name = $cr['nombre'];
-        $cs->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 // ── Layout vars ─────────────────────────────────────────────────────────────
 $nombreModelo = $producto['modelo'] ?: ('Activo #' . $producto_id);

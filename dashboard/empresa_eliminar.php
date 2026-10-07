@@ -5,6 +5,7 @@ require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
+require_once __DIR__ . '/../core/db/empresa_cache.php';
 
 superadmin_require_login();
 csrf_start();
@@ -36,6 +37,7 @@ try {
     $db     = new MasterDB();
     $active = ($action === 'activate') ? 1 : 0;
     $db->pquery('UPDATE companies SET active = ? WHERE id = ?', 'ii', [$active, $id]);
+    empresa_cache_olvidar($id);
 
     platform_log(sprintf(
         'empresa_eliminar: company_id=%d active=%d por superadmin_id=%s',

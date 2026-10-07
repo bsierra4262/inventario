@@ -224,18 +224,8 @@ $nombreActivo = trim(($prod_del['modelo'] ?? '') . ($prod_del['marca'] ? ' — '
 if ($nombreActivo === '') $nombreActivo = 'Activo #' . $producto_id;
 
 // Tenant name
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $mdb = new MasterDB();
-    $cid = (int)($_SESSION['company_id'] ?? 0);
-    if ($cid > 0) {
-        $cs = $mdb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cid]);
-        $cr = $cs->get_result()->fetch_assoc();
-        if ($cr) $tenant_name = $cr['nombre'];
-        $cs->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 // ── Layout vars ─────────────────────────────────────────────────────────────
 $page_title      = 'Archivar activo — Asset Vault';

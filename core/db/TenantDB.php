@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/platform.php';
 require_once __DIR__ . '/master_connection.php';
+require_once __DIR__ . '/empresa_cache.php';
 
 /**
  * TenantDB
@@ -19,14 +20,10 @@ class TenantDB {
     public function __construct(int $companyId){
         $this->companyId = $companyId;
 
-        // Traer datos de la empresa desde MASTER
-        $mdb = new MasterDB();
-        $stmt = $mdb->pquery('SELECT tenant_mode, db_host, db_name, db_user, db_pass FROM companies WHERE id=?', 'i', [$companyId]);
-        $row  = $stmt->get_result()->fetch_assoc();
-        if(!$row){
-            platform_log("TenantDB: empresa $companyId no encontrada");
-            throw new RuntimeException('Empresa no encontrada en master DB');
-        }
+        /* A qué base conectarse. Sale del caché de sesión y no de la master en
+           cada pedido: era la segunda conexión de cada pantalla, y el usuario de
+           la master corta a las 18 simultáneas. Ver core/db/empresa_cache.php. */
+        $row = empresa_fila($companyId);
 
         $this->mode = ($row['tenant_mode'] === 'prefix') ? 'prefix' : 'external';
 
@@ -36,10 +33,15 @@ class TenantDB {
             $name = $row['db_name'] ?: '';
             $user = $row['db_user'] ?: '';
             $pass = $row['db_pass'] ?: '';
-            $cx = @new mysqli($host, $user, $pass, $name);
-            if($cx->connect_errno){
-                platform_log('TenantDB external connect error: '.$cx->connect_error);
-                throw new RuntimeException('No se puede conectar a la base de datos del tenant');
+            /* Igual que en MasterDB: mysqli lanza la excepción y la arroba no la
+               tapa, así que el error se agarra acá y se dice CUÁL de las dos
+               conexiones falló y con qué código. */
+            try {
+                $cx = new mysqli($host, $user, $pass, $name);
+            } catch (Throwable $e) {
+                platform_log('TenantDB external connect error (' . $e->getCode() . '): ' . $e->getMessage());
+                throw new RuntimeException('No se puede conectar a la base de datos del tenant ['
+                    . $e->getCode() . ']: ' . $e->getMessage(), (int)$e->getCode(), $e);
             }
             $cx->set_charset('utf8mb4');
             $this->conn = $cx;

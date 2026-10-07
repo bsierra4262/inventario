@@ -1442,8 +1442,20 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   flex-wrap: nowrap;
   min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* Y mide un renglón pase lo que pase. Es un contenedor flex, así que lo que
+     tiene adentro son items y el más alto manda: un `<code>` —fuente
+     monoespaciada, caja más alta que su interlineado— lo llevaba a 17 px y una
+     insignia a 18, contra 14,8 del mismo renglón con texto suelto. Esos dos o
+     tres píxeles son los que hacían que la fila de campos midiera 54 y la de
+     activos 50 teniendo exactamente lo mismo adentro: un nombre arriba y una
+     línea de apoyo abajo. Se corta por donde no se ve —la caja de una fuente es
+     más alta que sus letras— y así la línea de apoyo de cualquier tabla mide lo
+     mismo. */
+  height: 1.35em;
 }
 .ih-celda__sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ih-celda__sub code,
+.ih-celda__sub .ih-badge { line-height: 1.35; }
 .ih-celda__sub code { font-size: inherit; }
 .ih-celda__sub .ih-badge { font-size: 10px; padding: 0 5px; }
 
@@ -1673,6 +1685,39 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 @media (max-width: 560px) {
   .ih-permisos__fila { flex-wrap: wrap; }
   .ih-permisos__clave { margin-left: 2.4rem; }
+}
+
+/* ---------------------------------------------------------------------------
+   8.bis. Un control dentro de una fila de tabla
+   --------------------------------------------------------------------------- */
+/* Una fila de tabla no es un formulario. Un campo suelto mide 40 px de alto —el
+   que corresponde cuando es lo unico que hay que mirar y hay que poder tocarlo
+   sin errarle— y dentro de una celda con 8 px de relleno arriba y abajo deja una
+   fila de 60: la lista de catalogos entraba a la mitad de filas que el resto de
+   las tablas con el mismo tipo de letra y el mismo relleno. Se veia desparejo
+   contra la tabla de al lado, y lo era.
+
+   El minimo tactil no se pierde: el @media (pointer:coarse) de cada hoja lo
+   vuelve a subir en las pantallas que se tocan con el dedo. */
+.ih-table td .ih-input,
+.ih-table td .ih-select,
+.ih-table td input[type="text"],
+.ih-table td input[type="search"],
+.ih-table td input[type="number"],
+.ih-table td input[type="date"],
+.ih-table td select {
+  min-height: 32px;
+  padding: .3rem .55rem;
+  font-size: 13px;
+}
+@media (pointer: coarse) {
+  .ih-table td .ih-input,
+  .ih-table td .ih-select,
+  .ih-table td input[type="text"],
+  .ih-table td input[type="search"],
+  .ih-table td input[type="number"],
+  .ih-table td input[type="date"],
+  .ih-table td select { min-height: 38px; }
 }
 
 /* ---------------------------------------------------------------------------

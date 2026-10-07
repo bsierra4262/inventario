@@ -56,18 +56,8 @@ try {
     // Permiso minimo para ver la pantalla de export
     require_permission('asset.export', $user);
 
-    $tenant_name = 'Mi empresa';
-    try {
-        require_once __DIR__ . '/../core/db/master_connection.php';
-        $masterDb = new MasterDB();
-        $companyId = (int)($_SESSION['company_id'] ?? 0);
-        if ($companyId > 0) {
-            $cstmt = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-            $crow = $cstmt->get_result()->fetch_assoc();
-            if ($crow) $tenant_name = $crow['nombre'];
-            $cstmt->close();
-        }
-    } catch (Throwable) {}
+    require_once __DIR__ . '/../core/db/empresa_cache.php';
+    $tenant_name = empresa_nombre();
 
     // ── Stats del inventario ───────────────────────────────────────────
     $productosTable = tn('productos');

@@ -48,18 +48,8 @@ if (!$user) { session_destroy(); header('Location: /auth/login.php'); exit; }
 require_permission('catalog.manage', $user);
 
 // Nombre de la empresa para la marca del topbar
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $masterDb  = new MasterDB();
-    $companyId = (int)($_SESSION['company_id'] ?? 0);
-    if ($companyId > 0) {
-        $cst = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-        $crow = $cst->get_result()->fetch_assoc();
-        if ($crow) { $tenant_name = $crow['nombre']; }
-        $cst->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 $tipo = (string)($_GET['tipo'] ?? 'asignado_a');
 if (!catalogo_tipo_valido($tipo)) { $tipo = 'asignado_a'; }

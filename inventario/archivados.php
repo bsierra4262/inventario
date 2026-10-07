@@ -57,18 +57,8 @@ $puedeRestaurar = user_can('asset.restore', $user);
 $puedeBorrar    = user_can('asset.delete', $user);
 
 // Nombre de la empresa
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $masterDb  = new MasterDB();
-    $companyId = (int)($_SESSION['company_id'] ?? 0);
-    if ($companyId > 0) {
-        $cst  = $masterDb->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$companyId]);
-        $crow = $cst->get_result()->fetch_assoc();
-        if ($crow) { $tenant_name = $crow['nombre']; }
-        $cst->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 // ── Búsqueda y paginación ────────────────────────────────────────────────────
 $q           = trim((string)($_GET['q'] ?? ''));
@@ -222,19 +212,32 @@ require __DIR__ . '/../includes/layout/head.php';
               ?>
                 <tr>
                   <td>
-                    <div class="ih-text-semibold"><?= htmlspecialchars($nombre) ?></div>
-                    <div class="ih-celda__sub">
-                      #<?= (int)$f['id'] ?>
-                      <?php if (!empty($f['categoria'])): ?> · <?= htmlspecialchars($f['categoria']) ?><?php endif; ?>
-                      <?php if (!empty($f['asignado_a'])): ?> · <?= htmlspecialchars($f['asignado_a']) ?><?php endif; ?>
+                    <?php /* El mismo par de renglones que el listado de activos, con las
+                             mismas clases: `ih-text-semibold` hereda el interlineado de la
+                             tabla y dejaba esta fila 4 px mas alta que la de al lado con
+                             exactamente el mismo contenido. */ ?>
+                    <div class="ih-celda__texto">
+                      <div class="ih-celda__nombre"><?= htmlspecialchars($nombre) ?></div>
+                      <div class="ih-celda__sub">
+                        #<?= (int)$f['id'] ?>
+                        <?php if (!empty($f['categoria'])): ?> · <?= htmlspecialchars($f['categoria']) ?><?php endif; ?>
+                        <?php if (!empty($f['asignado_a'])): ?> · <?= htmlspecialchars($f['asignado_a']) ?><?php endif; ?>
+                      </div>
                     </div>
                   </td>
                   <td><?= $f['servis_tag'] ? '<code>' . htmlspecialchars($f['servis_tag']) . '</code>' : '<span class="ih-text-muted">—</span>' ?></td>
                   <td>
-                    <div class="ih-text-sm"><?= $cuando ? htmlspecialchars(date('d/m/Y', strtotime((string)$cuando))) : '—' ?></div>
-                    <?php if (!empty($f['archivado_por'])): ?>
-                      <div class="ih-text-xs ih-text-muted"><?= htmlspecialchars($f['archivado_por']) ?></div>
-                    <?php endif; ?>
+                    <?php /* La fecha y quien archivo, con el mismo par de clases que el
+                             nombre y su renglon de apoyo. Con `ih-text-sm` + `ih-text-xs`
+                             sueltos esta celda medía 37 px y era la que estiraba la fila a
+                             54, contra 50 del listado de activos con el mismo contenido:
+                             dos renglones, uno grande y uno chico. */ ?>
+                    <div class="ih-celda__texto">
+                      <div class="ih-celda__nombre"><?= $cuando ? htmlspecialchars(date('d/m/Y', strtotime((string)$cuando))) : '—' ?></div>
+                      <?php if (!empty($f['archivado_por'])): ?>
+                        <div class="ih-celda__sub"><?= htmlspecialchars($f['archivado_por']) ?></div>
+                      <?php endif; ?>
+                    </div>
                   </td>
                   <td>
                     <?= !empty($f['archivado_motivo'])

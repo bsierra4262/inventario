@@ -229,7 +229,7 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
 .ih-btn--microsoft{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
 .ih-btn--microsoft:hover{background:#f7f8fa;color:#3c4043}
 .ih-btn--block{width:100%}
-.ih-btn--sm{padding:.42rem .8rem;font-size:12.5px;min-height:34px;border-radius:9px}
+.ih-btn--sm{padding:.34rem .72rem;font-size:12.5px;min-height:30px;border-radius:9px}
 .ih-btn--lg{padding:.7rem 1.1rem;font-size:14.5px;min-height:44px}
 
 /* ------------------------------------------------------------------

@@ -137,18 +137,8 @@ log_event(
 );
 
 // Tenant name
-$tenant_name = 'Mi empresa';
-try {
-    require_once __DIR__ . '/../core/db/master_connection.php';
-    $mdbC = new MasterDB();
-    $cidC = (int)($_SESSION['company_id'] ?? 0);
-    if ($cidC > 0) {
-        $csC = $mdbC->pquery('SELECT nombre FROM companies WHERE id = ? LIMIT 1', 'i', [$cidC]);
-        $crC = $csC->get_result()->fetch_assoc();
-        if ($crC) $tenant_name = $crC['nombre'];
-        $csC->close();
-    }
-} catch (Throwable) {}
+require_once __DIR__ . '/../core/db/empresa_cache.php';
+$tenant_name = empresa_nombre();
 
 // ── Layout vars ─────────────────────────────────────────────────────────────
 $page_title      = 'Confirmar subida — Asset Vault';

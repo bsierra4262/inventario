@@ -1011,6 +1011,112 @@ foreach ([
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+grupo('BASE · una conexión por pedido, y qué pasa si no hay');
+//
+// `new MasterDB()` aparece en 46 archivos y cada uno abría su propia conexión
+// TCP: una pantalla cualquiera del portal abría tres —la que arma TenantDB para
+// leer los datos de la empresa, la de la base del tenant, y otra más para el
+// nombre de la empresa del encabezado— y las que miran permisos de plataforma,
+// cuatro.
+//
+// En hosting compartido eso se paga: al tocar el límite de conexiones
+// simultáneas, mysqli no dice «demasiadas conexiones» sino
+// `Operation not permitted`. Apareció con las pruebas de punta a punta, que
+// hacen treinta pedidos en dos segundos: fallaba uno distinto en cada corrida y
+// el síntoma era siempre otro —un 419 acá, un «el activo sigue ahí» allá—,
+// porque la causa no era ninguno de los dos.
+$mc = leer('core/db/master_connection.php');
+chequear('MasterDB guarda la conexión del pedido y la reusa',
+    preg_match('/private static \?mysqli \$compartida/', $mc) === 1
+    && str_contains($mc, 'self::$compartida instanceof mysqli'));
+chequear('Y sólo la guarda si conectó bien',
+    strpos($mc, 'self::$compartida = $this->conn;') > strpos($mc, 'connect_errno'));
+chequear('MasterDB::olvidar() la suelta, para que reintentar sirva de algo',
+    str_contains($mc, 'public static function olvidar()'));
+
+// Y lo que tiene que pasar cuando igual falla. `/install.php` es un diagnóstico
+// —«el entorno no está preparado»— y la única acción que ofrece es instalar:
+// mandar ahí a alguien que tiene la sesión abierta no sólo desorienta, invita a
+// hacer lo peor que se puede hacer en ese momento.
+$dbp = leer('backend/db.php');
+preg_match_all("#header\('Location: /install\.php'\)#", $dbp, $mInst);
+chequear('db.php manda al instalador sólo cuando falta el esquema de verdad',
+    count($mInst[0]) === 1, count($mInst[0]) . ' redirecciones a /install.php');
+chequear('Y una base que no contesta muestra «no disponible», no el instalador',
+    substr_count($dbp, 'pantalla_sin_base()') === 3);
+chequear('El bootstrap reintenta antes de darse por vencido',
+    preg_match('/for \(\$_intento = 1; \$_intento <= 3/', $dbp) === 1
+    && str_contains($dbp, "MasterDB::olvidar()"));
+// La espera es la parte que importa: reintentar en el mismo instante encuentra
+// el mismo socket ocupado y vuelve a fallar.
+chequear('Y espera entre un intento y el siguiente',
+    preg_match('/usleep\(\$_intento \* \d+\)/', $dbp) === 1);
+
+// Las dos conexiones son a bases distintas con credenciales distintas: el log
+// tiene que decir cuál falló. `@new mysqli` no alcanza — mysqli lanza una
+// excepción desde PHP 8.1 y la arroba no la suprime, así que el `if
+// (connect_errno)` que había en las dos clases nunca se ejecutaba y el mensaje
+// llegaba pelado al otro extremo.
+$tdb = leer('core/db/TenantDB.php');
+foreach (['core/db/master_connection.php' => $mc, 'core/db/TenantDB.php' => $tdb] as $arch => $src) {
+    chequear(basename($arch) . ' agarra la excepción de mysqli al conectar',
+        preg_match('/try \{\s*\$\w+(?:->conn)? = new mysqli\(/', $src) === 1
+        && !str_contains($src, '@new mysqli'));
+    chequear(basename($arch) . ' deja en el log de qué conexión y con qué código',
+        str_contains($src, '$e->getCode()'));
+}
+
+/* Y la mitad que de verdad baja la cuenta: no pedir. La fila de la empresa —a
+   qué base conectarse y cómo se llama— no cambia entre dos clics de la misma
+   persona, y se leía dos veces por pantalla: una en TenantDB y otra en el
+   `SELECT nombre FROM companies` del encabezado, que estaba copiado en veinte
+   archivos con veinte juegos de nombres de variable. Reintentar no alcanzaba
+   porque el límite es de tasa, no de instante. */
+$ec = leer('core/db/empresa_cache.php');
+chequear('empresa_fila() guarda la fila de la empresa en la sesión',
+    str_contains($ec, "function empresa_fila(") && str_contains($ec, "_SESSION['_empresa']"));
+chequear('Con vencimiento, para que un cambio del superadmin llegue',
+    str_contains($ec, 'EMPRESA_CACHE_TTL') && str_contains($ec, "'_leida_en'"));
+chequear('Y no explota sin sesión: los scripts de bin/ no tienen una',
+    str_contains($ec, 'session_status() === PHP_SESSION_ACTIVE'));
+chequear('empresa_nombre() nunca lanza: el encabezado se dibuja igual',
+    preg_match('/function empresa_nombre\(.*?catch \(Throwable\)/s', $ec) === 1);
+
+chequear('TenantDB saca la empresa del caché y no de la master en cada pedido',
+    str_contains(leer('core/db/TenantDB.php'), 'empresa_fila($companyId)')
+    && !str_contains(leer('core/db/TenantDB.php'), 'FROM companies WHERE id=?'));
+
+// Ninguna pantalla vuelve a copiarse el bloque.
+$copias = [];
+foreach (archivos_php() as $f) {
+    $rel = str_replace([RAIZ . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR], ['', '/'], $f);
+    if (str_starts_with($rel, 'test/') || str_starts_with($rel, 'dashboard/')) { continue; }
+    if (str_contains((string)file_get_contents($f), 'SELECT nombre FROM companies')) { $copias[] = $rel; }
+}
+chequear('Ninguna pantalla del tenant repite el SELECT del nombre de la empresa',
+    $copias === [], implode(', ', $copias));
+
+// Y quien cambia la fila tira el caché, para no esperar el vencimiento.
+foreach (['dashboard/empresa_editar.php', 'dashboard/empresa_eliminar.php'] as $arch) {
+    chequear(basename($arch) . ' tira el caché de la empresa que cambió',
+        str_contains(leer($arch), 'empresa_cache_olvidar('));
+}
+
+$sb = leer('includes/sin_base.php');
+chequear('La pantalla de «no disponible» contesta 503 con Retry-After',
+    str_contains($sb, 'http_response_code(503)') && str_contains($sb, 'Retry-After'));
+chequear('Y no se cachea', str_contains($sb, 'Cache-Control: no-store'));
+chequear('Usa la misma tarjeta que el acceso, sin estilos propios',
+    str_contains($sb, 'ih-auth__card') && !str_contains($sb, '<style'));
+// Estaba escrita dos veces dentro de login.php, con dos textos distintos para
+// la misma situación.
+$lg = leer('auth/login.php');
+chequear('login.php ya no repite esa tarjeta',
+    !str_contains($lg, 'ih-auth__card') || substr_count($lg, 'ih-auth__card') === 1);
+chequear('Y tampoco manda al instalador si la master no contesta',
+    !preg_match("#header\('Location: /install\.php'\)#", $lg));
+
+// ───────────────────────────────────────────────────────────────────────────
 grupo('TESTS · la batería de integración no toca datos ajenos');
 //
 // Con --prefijo, una sola tabla escrita a mano escribe en las tablas REALES.
@@ -1795,6 +1901,68 @@ chequear('El detalle no dibuja tarjetas vacías',
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────
+grupo('DISENO · una fila de tabla, lo mas baja posible');
+//
+// Medido en Chrome, el alto de fila era: activos 51, papelera 54, campos 55-56,
+// catalogos 60, usuarios 51, reportes 43. Seis tablas con el mismo tipo de
+// letra y el mismo relleno y seis altos distintos: la de catalogos entraba a la
+// mitad de filas que la de al lado y se veia de otro tamaño, que es exactamente
+// lo que se reporto al usarla.
+//
+// No era el relleno ni la letra —son los mismos en las seis— sino lo que cada
+// una mete adentro de la celda. Tres causas, las tres acotadas acá:
+$appc = leer('assets/css/app.css');
+$ihc  = leer('assets/css/intellihelp.css');
+$comp = leer('assets/css/componentes.css');
+
+// 1. El boton chico de las acciones de fila: 34 px fijaba el piso en 51.
+foreach (['assets/css/app.css' => $appc, 'assets/css/intellihelp.css' => $ihc] as $arch => $src) {
+    chequear(basename($arch) . ': el boton chico mide 30 px',
+        preg_match('/\.ih-btn--sm\s*\{[^}]*min-height:\s*30px/', $src) === 1);
+    // El area tactil no se negocia: en una pantalla que se toca con el dedo
+    // vuelve a 38. Sin esto, achicar el boton seria achicar el blanco.
+    chequear(basename($arch) . ': y vuelve a 38 px donde se toca con el dedo',
+        preg_match('/pointer:\s*coarse\)[^@]*\.ih-btn--sm\s*\{[^}]*min-height:\s*38px/s', $src) === 1);
+}
+
+// 2. Un campo dentro de una celda: suelto mide 40 y dejaba la fila en 60.
+chequear('Un control dentro de una celda es compacto',
+    preg_match('/\.ih-table td \.ih-input[^{]*\{[^}]*min-height:\s*32px/s', $comp) === 1);
+chequear('Y tambien recupera el area tactil con el dedo',
+    preg_match('/pointer:\s*coarse\)\s*\{[^}]*\.ih-table td \.ih-input/s', $comp) === 1);
+
+// 3. El renglon de apoyo mide un renglon, tenga texto, un <code> o una insignia:
+//    un <code> lo llevaba a 17 px y una insignia a 18, contra 14,8 con texto.
+chequear('El renglon de apoyo de una celda mide un renglon exacto',
+    preg_match('/\.ih-celda__sub\s*\{[^}]*height:\s*1\.35em/s', $comp) === 1);
+
+// Y que nadie vuelva a armar a mano el par de renglones: la papelera lo hacia
+// con `ih-text-semibold`, que hereda el interlineado de la tabla, y campos con
+// un `<strong>`. Mismo contenido, cuatro pixeles mas de fila.
+$aMano = [];
+foreach (glob(RAIZ . '/inventario/*.php') ?: [] as $f) {
+    $src = (string)file_get_contents($f);
+    if (!str_contains($src, 'ih-celda__sub')) { continue; }
+    // Cada renglon de apoyo tiene que tener su nombre arriba, con la clase del
+    // sistema. Se cuentan: si hay mas subs que nombres, alguno se armo a mano.
+    if (substr_count($src, 'ih-celda__sub') > substr_count($src, 'ih-celda__nombre')) {
+        $aMano[] = basename($f);
+    }
+}
+chequear('Ninguna pantalla arma a mano el par nombre + renglon de apoyo',
+    $aMano === [], implode(', ', $aMano));
+
+// El auditor del navegador sabe que son dos grupos y no uno: un campo de
+// formulario y un campo dentro de una fila no son el mismo componente, pero DOS
+// alturas dentro del mismo grupo si son un error.
+$aud = leer('test/diseno/auditor.js');
+chequear('El auditor mide por separado los controles de tabla',
+    str_contains($aud, "ALTURAS DE CONTROL' + donde")
+    && str_contains($aud, "closest('.ih-table td')")
+    && str_contains($aud, "' EN TABLA'"));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────────────────
 grupo('CSV · exportar e importar');
 //
 // Exportar el inventario, abrirlo en Excel y volver a importarlo es un camino
@@ -1892,15 +2060,22 @@ chequear('Los botones con icono declaran su tipografía',
     preg_match('/\.cat-add\s*\{[^}]*font-family:\s*inherit/s', $comp) === 1
     && preg_match('/\.ihc-fecha__abrir\s*\{[^}]*font-family:\s*inherit/s', $comp) === 1);
 
-// El mismo `.ih-btn--sm` medía 27px en el panel y 34px en el portal del cliente,
-// porque la hoja del panel no declaraba alto mínimo. 34 es el de APP Tickets.
+/* El mismo `.ih-btn--sm` medía 27px en el panel y 34px en el portal del cliente,
+   porque la hoja del panel no declaraba alto mínimo. Las dos lo declaran, y el
+   valor es el mismo en las dos: eso es lo que este chequeo cuida.
+
+   El valor pasó de 34 a 30 al medir las tablas: los botones de acción de una
+   fila fijaban el piso del alto de fila en 51 px, y un 51 contra el 37 de la
+   tabla de reportes se ve —y se dijo— como dos tamaños distintos. El mínimo
+   táctil sigue garantizado por el `@media (pointer: coarse)`, que lo sube a 38;
+   lo cuida el grupo «DISENO · una fila de tabla». */
 foreach ([
     'assets/css/app.css'         => $css,
     'assets/css/intellihelp.css' => $ihcss2,
 ] as $hoja => $txt) {
     $plano2 = str_replace([" ", "\n"], '', $txt);
     chequear(basename($hoja) . ' declara el alto mínimo de los botones',
-        str_contains($plano2, 'min-height:36px') && str_contains($plano2, 'min-height:34px'));
+        str_contains($plano2, 'min-height:36px') && str_contains($plano2, 'min-height:30px'));
 }
 
 // Una insignia de 9px no se lee. El tamaño lo da la hoja, no un style suelto.
