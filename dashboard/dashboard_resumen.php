@@ -88,7 +88,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <?php if (!$ssoStatus['google'] && !$ssoStatus['microsoft']): ?>
       <div class="ih-alert ih-alert--warning">
-        <i class="bi bi-shield-exclamation" style="font-size:22px;flex-shrink:0"></i>
+        <i class="bi bi-shield-exclamation" class="ih-flex-none"></i>
         <div>
           <div class="ih-alert__title">SSO no configurado</div>
           El acceso al panel usa solo contraseña. Configurá Google Workspace o Microsoft 365 para mayor seguridad.
@@ -127,20 +127,20 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
     </div>
 
-    <div class="ih-grid" style="margin-top:20px">
+    <div class="ih-grid" class="ih-mt-5">
 
       <!-- SSO Status -->
       <div class="ih-col-6">
-        <div class="ih-card" style="height:100%">
+        <div class="ih-card" class="ih-alto-completo">
           <div class="ih-card__header">
             <h2 class="ih-card__title"><i class="bi bi-shield-check"></i> Estado SSO</h2>
             <a href="/dashboard/superadmin_integraciones.php" class="ih-btn ih-btn--ghost ih-btn--sm"><i class="bi bi-pencil"></i> Editar</a>
           </div>
           <div class="ih-card__body">
-            <div class="ih-flex ih-items-center ih-gap-3" style="padding:10px 0;border-bottom:1px solid #f0ebf8">
+            <div class="ih-fila-lista">
               <?= marca_svg('google', 20) ?>
-              <div style="flex:1">
-                <div class="ih-fw-600" style="font-size:14px">Google Workspace</div>
+              <div class="ih-flex-1">
+                <div class="ih-fw-600 ih-text-base">Google Workspace</div>
                 <?php if ($ssoStatus['google_hd']): ?>
                   <div class="ih-text-xs ih-text-muted">Dominio: @<?= htmlspecialchars($ssoStatus['google_hd']) ?></div>
                 <?php endif; ?>
@@ -151,10 +151,10 @@ require __DIR__ . '/../includes/layout/head.php';
                 <span class="ih-badge ih-badge--warning">Sin configurar</span>
               <?php endif; ?>
             </div>
-            <div class="ih-flex ih-items-center ih-gap-3" style="padding:10px 0">
+            <div class="ih-fila-lista">
               <?= marca_svg('microsoft', 20) ?>
-              <div style="flex:1">
-                <div class="ih-fw-600" style="font-size:14px">Microsoft 365 / Azure AD</div>
+              <div class="ih-flex-1">
+                <div class="ih-fw-600 ih-text-base">Microsoft 365 / Azure AD</div>
                 <?php if ($ssoStatus['ms_hd']): ?>
                   <div class="ih-text-xs ih-text-muted">Dominio: @<?= htmlspecialchars($ssoStatus['ms_hd']) ?></div>
                 <?php endif; ?>
@@ -171,22 +171,22 @@ require __DIR__ . '/../includes/layout/head.php';
 
       <!-- Acciones rápidas -->
       <div class="ih-col-6">
-        <div class="ih-card" style="height:100%">
+        <div class="ih-card" class="ih-alto-completo">
           <div class="ih-card__header">
             <h2 class="ih-card__title"><i class="bi bi-lightning-charge"></i> Acciones rápidas</h2>
           </div>
           <div class="ih-card__body">
             <div class="ih-flex ih-flex-col ih-gap-2">
-              <a href="/dashboard/dashboard_empresas.php" class="ih-btn ih-btn--outline ih-btn--block" style="justify-content:flex-start">
+              <a href="/dashboard/dashboard_empresas.php" class="ih-btn ih-btn--outline ih-btn--block" ih-btn--izquierda>
                 <i class="bi bi-plus-square"></i> Crear nueva empresa
               </a>
-              <a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--outline ih-btn--block" style="justify-content:flex-start">
+              <a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--outline ih-btn--block" ih-btn--izquierda>
                 <i class="bi bi-buildings"></i> Ver todas las empresas
               </a>
-              <a href="/dashboard/superadmin_usuarios.php" class="ih-btn ih-btn--outline ih-btn--block" style="justify-content:flex-start">
+              <a href="/dashboard/superadmin_usuarios.php" class="ih-btn ih-btn--outline ih-btn--block" ih-btn--izquierda>
                 <i class="bi bi-people"></i> Gestionar usuarios plataforma
               </a>
-              <a href="/dashboard/superadmin_logs.php" class="ih-btn ih-btn--outline ih-btn--block" style="justify-content:flex-start">
+              <a href="/dashboard/superadmin_logs.php" class="ih-btn ih-btn--outline ih-btn--block" ih-btn--izquierda>
                 <i class="bi bi-list-ul"></i> Ver auditoría completa
               </a>
             </div>
@@ -198,7 +198,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <!-- Últimas empresas -->
     <?php if (!empty($lastCompanies)): ?>
-      <div class="ih-card" style="margin-top:20px">
+      <div class="ih-card" class="ih-mt-5">
         <div class="ih-card__header">
           <h2 class="ih-card__title"><i class="bi bi-clock-history"></i> Empresas recientes</h2>
           <a href="/dashboard/dashboard_superadmin.php" class="ih-btn ih-btn--ghost ih-btn--sm">Ver todas</a>
@@ -210,7 +210,7 @@ require __DIR__ . '/../includes/layout/head.php';
             <?php foreach ($lastCompanies as $c): ?>
               <tr>
                 <td><strong>#<?= (int)$c['id'] ?></strong></td>
-                <td><a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" style="color:inherit;font-weight:600;text-decoration:none"><?= htmlspecialchars($c['nombre']) ?></a></td>
+                <td><a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" class="ih-enlace-plano ih-fw-600"><?= htmlspecialchars($c['nombre']) ?></a></td>
                 <td>
                   <?php if ((int)$c['active']): ?>
                     <span class="ih-badge ih-badge--success ih-badge--dot">Activa</span>
@@ -229,7 +229,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <!-- Log reciente -->
     <?php if (!empty($recentLogs)): ?>
-      <div class="ih-card" style="margin-top:20px">
+      <div class="ih-card" class="ih-mt-5">
         <div class="ih-card__header">
           <h2 class="ih-card__title"><i class="bi bi-list-ul"></i> Actividad reciente</h2>
           <a href="/dashboard/superadmin_logs.php" class="ih-btn ih-btn--ghost ih-btn--sm">Ver auditoría</a>

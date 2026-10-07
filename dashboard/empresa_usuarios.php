@@ -278,7 +278,7 @@ require __DIR__ . '/../includes/layout/head.php';
               <?php foreach ($tenantUsers as $u): ?>
                 <?php $isActive = (int)($u['active'] ?? 1) === 1; ?>
                 <?php $rl = $roleLabels[$u['role']] ?? ['label' => $u['role'], 'class' => 'ih-badge']; ?>
-                <tr style="<?= $isActive ? '' : 'opacity:.55' ?>">
+                <tr <?= $isActive ? '' : ' class="es-inactiva"' ?>>
                   <td><strong>#<?= (int)$u['id'] ?></strong></td>
                   <td>
                     <div class="ih-flex ih-items-center ih-gap-2">
@@ -302,12 +302,12 @@ require __DIR__ . '/../includes/layout/head.php';
                   </td>
                   <td class="ih-text-xs ih-text-muted"><?= htmlspecialchars((string)($u['created_at'] ?? '')) ?></td>
                   <?php if ($canManage): ?>
-                  <td class="ih-text-center" style="white-space:nowrap">
+                  <td class="ih-text-center" class="ih-text-nowrap">
                     <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
                             onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)($u['email'] ?? ''), ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
                       <i class="bi bi-pencil"></i>
                     </button>
-                    <form method="post" style="display:inline"
+                    <form method="post" 
                           onsubmit="return confirm('<?= $isActive ? '¿Desactivar usuario?' : '¿Activar usuario?' ?>')">
                       <?php csrf_input(); ?>
                       <input type="hidden" name="action" value="toggle">
@@ -320,7 +320,7 @@ require __DIR__ . '/../includes/layout/head.php';
                             onclick="abrirReset(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>')">
                       <i class="bi bi-key"></i>
                     </button>
-                    <form method="post" style="display:inline"
+                    <form method="post" 
                           onsubmit="return confirm('¿Eliminar a <?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>?')">
                       <?php csrf_input(); ?>
                       <input type="hidden" name="action" value="delete">
@@ -378,7 +378,7 @@ require __DIR__ . '/../includes/layout/head.php';
   </form>
 </dialog>
 
-<dialog class="ih-modal" id="modalReset" style="width:min(420px,calc(100vw - 2rem))">
+<dialog class="ih-modal" id="modalReset" class="ih-ancho-modal">
   <div class="ih-modal__header">
     <h2 class="ih-modal__title"><i class="bi bi-key" aria-hidden="true"></i> Restablecer contraseña</h2>
     <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
@@ -388,7 +388,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <input type="hidden" name="action" value="reset_pass">
     <input type="hidden" name="id" id="resetId">
     <div class="ih-modal__body">
-      <p class="ih-text-sm ih-text-muted" style="margin:0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
+      <p class="ih-text-sm ih-text-muted" class="ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
       <div class="ih-field">
         <label class="ih-field__label" for="resetPass">Nueva contraseña</label>
         <input class="ih-input" type="password" name="new_password" id="resetPass" minlength="8" required

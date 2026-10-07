@@ -241,11 +241,11 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-col-4">
               <div class="ih-field">
                 <label class="ih-field__label">Estado</label>
-                <label class="ih-switch" style="margin-top:6px">
+                <label class="ih-switch" class="ih-mt-1">
                   <input type="checkbox" name="active" value="1" <?= (int)($company['active'] ?? 1) === 1 ? 'checked' : '' ?>>
                   <span class="ih-switch__slider"></span>
                 </label>
-                <span class="ih-text-sm ih-text-muted" style="margin-left:10px">Empresa activa</span>
+                <span class="ih-text-sm ih-text-muted" class="ih-ml-2">Empresa activa</span>
               </div>
             </div>
           </div>
@@ -295,7 +295,7 @@ require __DIR__ . '/../includes/layout/head.php';
             </div>
           </div>
 
-          <div id="cred-microsoft" style="display:none;">
+          <div id="cred-microsoft" hidden>
             <div class="ih-section-title">Credenciales OAuth — Microsoft</div>
             <div class="ih-field__hint ih-mb-2">Dejá vacío lo que no quieras modificar.</div>
             <div class="ih-grid">
@@ -355,8 +355,12 @@ require __DIR__ . '/../includes/layout/head.php';
 
 <script>
 function ihToggleProvider(val) {
-  document.getElementById('cred-google').style.display    = (val === 'google')    ? '' : 'none';
-  document.getElementById('cred-microsoft').style.display = (val === 'microsoft') ? '' : 'none';
+/* `hidden` y no `style.display`: la hoja compartida declara
+   `[hidden] { display: none !important }`, y un `style.display = ''` NO le gana
+   a un `!important`. Mezclar las dos formas deja bloques que se esconden y no
+   se pueden volver a mostrar. El estado vive en el HTML. */
+  document.getElementById('cred-google').hidden    = (val !== 'google');
+  document.getElementById('cred-microsoft').hidden = (val !== 'microsoft');
 }
 (function(){ ihToggleProvider(document.querySelector('[name="provider"]').value); })();
 </script>

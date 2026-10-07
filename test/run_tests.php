@@ -1479,7 +1479,11 @@ foreach ([
 // logo ajeno, que si se pinta de violeta deja de ser el logo.
 $conEstilos = [];
 $conInline  = [];
-foreach (['inventario', 'backend', 'includes', 'includes/layout', 'auth'] as $dir) {
+/* `dashboard` entró recién ahora. El panel superadmin tenía dos `<style>` de
+   pantalla —que redibujaban componentes ya existentes con otros colores— y 137
+   atributos `style=`. Un chequeo que mira cinco de las seis carpetas da verde y
+   no cuida nada en la sexta. */
+foreach (['inventario', 'backend', 'includes', 'includes/layout', 'auth', 'dashboard'] as $dir) {
     foreach (glob(RAIZ . '/' . $dir . '/*.php') ?: [] as $f) {
         $rel = $dir . '/' . basename($f);
         $src = sin_comentarios((string)file_get_contents($f));

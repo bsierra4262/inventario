@@ -4,6 +4,74 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.10.0] — 2026-10-07
+
+El portal del cliente quedó cerrado; esta tanda es el panel superadmin, más los
+cortes que se veían mal en los dos.
+
+### Corregido
+
+- **El panel corría con otra paleta.** Las dos hojas declaran los mismos
+  nombres —`--ih-gray-500`, `--ih-success`, `--ih-radius-md`— y los comparte
+  `componentes.css`, que cargan los dos portales: **un componente escrito una
+  vez se dibujaba de dos formas según dónde cayera**. Y no eran matices. El
+  panel traía la paleta `zinc` de Tailwind: gris `#71717a` contra el gris
+  violáceo `#6f6a7d` de la marca, texto `#18181b` contra el `#161922` de la
+  identidad, verde `#16a34a` —un verde ajeno— al lado del `#9CC930` de la marca
+  en la misma pantalla, y naranja donde el cliente usa ámbar.
+
+  `test/tokens.php` llevaba la cuenta desde hace meses: veintiocho tokens de
+  deuda. **La lista quedó vacía.**
+
+- **Dos `<style>` de pantalla y 137 atributos `style=`.** `superadmin_roles.php`
+  tenía doce reglas que volvían a dibujar, con otros nombres y colores escritos
+  a mano, las pastillas y los grupos de permisos que la hoja compartida ya
+  tiene; ahora usa los mismos componentes que la pantalla de roles del cliente.
+  `select_empresa.php` redibujaba la tarjeta de elección que ya existe como
+  `.ih-hub__item` — y además **se escribía su propio `<head>`**, sin la hoja de
+  componentes, sin versión de assets (un cambio de CSS quedaba tapado por la
+  caché hasta un Ctrl+F5) y sin Saira: salía en la fuente del sistema.
+
+  Los `style=` quedaron en cero. Lo que había adentro eran veinte colores
+  escritos a mano, márgenes repetidos y cinco versiones del mismo borde.
+
+- **Los auditores miraban cinco de las seis carpetas.** Ni `test/colores.php`
+  ni el chequeo de estilos de pantalla incluían `dashboard/`: por eso el panel
+  pudo juntar veinte colores fuera de la paleta sin que nada avisara. Ahora
+  entran los dos.
+
+- **Un campo del panel no medía lo mismo que el desplegable de al lado**: 39,5
+  contra 40,8 px, y es el mismo control. El `.ih-input` tenía su geometría
+  escrita a mano en vez de leer los tokens que usa `componentes.css`.
+
+- **El «ghost» del panel se veía como texto suelto** —fondo y borde
+  transparentes—, así que «Habilitar», al lado de un dato, no parecía algo que
+  se pudiera tocar.
+
+- **La pantalla de auditoría cargaba el log entero en memoria** y recién después
+  se quedaba con los últimos quinientos: el costo crecía con el archivo y no con
+  lo que se mira, y devolvía **522 KB** de HTML. Ahora se lee desde el final, de
+  a pedazos, y se corta apenas hay suficiente: **62 KB**, con paginación de
+  verdad. Abrir la primera página cuesta lo mismo con mil renglones que con un
+  millón.
+
+- **La mitad del log era ruido.** 736 de 1467 líneas eran éxitos del CSRF: se
+  genera un token en cada pantalla con formulario y se valida en cada envío que
+  funciona, y la acción ya queda anotada por su cuenta. «Actividad reciente»
+  mostraba tres de cada cinco renglones hablando de tokens. Los **fallos** sí se
+  registran: un token que no valida es lo único que hay para mirar.
+
+- **El KPI «Inactivas» estaba siempre en rojo**, también diciendo cero. Mismo
+  criterio que el tablero del cliente: el color sigue al número.
+
+- **Las tablas escritas a mano del detalle de empresa** —`<table style="…">` con
+  los bordes y el relleno en cada `<td>`— no se encogían: a 752 px se salían de
+  la tarjeta y lo que sobraba quedaba recortado sin forma de llegar. Son listas
+  de dato y valor: ahora usan `.ih-datos`, el componente del detalle de un
+  activo.
+
+---
+
 ## [1.9.0] — 2026-10-07
 
 Lo que apareció al usar el portal de verdad: un PDF que salía vacío, campos del

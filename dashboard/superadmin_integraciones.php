@@ -118,7 +118,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
     <?php if ($pendingSetup): ?>
       <div class="ih-alert ih-alert--warning">
-        <i class="bi bi-shield-exclamation" style="font-size:22px;flex-shrink:0"></i>
+        <i class="bi bi-shield-exclamation" class="ih-flex-none"></i>
         <div>
           <div class="ih-alert__title">Configuración de SSO requerida</div>
           Por seguridad, el acceso con usuario y contraseña es solo temporal.<br>
@@ -142,7 +142,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <?php endif; ?>
 
     <!-- URI de callback (solo lectura) -->
-    <div class="ih-card" style="margin-bottom:20px">
+    <div class="ih-card" class="ih-mb-5">
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-link-45deg"></i> URI de Callback OAuth</h2>
@@ -151,12 +151,12 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
       <div class="ih-card__body">
         <div class="ih-flex ih-items-center ih-gap-2">
-          <code class="ih-input" style="background:#f7f2ff;font-size:13px;padding:10px 14px;flex:1;cursor:text;word-break:break-all" id="callback-uri-display"><?= htmlspecialchars($callbackUri) ?></code>
+          <code class="ih-input ih-copiable" id="callback-uri-display"><?= htmlspecialchars($callbackUri) ?></code>
           <button type="button" class="ih-btn ih-btn--outline ih-btn--sm" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($callbackUri, ENT_QUOTES) ?>');this.innerHTML='<i class=\'bi bi-check2\'></i> Copiado'">
             <i class="bi bi-clipboard"></i> Copiar
           </button>
         </div>
-        <p class="ih-text-xs ih-text-muted" style="margin-top:8px">
+        <p class="ih-text-xs ih-text-muted" class="ih-mt-2">
           <i class="bi bi-info-circle"></i>
           En <strong>Google Console</strong>: Credentials → OAuth client → Authorized redirect URIs.<br>
           En <strong>Azure</strong>: App registrations → Authentication → Redirect URIs.
@@ -168,10 +168,10 @@ require __DIR__ . '/../includes/layout/head.php';
       <?php csrf_input(); ?>
 
       <!-- ── Google Workspace SSO ────────────────────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:20px">
+      <div class="ih-card" class="ih-mb-5">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title" style="display:flex;align-items:center;gap:8px;"><?= cloud_icon_svg('google', 22) ?> Google Workspace SSO</h2>
+            <h2 class="ih-card__title"><?= cloud_icon_svg('google', 22) ?> Google Workspace SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Google</div>
           </div>
           <?php if ($current['sa_google_client_id'] !== ''): ?>
@@ -203,9 +203,9 @@ require __DIR__ . '/../includes/layout/head.php';
               </div>
             </div>
           </div>
-          <details class="ih-mt-4" style="font-size:13px;color:#555">
-            <summary style="cursor:pointer;color:#663399;font-weight:600">¿Cómo configurarlo? <i class="bi bi-chevron-down"></i></summary>
-            <ol style="padding-left:1.2rem;line-height:1.9;margin-top:8px">
+          <details class="ih-mt-4 ih-text-sm ih-text-muted">
+            <summary class="ih-resumen-abrible">¿Cómo configurarlo? <i class="bi bi-chevron-down"></i></summary>
+            <ol class="ih-lista-pasos">
               <li>Abrí <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> → <em>APIs &amp; Services</em> → <em>OAuth consent screen</em> (elegí "Internal" para Workspace).</li>
               <li><em>Credentials</em> → <em>Create credentials</em> → <em>OAuth client ID</em> → tipo <strong>Web application</strong>.</li>
               <li>En <em>Authorized redirect URIs</em> pegá la URI de callback que aparece arriba.</li>
@@ -216,10 +216,10 @@ require __DIR__ . '/../includes/layout/head.php';
       </div>
 
       <!-- ── Microsoft 365 SSO ──────────────────────────────────────────── -->
-      <div class="ih-card" style="margin-bottom:20px">
+      <div class="ih-card" class="ih-mb-5">
         <div class="ih-card__header">
           <div>
-            <h2 class="ih-card__title" style="display:flex;align-items:center;gap:8px;"><?= cloud_icon_svg('microsoft', 22) ?> Microsoft 365 / Azure AD SSO</h2>
+            <h2 class="ih-card__title"><?= cloud_icon_svg('microsoft', 22) ?> Microsoft 365 / Azure AD SSO</h2>
             <div class="ih-card__subtitle">Permite ingresar con una cuenta corporativa de Microsoft</div>
           </div>
           <?php if ($current['sa_ms_client_id'] !== ''): ?>
@@ -258,9 +258,9 @@ require __DIR__ . '/../includes/layout/head.php';
               </div>
             </div>
           </div>
-          <details class="ih-mt-4" style="font-size:13px;color:#555">
-            <summary style="cursor:pointer;color:#663399;font-weight:600">¿Cómo configurarlo? <i class="bi bi-chevron-down"></i></summary>
-            <ol style="padding-left:1.2rem;line-height:1.9;margin-top:8px">
+          <details class="ih-mt-4 ih-text-sm ih-text-muted">
+            <summary class="ih-resumen-abrible">¿Cómo configurarlo? <i class="bi bi-chevron-down"></i></summary>
+            <ol class="ih-lista-pasos">
               <li>Abrí <a href="https://portal.azure.com/" target="_blank" rel="noopener">Azure Portal</a> → <em>Azure Active Directory</em> → <em>App registrations</em> → <em>New registration</em>.</li>
               <li>Tipo de cuenta: "Accounts in this organizational directory only" (para una sola organización).</li>
               <li>En <em>Redirect URI</em> elegí "Web" y pegá la URI de callback de arriba.</li>

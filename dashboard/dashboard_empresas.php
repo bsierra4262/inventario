@@ -210,7 +210,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
           <!-- Google -->
           <div id="cred-google">
-            <div class="ih-section-title">Credenciales OAuth — Google <span style="font-weight:400;color:#71717A;font-size:12px">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
+            <div class="ih-section-title">Credenciales OAuth — Google <span class="ih-fw-400 ih-text-sm ih-text-muted">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
             <div class="ih-grid">
               <div class="ih-col-6">
                 <div class="ih-field">
@@ -236,8 +236,8 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- Microsoft -->
-          <div id="cred-microsoft" style="display:none;">
-            <div class="ih-section-title">Credenciales OAuth — Microsoft <span style="font-weight:400;color:#71717A;font-size:12px">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
+          <div id="cred-microsoft" hidden>
+            <div class="ih-section-title">Credenciales OAuth — Microsoft <span class="ih-fw-400 ih-text-sm ih-text-muted">(opcional — podés configurarlas después desde el inventario del cliente)</span></div>
             <div class="ih-grid">
               <div class="ih-col-4">
                 <div class="ih-field">
@@ -261,7 +261,7 @@ require __DIR__ . '/../includes/layout/head.php';
           </div>
 
           <!-- DB externa -->
-          <div id="db-ext" style="display:none;">
+          <div id="db-ext" hidden>
             <div class="ih-section-title">Base de datos del tenant</div>
             <div class="ih-grid">
               <div class="ih-col-3">
@@ -347,12 +347,16 @@ require __DIR__ . '/../includes/layout/head.php';
 </div>
 
 <script>
+/* `hidden` y no `style.display`: la hoja compartida declara
+   `[hidden] { display: none !important }`, y un `style.display = ''` NO le gana
+   a un `!important`. Mezclar las dos formas deja bloques que se esconden y no
+   se pueden volver a mostrar. El estado vive en el HTML. */
 function ihToggleProvider(val) {
-  document.getElementById('cred-google').style.display    = (val === 'google')    ? '' : 'none';
-  document.getElementById('cred-microsoft').style.display = (val === 'microsoft') ? '' : 'none';
+  document.getElementById('cred-google').hidden    = (val !== 'google');
+  document.getElementById('cred-microsoft').hidden = (val !== 'microsoft');
 }
 function ihToggleDB(val) {
-  document.getElementById('db-ext').style.display = (val === 'external') ? '' : 'none';
+  document.getElementById('db-ext').hidden = (val !== 'external');
 }
 (function(){
   ihToggleProvider(document.querySelector('[name="provider"]').value);

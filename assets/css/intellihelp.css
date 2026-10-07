@@ -444,7 +444,11 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .ih-btn:hover { transform: translateY(-1px); box-shadow: var(--ih-shadow-md); }
 .ih-btn:active { transform: translateY(0); }
-.ih-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+/* `.is-disabled` junto a `:disabled`: un <a> no se puede deshabilitar como un
+   <button>, y los paginadores que no tienen a dónde ir son enlaces. En la
+   hoja del cliente ya estaban los dos. */
+.ih-btn:disabled,
+.ih-btn.is-disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; pointer-events: none; }
 
 .ih-btn--primary {
   background: var(--ih-purple); color: var(--ih-white); border-color: var(--ih-purple);
@@ -461,15 +465,22 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .ih-btn--outline:hover { background: var(--ih-purple-50); border-color: var(--ih-purple); color: var(--ih-purple-dark); }
 
+/* Con el borde transparente y el fondo también, un botón «ghost» del panel se
+   veía como texto suelto: «Habilitar» al lado de un dato no parecía algo que se
+   pudiera tocar. El del portal del cliente tiene fondo blanco y borde gris —se
+   lee como botón sin competir con el principal— y es lo que corresponde cuando
+   está solo en una fila. */
 .ih-btn--ghost {
-  background: transparent; color: var(--ih-gray-700); border-color: transparent;
+  background: var(--ih-white); color: var(--ih-purple); border-color: var(--ih-gray-200);
 }
-.ih-btn--ghost:hover { background: var(--ih-gray-100); color: var(--ih-gray-900); }
+.ih-btn--ghost:hover { background: var(--ih-purple-50); color: var(--ih-purple); border-color: var(--ih-purple-200); }
 
 .ih-btn--danger {
   background: var(--ih-danger); color: var(--ih-white); border-color: var(--ih-danger);
 }
-.ih-btn--danger:hover { background: #B91C1C; border-color: #B91C1C; color: var(--ih-white); }
+/* El hover de un botón rojo era #B91C1C, otro rojo más: el de la paleta
+   oscurecido alcanza, y es el único rojo que hay. */
+.ih-btn--danger:hover { filter: brightness(.9); color: var(--ih-white); }
 
 .ih-btn--sm { padding: 5px 11px; font-size: var(--ih-text-sm); min-height: 30px; border-radius: var(--ih-radius-sm); }
 .ih-btn--lg { padding: 13px 24px; font-size: var(--ih-text-md); }
@@ -513,27 +524,33 @@ img { max-width: 100%; height: auto; display: block; }
 .ih-input, .ih-select, .ih-textarea,
 input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]):not([type="range"]):not([type="color"]),
 select, textarea {
+  /* Los MISMOS tokens que lee `componentes.css` para dibujar el desplegable y
+     el calendario propios. Escritos a mano —10px 14px, `--ih-text-sm`,
+     `line-height: 1.4`— un <input> medía 39,5 px y el botón del desplegable de
+     al lado 40,8: en una fila de filtros se ve el escalón, y es el mismo
+     control. Ahora los dos salen del mismo lugar. */
   display: block; width: 100%;
-  padding: 10px 14px;
-  font-family: var(--ih-font); font-size: var(--ih-text-sm);
+  padding: var(--ih-ctl-pad);
+  min-height: var(--ih-ctl-min-h);
+  font-family: var(--ih-font); font-size: var(--ih-ctl-font);
+  line-height: var(--ih-ctl-line);
   color: var(--ih-gray-900);
-  background: var(--ih-white);
-  border: 1px solid var(--ih-gray-300);
-  border-radius: var(--ih-radius-md);
+  background: var(--ih-ctl-bg);
+  border: 1px solid var(--ih-ctl-border);
+  border-radius: var(--ih-ctl-radius);
   transition: border-color var(--ih-trans-fast), box-shadow var(--ih-trans-fast);
-  line-height: 1.4;
 }
 .ih-input:focus, .ih-select:focus, .ih-textarea:focus,
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--ih-purple);
-  box-shadow: 0 0 0 3px rgba(102,51,153,.12);
+  box-shadow: 0 0 0 3px var(--ih-ctl-ring);
 }
 .ih-input:hover:not(:focus), .ih-select:hover:not(:focus), .ih-textarea:hover:not(:focus),
 input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
-  border-color: var(--ih-purple-200);
+  border-color: var(--ih-ctl-hover);
 }
-input::placeholder, textarea::placeholder { color: var(--ih-gray-400); }
+input::placeholder, textarea::placeholder { color: var(--ih-ctl-placeholder); }
 input:disabled, select:disabled, textarea:disabled {
   background: var(--ih-gray-50); color: var(--ih-gray-500); cursor: not-allowed;
 }
@@ -796,6 +813,9 @@ input:disabled, select:disabled, textarea:disabled {
 .ih-text-green  { color: var(--ih-green); }
 .ih-text-sm     { font-size: var(--ih-text-sm); }
 .ih-text-xs     { font-size: var(--ih-text-xs); }
+/* Le faltaba el escalón del medio, que es el tamaño del cuerpo: la hoja del
+   cliente lo tiene y el panel lo escribía con `style="font-size:14px"`. */
+.ih-text-base   { font-size: var(--ih-text-base); }
 .ih-hidden-mobile { display: inherit; }
 .ih-hidden-desktop { display: none; }
 @media (max-width: 767px) {

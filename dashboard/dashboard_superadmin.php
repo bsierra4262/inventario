@@ -178,10 +178,10 @@ require __DIR__ . '/../includes/layout/head.php';
                 $isActive = (int)($c['active'] ?? 1) === 1;
                 $provider = $c['provider'] ?? 'google';
               ?>
-              <tr style="<?= $isActive ? '' : 'opacity:.55;' ?>">
+              <tr<?= $isActive ? '' : ' class="es-inactiva"' ?>>
                 <td><strong>#<?= (int)$c['id'] ?></strong></td>
                 <td>
-                  <a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" class="ih-fw-700" style="color:inherit;text-decoration:none">
+                  <a href="/dashboard/empresa_detalle.php?id=<?= (int)$c['id'] ?>" class="ih-fw-700" class="ih-enlace-plano">
                     <?= htmlspecialchars($c['nombre']) ?>
                   </a>
                   <?php if (!empty($c['razon_social'])): ?>
@@ -192,7 +192,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?php $url = $c['login_url'] ?? ''; ?>
                   <?php if ($url): ?>
                     <div class="ih-flex ih-items-center ih-gap-2">
-                      <a href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener" class="ih-text-sm ih-fw-600" style="color:#663399;text-decoration:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block">
+                      <a href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener" class="ih-text-sm ih-fw-600 ih-enlace-corto">
                         <i class="bi bi-box-arrow-up-right"></i> <?= htmlspecialchars(preg_replace('#^https?://#', '', $url)) ?>
                       </a>
                       <button type="button" class="ih-btn ih-btn--ghost ih-btn--sm" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($url, ENT_QUOTES) ?>');this.innerHTML='<i class=\'bi bi-check2\'></i>'" title="Copiar URL">
@@ -234,7 +234,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <a href="/dashboard/empresa_editar.php?id=<?= (int)$c['id'] ?>" class="ih-btn ih-btn--outline ih-btn--sm">
                     <i class="bi bi-pencil"></i> Editar
                   </a>
-                  <form method="post" action="/dashboard/empresa_eliminar.php" style="display:inline"
+                  <form method="post" action="/dashboard/empresa_eliminar.php" 
                         onsubmit="return confirm('<?= $isActive ? '¿Desactivar esta empresa?' : '¿Activar esta empresa?' ?>')">
                     <?php csrf_input(); ?>
                     <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">

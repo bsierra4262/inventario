@@ -77,7 +77,11 @@ if (!function_exists('colores_fuera_de_paleta')) {
  * Se ignoran los comentarios: explicar por qué se sacó un #16a34a no puede
  * contar como usarlo. Se usa el lexer de PHP, igual que en test/ortografia.php.
  */
-function colores_fuera_de_paleta(array $dirs = ['inventario', 'backend', 'includes', 'includes/layout', 'auth']): array {
+/* `dashboard` entró en la lista recién ahora: el panel superadmin nunca se
+   miraba, y tenía veinte colores escritos a mano —#ef4444, #10b981, #1a1a2e,
+   #71717A— puestos en atributos `style=`. Un auditor que mira cuatro de las
+   cinco carpetas da verde y no cuida nada en la quinta. */
+function colores_fuera_de_paleta(array $dirs = ['inventario', 'backend', 'includes', 'includes/layout', 'auth', 'dashboard']): array {
     $permitidos = array_flip(array_merge(COLORES_MARCA, COLORES_TERCEROS));
     $out = [];
 

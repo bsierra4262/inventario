@@ -213,8 +213,8 @@ require __DIR__ . '/../includes/layout/head.php';
               </div>
             </div>
           </div>
-          <div class="ih-field__hint ih-mt-2" style="background:#F4F1F9;padding:10px 14px;border-radius:10px;max-width:600px;">
-            <i class="bi bi-info-circle" style="color:#663399"></i>
+          <div class="ih-nota ih-mt-2">
+            <i class="bi bi-info-circle ih-text-primary"></i>
             <strong>Vinculación automática:</strong> La primera vez que el usuario inicie sesión con Google o Microsoft usando el email registrado, su cuenta quedará vinculada automáticamente.
           </div>
           <button class="ih-btn ih-btn--accent ih-mt-4" type="submit"><i class="bi bi-check-lg"></i> Crear usuario</button>
@@ -250,14 +250,14 @@ require __DIR__ . '/../includes/layout/head.php';
             <?php foreach ($users as $u): ?>
               <?php $isActive = (int)$u['active'] === 1; ?>
               <?php $rl = $roleLabels[$u['role']] ?? ['label' => $u['role'], 'class' => 'ih-badge']; ?>
-              <tr style="<?= $isActive ? '' : 'opacity:.55' ?>">
+              <tr <?= $isActive ? '' : ' class="es-inactiva"' ?>>
                 <td><strong>#<?= (int)$u['id'] ?></strong></td>
                 <td>
                   <div class="ih-flex ih-items-center ih-gap-2">
                     <?php if (!empty($u['google_pic'])): ?>
-                      <img src="<?= htmlspecialchars($u['google_pic']) ?>" alt="" style="width:28px;height:28px;border-radius:50%;flex-shrink:0">
+                      <img src="<?= htmlspecialchars($u['google_pic']) ?>" alt="" class="ih-avatar-chico">
                     <?php else: ?>
-                      <span class="ih-user-chip__avatar" style="flex-shrink:0"><?= htmlspecialchars(strtoupper(substr((string)$u['username'], 0, 1))) ?></span>
+                      <span class="ih-user-chip__avatar" class="ih-flex-none"><?= htmlspecialchars(strtoupper(substr((string)$u['username'], 0, 1))) ?></span>
                     <?php endif; ?>
                     <div>
                       <div class="ih-fw-600"><?= htmlspecialchars((string)$u['username']) ?></div>
@@ -275,7 +275,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?php elseif (!empty($u['ms_sub'])): ?>
                     <span class="ih-badge ih-badge--info"><?= marca_svg('microsoft', 13) ?> Microsoft</span>
                   <?php else: ?>
-                    <span class="ih-badge" style="color:#A1A1AA">No vinculado</span>
+                    <span class="ih-badge ih-badge--neutral">No vinculado</span>
                   <?php endif; ?>
                 </td>
                 <td>
@@ -289,7 +289,7 @@ require __DIR__ . '/../includes/layout/head.php';
                   <?= $u['last_login'] ? htmlspecialchars((string)$u['last_login']) : '—' ?>
                 </td>
                 <?php if (platform_can('platform_user.manage')): ?>
-                <td class="ih-text-center" style="white-space:nowrap">
+                <td class="ih-text-center" class="ih-text-nowrap">
                   <!-- Editar rol/email -->
                   <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
                           onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars((string)$u['email'], ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
@@ -298,7 +298,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
                   <!-- Toggle activo -->
                   <?php if ((int)$u['id'] !== $currentUserId): ?>
-                  <form method="post" style="display:inline"
+                  <form method="post" 
                         onsubmit="return confirm('<?= $isActive ? '¿Desactivar este usuario?' : '¿Activar este usuario?' ?>')">
                     <?php csrf_input(); ?>
                     <input type="hidden" name="action" value="toggle">
@@ -317,7 +317,7 @@ require __DIR__ . '/../includes/layout/head.php';
 
                   <!-- Eliminar -->
                   <?php if ((int)$u['id'] !== $currentUserId && (int)$u['id'] !== 1): ?>
-                  <form method="post" style="display:inline"
+                  <form method="post" 
                         onsubmit="return confirm('¿Eliminar a <?= htmlspecialchars((string)$u['username'], ENT_QUOTES) ?>? Esta acción no se puede deshacer.')">
                     <?php csrf_input(); ?>
                     <input type="hidden" name="action" value="delete">
@@ -376,7 +376,7 @@ require __DIR__ . '/../includes/layout/head.php';
   </form>
 </dialog>
 
-<dialog class="ih-modal" id="modalReset" style="width:min(420px,calc(100vw - 2rem))">
+<dialog class="ih-modal" id="modalReset" class="ih-ancho-modal">
   <div class="ih-modal__header">
     <h2 class="ih-modal__title"><i class="bi bi-key" aria-hidden="true"></i> Restablecer contraseña</h2>
     <button type="button" class="ih-modal__close" data-cerrar aria-label="Cerrar">&times;</button>
@@ -386,7 +386,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <input type="hidden" name="action" value="reset_pass">
     <input type="hidden" name="id" id="resetId">
     <div class="ih-modal__body">
-      <p class="ih-text-sm ih-text-muted" style="margin:0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
+      <p class="ih-text-sm ih-text-muted" class="ih-mb-0 ih-mt-0">Nueva contraseña para <strong id="resetUsername"></strong>.</p>
       <div class="ih-field">
         <label class="ih-field__label" for="resetPass">Nueva contraseña</label>
         <input class="ih-input" type="password" name="new_password" id="resetPass" minlength="8" required
