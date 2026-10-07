@@ -1102,12 +1102,18 @@ foreach (['dashboard/empresa_editar.php', 'dashboard/empresa_eliminar.php'] as $
         str_contains(leer($arch), 'empresa_cache_olvidar('));
 }
 
+/* La tarjeta la dibuja `includes/pantalla_aviso.php`, que es la misma que usan
+   el 419 del formulario vencido y el 500 de la generación: una sola pantalla de
+   corte para toda la aplicación. Acá se verifica lo que le toca a cada una. */
 $sb = leer('includes/sin_base.php');
 chequear('La pantalla de «no disponible» contesta 503 con Retry-After',
-    str_contains($sb, 'http_response_code(503)') && str_contains($sb, 'Retry-After'));
-chequear('Y no se cachea', str_contains($sb, 'Cache-Control: no-store'));
-chequear('Usa la misma tarjeta que el acceso, sin estilos propios',
-    str_contains($sb, 'ih-auth__card') && !str_contains($sb, '<style'));
+    str_contains($sb, "'codigo'    => 503") && str_contains($sb, 'Retry-After'));
+chequear('Y la pantalla de aviso no se cachea ni dibuja estilos propios',
+    str_contains(leer('includes/pantalla_aviso.php'), 'Cache-Control: no-store')
+    && !str_contains(leer('includes/pantalla_aviso.php'), '<style'));
+chequear('Usa la misma tarjeta que el acceso',
+    str_contains(leer('includes/pantalla_aviso.php'), 'ih-auth__card')
+    && str_contains($sb, 'pantalla_aviso('));
 // Estaba escrita dos veces dentro de login.php, con dos textos distintos para
 // la misma situación.
 $lg = leer('auth/login.php');
@@ -1898,6 +1904,61 @@ chequear('El detalle muestra los datos de compra y administración',
     str_contains($vd, 'infocom_de(') && str_contains($vd, 'Compra y administración'));
 chequear('El detalle no dibuja tarjetas vacías',
     str_contains($vd, '$htmlGarantia') && str_contains($vd, '$htmlInfocom'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────────────────
+grupo('CUANDO ALGO FALLA · la pantalla sigue siendo la aplicación');
+//
+// Son las pantallas que casi nadie ve y que, por eso mismo, se escriben con un
+// `echo '<h1>…</h1>'` y se olvidan. El resultado es que el único momento en que
+// algo sale mal es también el único en que la aplicación se ve rota: Times New
+// Roman sobre fondo blanco, sin menú y sin salida. Y «CSRF inválido o
+// expirado» no le dice nada a quien acaba de cargar un activo: lo que necesita
+// saber es si perdió lo que escribió y cómo volver.
+$pa = leer('includes/pantalla_aviso.php');
+chequear('Hay una pantalla de aviso con el diseño del sistema',
+    str_contains($pa, 'function pantalla_aviso(') && str_contains($pa, 'ih-auth__card'));
+chequear('Que no define estilos propios', !str_contains($pa, '<style'));
+chequear('Y tira lo que se haya escrito antes, para no salir a medias',
+    str_contains($pa, 'ob_end_clean'));
+
+$csrfT = leer('backend/csrf.php');
+$csrfS = leer('core/security/csrf.php');
+foreach (['backend/csrf.php' => $csrfT, 'core/security/csrf.php' => $csrfS] as $arch => $src) {
+    chequear(basename(dirname($arch)) . '/' . basename($arch) . ': el rechazo usa la pantalla del sistema',
+        str_contains($src, 'pantalla_aviso('));
+    /* Sin los comentarios: explicar POR QUÉ se sacó un `die('CSRF inválido')`
+       no puede contar como seguir teniéndolo. Es el mismo criterio que usa
+       test/colores.php con los colores que se explican al lado. */
+    chequear(basename(dirname($arch)) . '/' . basename($arch) . ': y ya no imprime HTML suelto',
+        !preg_match("/die\(|echo\s*['\"]<h1>/i", sin_comentarios($src)));
+}
+// El camino de vuelta importa tanto como el mensaje.
+chequear('El aviso ofrece volver a la pantalla anterior',
+    str_contains($csrfT, 'history.back()') && str_contains($csrfS, 'history.back()'));
+
+// Un token que vence antes que la sesión que lo sostiene sólo sirve para
+// interrumpir a alguien que está trabajando.
+$ini = leer('.user.ini');
+preg_match('/session\.gc_maxlifetime\s*=\s*(\d+)/', $ini, $mSes);
+preg_match('/const CSRF_TTL_SECONDS\s*=\s*(\d+)/', $csrfT, $mTok);
+$vidaSesion = (int)($mSes[1] ?? 0);
+$vidaToken  = (int)($mTok[1] ?? 0);
+chequear('Se pudieron leer las dos duraciones', $vidaSesion > 0 && $vidaToken > 0,
+    "sesion={$vidaSesion} token={$vidaToken}");
+chequear('El token del formulario dura lo mismo que la sesión',
+    $vidaToken >= $vidaSesion,
+    "el token vence a los {$vidaToken}s y la sesion a los {$vidaSesion}s");
+
+// Y la causa que no es el tiempo: el doble clic gasta un token de un solo uso,
+// la primera vez funciona y la segunda muestra un error por algo que SÍ se hizo.
+$compJs = leer('assets/js/componentes.js');
+chequear('Un formulario no se puede mandar dos veces',
+    str_contains($compJs, 'function unSoloEnvio()') && str_contains($compJs, "b.disabled = true"));
+chequear('Y el botón vuelve si se llega con la flecha de atrás',
+    str_contains($compJs, "'pageshow'") && str_contains($compJs, 'ev.persisted'));
+chequear('Un envío que el propio código canceló no se bloquea',
+    str_contains($compJs, 'ev.defaultPrevented'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────

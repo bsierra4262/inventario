@@ -63,8 +63,8 @@ try {
     }
 } catch (Throwable $e) {
     log_event("UsuarioID:$user_id", "ERROR", "DB error cargando usuario: ".$e->getMessage(), "auth");
-    http_response_code(500);
-    die('Error de base de datos.');
+    require_once __DIR__ . '/../includes/sin_base.php';
+    pantalla_sin_base('No se puede cambiar la contraseña en este momento');
 }
 
 // -----------------------------

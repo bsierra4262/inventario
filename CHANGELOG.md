@@ -12,6 +12,29 @@ pantallas para cargar una computadora.
 
 ### Corregido
 
+- **«Acción bloqueada»: la única pantalla que se veía rota era la del error.**
+  Cuando un formulario caducaba, el servidor contestaba
+  `<h1>Acción bloqueada</h1><p>CSRF inválido o expirado…</p>` — Times New Roman
+  sobre fondo blanco, sin menú, sin salida y sin decir si se había perdido lo
+  cargado. Ahora es una pantalla del sistema, con el camino de vuelta y una
+  explicación en castellano. Lo mismo el «CSRF inválido» del panel y el
+  «Error de base de datos» del cambio de contraseña.
+
+  Y, sobre todo, **que no pase**. Eran tres causas distintas:
+
+  - El token duraba **quince minutos** mientras la sesión dura ocho horas: el
+    formulario caducaba ocho veces antes que la sesión que lo sostiene. Dar de
+    alta un activo con treinta campos lleva más de quince minutos si hay que ir
+    a buscar el número de serie al equipo. Ahora dura lo mismo que la sesión, y
+    eso no afloja nada: el token vive **dentro** de `$_SESSION`, así que el
+    límite real siempre fue la sesión.
+  - El **doble clic**. Los tokens de las acciones que no se deshacen son de un
+    solo uso: el primer envío funciona y el segundo llega con un token que ya no
+    existe, así que la persona veía un error por algo que SÍ se había hecho.
+    Ahora un formulario se manda una vez: el botón se apaga y dice «Enviando…».
+  - Volver con la flecha del navegador dejaba ese botón apagado para siempre,
+    porque la página sale del caché tal como estaba. Se repone en `pageshow`.
+
 - **Un activo restaurado seguía figurando como archivado en los dos reportes.**
   La restauración **sí** quedaba guardada; lo que fallaba era leerla.
   Trazabilidad empezaba con `WHERE pm.realizado_por != 0`, y `realizado_por` es

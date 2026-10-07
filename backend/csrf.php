@@ -41,7 +41,18 @@ if (!$__logger_ok && !function_exists('log_event')) {
 // ============================
 const CSRF_SESSION_KEY   = 'csrf_tokens';    // container en $_SESSION
 const CSRF_COOKIE_NAME   = 'csrfc';          // cookie espejo
-const CSRF_TTL_SECONDS   = 900;              // 15 minutos
+/* Lo que dura un token. Era 900 —quince minutos— mientras la sesión dura ocho
+   horas (`session.gc_maxlifetime` en `.user.ini`): el formulario caducaba ocho
+   veces antes que la sesión que lo sostiene. Dar de alta un activo con treinta
+   campos lleva más de quince minutos si hay que ir a buscar el número de serie
+   al equipo, y al enviar salía «acción bloqueada» y se perdía todo lo escrito.
+
+   Que dure lo mismo que la sesión no afloja nada: el token vive DENTRO de
+   `$_SESSION`, así que cuando la sesión muere el token se va con ella. El
+   límite real siempre fue la sesión; los quince minutos sólo agregaban una
+   segunda fecha de vencimiento, más corta, que no protegía de nada que la
+   sesión no protegiera ya. */
+const CSRF_TTL_SECONDS   = 28800;            // 8 horas: lo mismo que la sesión
 const CSRF_DEFAULT_SCOPE = '_global';        // scope por defecto
 
 /**
@@ -201,8 +212,20 @@ function generateCsrfToken(?string $scope = null, ?int $ttl = null): string {
     } catch (\Throwable $e) {
         error_log("Error generando token CSRF: " . $e->getMessage());
         log_event('csrf', 'ERROR', "Error generando token CSRF: " . $e->getMessage(), 'transaccion');
-        http_response_code(500);
-        die('Se produjo un error interno. Intente nuevamente más tarde.');
+        require_once __DIR__ . '/../includes/pantalla_aviso.php';
+        pantalla_aviso([
+            'titulo'    => 'No se pudo preparar el formulario',
+            'subtitulo' => 'Es un problema nuestro, no de lo que estabas haciendo',
+            'detalle'   => 'Volvé a cargar la pantalla. Si vuelve a pasar, avisale al '
+                         . 'administrador del sistema: queda registrado en el log.',
+            'tono'      => 'danger',
+            'icono'     => 'exclamation-octagon-fill',
+            'codigo'    => 500,
+            'acciones'  => [
+                ['texto' => 'Volver a cargar', 'icono' => 'arrow-clockwise',
+                 'href'  => (string)($_SERVER['REQUEST_URI'] ?? '/inventario/index.php')],
+            ],
+        ]);
     }
 }
 
@@ -317,11 +340,33 @@ function csrf_or_fail(?string $scope = null, bool $oneTime = false): void {
             'error' => 'CSRF inválido o expirado. Volvé a cargar la página.',
             'code'  => 419,
         ], JSON_UNESCAPED_UNICODE);
-    } else {
-        header('Content-Type: text/html; charset=utf-8');
-        echo '<h1>Acción bloqueada</h1><p>CSRF inválido o expirado. Actualizá la página e intentá otra vez.</p>';
+        exit;
     }
-    exit;
+
+    /* Y si lo pide un navegador, una pantalla de verdad. Salía un `<h1>` suelto
+       sobre fondo blanco, en la tipografía del navegador, sin menú y sin
+       salida: el único momento en que algo falla era también el único en que la
+       aplicación se veía rota. Y «CSRF inválido o expirado» no le dice nada a
+       quien acaba de cargar un activo — lo que necesita saber es si perdió lo
+       que escribió y cómo volver. */
+    require_once __DIR__ . '/../includes/pantalla_aviso.php';
+    pantalla_aviso([
+        'titulo'    => 'La pantalla estuvo demasiado tiempo abierta',
+        'subtitulo' => 'No se hizo nada: la acción quedó sin efecto',
+        'detalle'   => 'Por seguridad, los formularios dejan de valer después de un rato '
+                     . 'o si ya se enviaron una vez. <strong>Volvé a la pantalla anterior</strong> '
+                     . 'y mandalo de nuevo. Si ya lo habías enviado, puede que la acción '
+                     . 'se haya hecho: fijate antes de repetirla.',
+        'tono'      => 'warning',
+        'icono'     => 'clock-history',
+        'codigo'    => 419,
+        'acciones'  => [
+            ['texto' => 'Volver a la pantalla anterior', 'icono' => 'arrow-left',
+             'href'  => '#', 'onclick' => 'history.back(); return false;'],
+            ['texto' => 'Ir al inventario', 'icono' => 'box-seam',
+             'href'  => '/inventario/index.php', 'tipo' => 'ghost'],
+        ],
+    ]);
 }
 
 /**

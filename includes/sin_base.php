@@ -38,46 +38,25 @@ function pantalla_sin_base(
     string $subtitulo = 'No se puede acceder al inventario en este momento',
     string $detalle   = 'La base de datos no respondió. Es algo momentáneo: volvé a intentar en unos segundos. Si sigue igual, avisale al administrador del sistema.'
 ): never {
-    if (!headers_sent()) {
-        http_response_code(503);
-        header('Retry-After: 15');
-        header('Cache-Control: no-store');
-    }
-
-    $page_title = 'Servicio no disponible';
-    require __DIR__ . '/layout/head.php';
-    ?>
-    <div class="ih-auth">
-      <div class="ih-auth__card ih-anim-fade">
-        <div class="ih-auth__header">
-          <div class="ih-auth__brand">
-            <div class="ih-auth__logo"><?= function_exists('platform_logo_html') ? platform_logo_html() : 'i' ?></div>
-            <div class="ih-auth__brand-text"><strong>INTELLIHELP</strong><span>Asset Vault</span></div>
-          </div>
-          <h2 class="ih-auth__title">Servicio no disponible</h2>
-          <p class="ih-auth__subtitle"><?= htmlspecialchars($subtitulo) ?></p>
-        </div>
-        <div class="ih-auth__body">
-          <div class="ih-alert ih-alert--warning">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <div><?= htmlspecialchars($detalle) ?></div>
-          </div>
-          <?php /* Reintentar un GET es volver a pedir la misma dirección. Reintentar un
-                   POST no: el navegador tendría que volver a enviar el formulario, y la
-                   dirección del endpoint pedida por GET contesta «acción no permitida».
-                   Así que en ese caso el botón lleva al listado. */
-          $sb_volver = (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET')
-              ? (string)($_SERVER['REQUEST_URI'] ?? '/inventario/index.php')
-              : '/inventario/index.php'; ?>
-          <a class="ih-btn ih-btn--primary ih-btn--block" href="<?= htmlspecialchars($sb_volver) ?>">
-            <i class="bi bi-arrow-clockwise"></i> Volver a intentar
-          </a>
-        </div>
-        <div class="ih-auth__footer">© <?= date('Y') ?> INTELLIHELP S.A. · Asset Vault</div>
-      </div>
-    </div>
-    <?php
-    require __DIR__ . '/layout/foot.php';
-    exit;
+    if (!headers_sent()) { header('Retry-After: 15'); }
+    require_once __DIR__ . '/pantalla_aviso.php';
+    pantalla_aviso([
+        'titulo'    => 'Servicio no disponible',
+        'subtitulo' => $subtitulo,
+        'detalle'   => htmlspecialchars($detalle),
+        'tono'      => 'warning',
+        'icono'     => 'exclamation-triangle-fill',
+        'codigo'    => 503,
+        'acciones'  => [
+            /* Reintentar un GET es volver a pedir la misma dirección. Reintentar
+               un POST no: el navegador tendría que volver a enviar el formulario,
+               y la dirección del endpoint pedida por GET contesta «acción no
+               permitida». Así que en ese caso el botón lleva al listado. */
+            ['texto' => 'Volver a intentar', 'icono' => 'arrow-clockwise',
+             'href'  => (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET')
+                        ? (string)($_SERVER['REQUEST_URI'] ?? '/inventario/index.php')
+                        : '/inventario/index.php'],
+        ],
+    ]);
 }
 }

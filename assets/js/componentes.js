@@ -1042,9 +1042,69 @@
     });
   }
 
+  /**
+   * Un formulario se manda UNA vez.
+   *
+   * Los tokens CSRF de las acciones que no se pueden deshacer son de un solo
+   * uso: al validarlos el servidor los rota. Entonces un doble clic manda dos
+   * veces, la primera funciona y la segunda llega con un token que ya no
+   * existe — y la persona, que hizo lo que hace todo el mundo con un botón, ve
+   * una pantalla de error por algo que en realidad SÍ se hizo. Pasaba también
+   * con el Enter en un campo mientras el navegador ya estaba enviando.
+   *
+   * Se escucha en captura y en el documento, así que vale para los formularios
+   * que se agreguen después sin tener que volver a recorrer nada.
+   *
+   * No bloquea un envío que el propio código canceló (`preventDefault`), que es
+   * lo que hacen las confirmaciones: ahí el formulario se manda más tarde, y
+   * dejarlo deshabilitado sería romperlo.
+   */
+  function unSoloEnvio() {
+    if (document.__ihUnEnvio) { return; }
+    document.__ihUnEnvio = true;
+
+    document.addEventListener('submit', function (ev) {
+      var form = ev.target;
+      if (!form || form.tagName !== 'FORM') { return; }
+      if (form.hasAttribute('data-ih-multienvio')) { return; }
+
+      // Al final del turno: si algo lo cancelo, no se toca nada.
+      setTimeout(function () {
+        if (ev.defaultPrevented) { return; }
+        var botones = form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type])');
+        for (var i = 0; i < botones.length; i++) {
+          var b = botones[i];
+          if (b.disabled) { continue; }
+          b.disabled = true;
+          b.setAttribute('aria-busy', 'true');
+          /* El texto cambia porque un botón apagado sin explicación parece que
+             no anduvo, y la persona vuelve a apretar. */
+          if (b.tagName === 'BUTTON' && !b.hasAttribute('data-ih-texto-previo')) {
+            b.setAttribute('data-ih-texto-previo', b.innerHTML);
+            b.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando…';
+          }
+        }
+      }, 0);
+    }, true);
+
+    /* Si se vuelve con la flecha del navegador, la página sale del caché tal
+       como estaba: con el botón apagado y diciendo «Enviando…» para siempre. */
+    window.addEventListener('pageshow', function (ev) {
+      if (!ev.persisted) { return; }
+      var botones = document.querySelectorAll('[data-ih-texto-previo]');
+      for (var i = 0; i < botones.length; i++) {
+        botones[i].disabled = false;
+        botones[i].removeAttribute('aria-busy');
+        botones[i].innerHTML = botones[i].getAttribute('data-ih-texto-previo');
+        botones[i].removeAttribute('data-ih-texto-previo');
+      }
+    });
+  }
+
   function mejorar(raiz) {
     raiz = raiz || document;
     escucharCierres();
+    unSoloEnvio();
     aCadaUno(raiz.querySelectorAll('select'), mejorarSelect);
     aCadaUno(raiz.querySelectorAll('input[type="date"]'), mejorarFecha);
     aCadaUno(raiz.querySelectorAll('input[type="file"]'), mejorarArchivo);
