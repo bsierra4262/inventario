@@ -802,7 +802,7 @@ Detalle completo, permisos de directorios y configuración de Drive en [INSTALL.
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 467 chequeos — análisis estático del árbol
+php test/run_tests.php            # 477 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

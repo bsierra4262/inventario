@@ -83,6 +83,26 @@ function validate_password(string $p): bool {
     return strlen($p) >= 8 && preg_match('/[A-Za-z]/', $p) && preg_match('/[0-9]/', $p);
 }
 
+/**
+ * ¿Queda alguien de alta que pueda administrar usuarios, sin contar a `$excluido`?
+ *
+ * La misma idea que el anti-lockout del rol, pero para la baja: dar de baja al
+ * único admin deja la empresa sin forma de volver a dar de alta a nadie —y la
+ * pantalla de usuarios es justamente la que ya no se podría abrir—.
+ */
+function queda_otro_admin(mysqli $conn, string $tabla, int $excluido): bool {
+    $st = $conn->prepare("SELECT role FROM `{$tabla}` WHERE active = 1 AND id <> ?");
+    $st->bind_param('i', $excluido);
+    $st->execute();
+    $res = $st->get_result();
+    $hay = false;
+    while ($r = $res->fetch_assoc()) {
+        if (role_can('user.edit', (string)$r['role'])) { $hay = true; break; }
+    }
+    $st->close();
+    return $hay;
+}
+
 switch ($action) {
 
     // =========================================================
@@ -155,7 +175,11 @@ switch ($action) {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
         $emailVal = $email !== '' ? $email : null;
 
-        $ins = $conn->prepare("INSERT INTO `{$usersTable}` (username, password, email, role) VALUES (?, ?, ?, ?)");
+        /* `active = 1` explícito y no por el DEFAULT de la columna: así la fila
+           queda bien aunque la base venga de una instalación vieja donde la
+           columna se agregó después (migración 11). */
+        $ins = $conn->prepare("INSERT INTO `{$usersTable}` (username, password, email, role, active)
+                               VALUES (?, ?, ?, ?, 1)");
         $ins->bind_param('ssss', $username, $hashed, $emailVal, $role);
 
         if ($ins->execute()) {
@@ -191,7 +215,7 @@ switch ($action) {
         }
 
         // Verificar que el target existe
-        $chk = $conn->prepare("SELECT id, username FROM `{$usersTable}` WHERE id = ?");
+        $chk = $conn->prepare("SELECT id, username, active FROM `{$usersTable}` WHERE id = ?");
         $chk->bind_param('i', $target_id);
         $chk->execute();
         $target = $chk->get_result()->fetch_assoc();
@@ -222,18 +246,33 @@ switch ($action) {
 
         $emailVal = $email !== '' ? $email : null;
 
+        /* El estado viene del switch del modal. Un `checkbox` sin marcar no
+           manda nada, así que la ausencia es «de baja» —y por eso el modal tiene
+           que incluir siempre el switch, aunque esté marcado—. */
+        $activo = isset($_POST['active']) ? 1 : 0;
+
+        if ($target_id === $user_id && $activo === 0) {
+            redirect_users('No podés darte de baja a vos mismo: te quedarías afuera en el próximo minuto.', 'error');
+        }
+        if ($activo === 0 && (int)($target['active'] ?? 1) === 1
+            && !queda_otro_admin($conn, $usersTable, $target_id)
+        ) {
+            redirect_users("Si das de baja a «{$target['username']}» no queda nadie de alta que pueda "
+                . 'administrar usuarios, y nadie podría volver a dar de alta a nadie.', 'error');
+        }
+
         if ($password !== '') {
             // Con cambio de contraseña
             if (!validate_password($password)) {
                 redirect_users('La contraseña debe tener al menos 8 caracteres con letras y números.', 'error');
             }
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $upd = $conn->prepare("UPDATE `{$usersTable}` SET email = ?, role = ?, password = ? WHERE id = ?");
-            $upd->bind_param('sssi', $emailVal, $role, $hashed, $target_id);
+            $upd = $conn->prepare("UPDATE `{$usersTable}` SET email = ?, role = ?, active = ?, password = ? WHERE id = ?");
+            $upd->bind_param('ssisi', $emailVal, $role, $activo, $hashed, $target_id);
         } else {
             // Sin cambio de contraseña
-            $upd = $conn->prepare("UPDATE `{$usersTable}` SET email = ?, role = ? WHERE id = ?");
-            $upd->bind_param('ssi', $emailVal, $role, $target_id);
+            $upd = $conn->prepare("UPDATE `{$usersTable}` SET email = ?, role = ?, active = ? WHERE id = ?");
+            $upd->bind_param('ssii', $emailVal, $role, $activo, $target_id);
         }
 
         if ($upd->execute()) {
@@ -262,6 +301,51 @@ switch ($action) {
             log_event((string)$user_id, 'EDITAR_USUARIO_ERROR', "Fallo UPDATE usuario {$target_id}: " . $upd->error, 'usuarios');
             redirect_users('Error al actualizar el usuario: ' . $upd->error, 'error');
         }
+
+    // =========================================================
+    case 'toggle_active':
+    // =========================================================
+
+        /* Dar de baja y reactivar con un botón, igual que en Catálogos. Eliminar
+           no sirve para esto: se pierde el rol que tenía y, si la persona vuelve,
+           hay que acordarse de todo de nuevo. */
+        $target_id = (int)($_POST['target_id'] ?? 0);
+
+        if ($target_id <= 0) {
+            redirect_users('ID de usuario inválido.', 'error');
+        }
+        if ($target_id === $user_id) {
+            redirect_users('No podés darte de baja a vos mismo: te quedarías afuera en el próximo minuto.', 'error');
+        }
+
+        $chk = $conn->prepare("SELECT username, active FROM `{$usersTable}` WHERE id = ?");
+        $chk->bind_param('i', $target_id);
+        $chk->execute();
+        $target = $chk->get_result()->fetch_assoc();
+        $chk->close();
+
+        if (!$target) {
+            redirect_users('Usuario no encontrado.', 'error');
+        }
+
+        $nuevo = (int)($target['active'] ?? 1) === 1 ? 0 : 1;
+
+        if ($nuevo === 0 && !queda_otro_admin($conn, $usersTable, $target_id)) {
+            redirect_users("Si das de baja a «{$target['username']}» no queda nadie de alta que pueda "
+                . 'administrar usuarios, y nadie podría volver a dar de alta a nadie.', 'error');
+        }
+
+        $upd = $conn->prepare("UPDATE `{$usersTable}` SET active = ? WHERE id = ?");
+        $upd->bind_param('ii', $nuevo, $target_id);
+
+        if ($upd->execute()) {
+            log_event((string)$user_id, $nuevo === 1 ? 'REACTIVAR_USUARIO' : 'BAJA_USUARIO',
+                "Usuario '{$target['username']}' " . ($nuevo === 1 ? 'reactivado' : 'dado de baja'), 'usuarios');
+            redirect_users($nuevo === 1
+                ? "«{$target['username']}» vuelve a poder entrar."
+                : "«{$target['username']}» quedó de baja y no va a poder entrar.");
+        }
+        redirect_users('No se pudo cambiar el estado del usuario.', 'error');
 
     // =========================================================
     case 'delete':

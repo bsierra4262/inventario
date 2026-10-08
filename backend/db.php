@@ -170,3 +170,58 @@ if (!in_array($current_file, ['login.php', 'select_empresa.php'], true)) {
         pantalla_sin_base();
     }
 }
+
+// ============================================================
+// Guard: la cuenta sigue estando de alta
+//
+// Los dos logins ya respetan `users.active`, pero eso sólo cierra la puerta de
+// entrada: a alguien que ya está adentro darle de baja no lo saca, y su sesión
+// dura ocho horas. O sea que la baja tardaría una jornada entera en hacerse
+// efectiva, que es justo lo contrario de para qué se da de baja a alguien.
+//
+// No se consulta en cada request: la respuesta se guarda en la sesión por un
+// minuto, como ya se hace con la fila de la empresa (core/db/empresa_cache.php).
+// Un minuto de demora es aceptable para una baja; una consulta extra en cada
+// carga de cada pantalla, no.
+// ============================================================
+if (!in_array($current_file, ['login.php', 'select_empresa.php', 'logout.php'], true)
+    && !empty($_SESSION['user_id'])
+) {
+    $_ahora  = time();
+    $_cache  = $_SESSION['_activo'] ?? null;
+    $_vigente = is_array($_cache)
+        && (int)($_cache['id'] ?? 0) === (int)$_SESSION['user_id']
+        && ($_ahora - (int)($_cache['ts'] ?? 0)) < 60;
+
+    if (!$_vigente) {
+        $_sigue = true;   // Ante la duda no se echa a nadie: un error de base
+                          // no es una baja. Ya hay pantalla para eso más arriba.
+        try {
+            $_st = $conn->prepare("SELECT active FROM " . tn('users') . " WHERE id = ?");
+            $_st->bind_param('i', $_SESSION['user_id']);
+            $_st->execute();
+            $_row = $_st->get_result()->fetch_assoc();
+            $_st->close();
+            // Sin fila: el usuario fue eliminado mientras tenía la sesión abierta.
+            $_sigue = $_row !== null && (int)($_row['active'] ?? 1) === 1;
+        } catch (Throwable $e) {
+            log_event('db.php', 'WARN', 'No se pudo verificar si la cuenta sigue activa: '
+                . $e->getMessage(), 'seguridad');
+        }
+
+        if (!$_sigue) {
+            log_event('db.php', 'SESION_CERRADA',
+                "user_id={$_SESSION['user_id']} dado de baja o eliminado: sesión cerrada", 'seguridad');
+            $_cid = (int)($_SESSION['company_id'] ?? 0);
+            $_SESSION = [];
+            if (session_status() === PHP_SESSION_ACTIVE) { session_destroy(); }
+            require_once ROOT_PATH . '/core/tenants/tenant_url_helper.php';
+            header('Location: ' . tenant_login_url($_cid, [
+                'err' => 'Tu cuenta ya no está habilitada en esta empresa.',
+            ]));
+            exit();
+        }
+
+        $_SESSION['_activo'] = ['id' => (int)$_SESSION['user_id'], 'ts' => $_ahora];
+    }
+}

@@ -218,12 +218,20 @@ if ($isTenantFlow) {
         }
 
         // ── Buscar usuario en la DB del tenant ───────────────────────
-        $stmt = $tconn->prepare("SELECT id, role FROM `$usersTable` WHERE email = ? LIMIT 1");
+        $stmt = $tconn->prepare("SELECT id, role, active FROM `$usersTable` WHERE email = ? LIMIT 1");
         $stmt->bind_param('s', $email);
         $stmt->execute();
         $userRow = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         $found = $userRow !== null;
+
+        /* Dado de baja. Acá sí se puede decir que la cuenta existe y está de
+           baja: para llegar a este punto la persona ya se autenticó con Google
+           o Microsoft, así que no está adivinando nada. */
+        if ($found && (int)($userRow['active'] ?? 1) !== 1) {
+            $tenantCbError('Tu cuenta (' . htmlspecialchars($email, ENT_QUOTES) . ') está dada de baja '
+                . 'en esta empresa. Pedile a un administrador que la reactive.');
+        }
 
         if ($found) {
             $_SESSION['user_id'] = (int)$userRow['id'];

@@ -11,6 +11,33 @@ cortes que se veían mal en los dos.
 
 ### Corregido
 
+- **`users.active` no la leía nadie: dar de baja a alguien no lo bloqueaba.**
+  La columna estaba en el DDL desde el primer día. Ni `auth/login.php` ni la
+  rama de empresa del callback la miraban, y ninguna pantalla la escribía. O
+  sea: apagarla **parecía** dar de baja a una persona y no hacía absolutamente
+  nada. La única forma real de sacarle el acceso a alguien era borrarlo —y
+  perder su rol— o quitarle el correo.
+
+  Ahora significa lo que dice:
+
+  - los **dos** logins la respetan. El local la chequea *después* de verificar
+    la contraseña, a propósito: si lo hiciera antes, la diferencia entre
+    «credenciales inválidas» y «cuenta de baja» diría que ese usuario existe sin
+    saber ninguna contraseña;
+  - a quien **ya está adentro** la baja lo saca. Cerrar sólo la puerta de
+    entrada no alcanzaba: la sesión dura ocho horas, así que la baja habría
+    tardado una jornada entera en hacerse efectiva. La respuesta se guarda un
+    minuto en la sesión, como la fila de la empresa, para no agregar una
+    consulta a cada carga de cada pantalla. Un error de base no echa a nadie;
+  - la pantalla de usuarios tiene columna **Estado**, botón **Dar de baja /
+    Reactivar** y un switch en el modal, con el mismo lenguaje que Catálogos;
+  - no se puede dar de baja uno mismo, ni al último usuario de alta que pueda
+    administrar usuarios: la empresa quedaría sin forma de volver a dar de alta
+    a nadie, y la pantalla para arreglarlo es justo la que ya no abriría.
+
+  Migración 11: asegura la columna en todas las empresas, incluidas las que
+  vienen de una base importada.
+
 - **El alta de un usuario pedía lo que no da acceso y no pedía lo que sí.**
   En una empresa que entra sólo con Google o Microsoft —como está configurada
   ITH— la llave es el **correo**: el callback busca `WHERE email = ?` en la

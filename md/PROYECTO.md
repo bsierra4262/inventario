@@ -236,10 +236,29 @@ dos —con su rol— y nadie sabría cuál. La tabla ya lo impide con un `UNIQUE
 el chequeo en PHP está igual: una base de empresa en modo `external` puede venir de una
 instalación vieja sin ese índice, y el mensaje de error es legible.
 
-**Ojo con `users.active`.** La columna existe en el DDL pero **hoy no la lee nadie**: ni
-`auth/login.php` ni la rama de empresa del callback la miran, y ninguna pantalla la escribe.
-Darle de baja a alguien se hace borrándolo o quitándole el correo, no apagando esa bandera —
-apagarla no bloquea nada.
+### Dar de baja
+
+Borrar a alguien no es la forma de sacarle el acceso: se pierde su rol y, si vuelve, hay que
+acordarse de todo. Para eso está `users.active`, y desde la migración 11 **significa algo** —
+antes estaba en el DDL y no la leía nadie, así que apagarla no bloqueaba nada—.
+
+Tres lugares la respetan, y hacen falta los tres:
+
+| Dónde | Qué hace |
+|---|---|
+| `auth/login.php` | rechaza el login local. El chequeo va **después** del `password_verify`: antes, la diferencia entre «credenciales inválidas» y «cuenta de baja» delataría qué usuarios existen |
+| `auth/superadmin_callback.php` | rechaza el acceso con Google o Microsoft. Acá sí se puede decir que la cuenta está de baja: para llegar ahí la persona ya se autenticó |
+| `backend/db.php` | cierra la sesión de quien **ya estaba adentro**. Sin esto la baja tardaría las ocho horas de la sesión en hacerse efectiva. La respuesta se cachea un minuto en `$_SESSION['_activo']`, para no agregar una consulta por request; un error de base no echa a nadie |
+
+Dos cosas que no se pueden hacer, por la misma razón que el anti-lockout del rol: darse de
+baja uno mismo, y dar de baja al último usuario de alta que pueda administrar usuarios —la
+empresa se quedaría sin forma de volver a dar de alta a nadie, y la pantalla para arreglarlo
+es justamente la que ya no se podría abrir—.
+
+Detalle del switch del modal: un `checkbox` sin marcar **no viaja en el POST**, así que el
+backend lee la ausencia del campo como «de baja». Por eso el modal tiene que incluir siempre
+el switch, aunque esté marcado: si el campo no estuviera, cada edición daría de baja a la
+persona sin que nadie lo haya pedido.
 
 Primero se da de alta, después la persona entra. No hay auto-registro: alguien con un correo
 de la empresa que no esté en la tabla llega hasta Google, Google dice que sí, y el sistema
@@ -879,7 +898,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 467 chequeos — análisis estático del árbol
+php test/run_tests.php            # 477 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

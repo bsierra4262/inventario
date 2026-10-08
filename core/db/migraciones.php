@@ -791,6 +791,19 @@ function migraciones_tenant(): array {
                          WHERE edicion IS NOT NULL AND TRIM(edicion) <> ''");
         },
 
+        11 => function (mysqli $c, string $p): void {
+            // `users.active` existía en el DDL desde el principio y no la leía
+            // nadie: ni el login local ni el callback de Google la miraban, y
+            // ninguna pantalla la escribía. Era una trampa —apagarla parecía dar
+            // de baja a alguien y no bloqueaba nada—, así que ahora los dos
+            // logins la respetan. Acá se asegura que la columna esté en todas
+            // las empresas, incluidas las que vienen de una base importada.
+            @$c->query("ALTER TABLE `{$p}users` ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1");
+            // Nadie la escribía, así que un NULL de una base vieja no significa
+            // «de baja»: significa «nunca se tocó». Entra como activo.
+            @$c->query("UPDATE `{$p}users` SET active = 1 WHERE active IS NULL");
+        },
+
     ];
 }
 }

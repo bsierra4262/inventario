@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 
         $user = null;
         try {
-            $stmt = $conn->prepare("SELECT id, password, role, email FROM " . tn('users') . " WHERE username = ?");
+            $stmt = $conn->prepare("SELECT id, password, role, email, active FROM " . tn('users') . " WHERE username = ?");
             $stmt->bind_param('s', $username);
             $stmt->execute();
             $user = $stmt->get_result()->fetch_assoc();
@@ -236,7 +236,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             log_event('login.php', 'ERROR', 'DB login local: ' . $e->getMessage(), 'auth');
         }
 
-        if ($user && password_verify($password, $user['password'])) {
+        /* La baja de alguien. `active` estaba en la tabla desde el principio y
+           no la leía nadie: apagarla parecía dar de baja a una persona y no
+           bloqueaba nada. Se chequea DESPUÉS de verificar la contraseña a
+           propósito: si se chequeara antes, el mensaje distinto entre «no
+           existe» y «está de baja» serviría para averiguar qué usuarios
+           existen sin saber ninguna contraseña. */
+        if ($user && (int)($user['active'] ?? 1) !== 1 && password_verify($password, $user['password'])) {
+            $error_msg = 'Tu cuenta está dada de baja. Pedile a un administrador de la empresa que la reactive.';
+            log_event($user['email'] ?? "id:{$user['id']}", 'LOGIN BLOQUEADO',
+                'Cuenta de baja (active=0). IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'CLI'), 'auth');
+
+        } elseif ($user && password_verify($password, $user['password'])) {
             // Rotar el ID de sesión al autenticar (anti fijación de sesión).
             // app_session_rotar() conserva company_id, descarta el resto y cierra
             // la sesión antes del redirect, que era el problema real que en su

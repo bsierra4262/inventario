@@ -1961,6 +1961,60 @@ chequear('La lista avisa quien no puede entrar',
 chequear('Y la pantalla explica como entra una persona',
     str_contains($upl, 'C&oacute;mo entra una persona'));
 
+// ───────────────────────────────────────────────────────────────────────────
+// La BAJA. `users.active` estaba en el DDL desde el primer dia y no la leia
+// NADIE: ni el login local ni el callback de Google la miraban, y ninguna
+// pantalla la escribia. Era una trampa silenciosa —apagarla parecia dar de
+// baja a alguien y no bloqueaba nada—, y el unico modo de sacarle el acceso a
+// una persona era borrarla o quitarle el correo.
+$lg = leer('auth/login.php');
+$db = leer('backend/db.php');
+
+chequear('El login local respeta la baja',
+    str_contains($lg, "role, email, active FROM")
+    && str_contains($lg, 'Tu cuenta está dada de baja'));
+
+/* Si se chequeara la baja ANTES de verificar la contraseña, la diferencia
+   entre «credenciales invalidas» y «cuenta de baja» diria que ese usuario
+   existe sin saber ninguna contraseña. */
+chequear('Y lo hace despues de verificar la contraseña, no antes',
+    (int)strpos($lg, "!== 1 && password_verify") > 0);
+
+chequear('El acceso con Google tambien respeta la baja',
+    str_contains($cb, 'SELECT id, role, active FROM')
+    && str_contains($cb, 'está dada de baja'));
+
+/* Cerrar la puerta de entrada no alcanza: la sesion dura ocho horas, asi que
+   sin esto la baja tardaria una jornada entera en hacerse efectiva. */
+chequear('A quien ya esta adentro la baja lo saca, sin consultar en cada request',
+    str_contains($db, 'SELECT active FROM')
+    && str_contains($db, "\$_SESSION['_activo']")
+    && str_contains($db, 'Tu cuenta ya no está habilitada'));
+chequear('Y un error de base no echa a nadie',
+    str_contains($db, '$_sigue = true;'));
+
+chequear('Se puede dar de baja y reactivar desde la pantalla',
+    str_contains($uc, "case 'toggle_active':")
+    && str_contains($upl, 'Dar de baja') && str_contains($upl, 'Reactivar'));
+
+/* El mismo anti-lockout que el rol: dar de baja al unico admin deja la empresa
+   sin forma de volver a dar de alta a nadie. */
+chequear('Pero no al punto de quedarse sin ningun admin',
+    substr_count($uc, 'queda_otro_admin($conn, $usersTable, $target_id)') === 2,
+    'tiene que estar en editar Y en el boton de baja');
+chequear('Ni de darse de baja uno mismo',
+    substr_count($uc, 'No podés darte de baja a vos mismo') === 2);
+
+/* Un checkbox sin marcar no viaja en el POST: si el modal no trajera SIEMPRE
+   el switch, cada edicion daria de baja a la persona sin que nadie lo pida. */
+chequear('El switch del modal va siempre, aunque este marcado',
+    str_contains($upl, 'id="editActive"')
+    && str_contains($uc, "isset(\$_POST['active'])"));
+
+chequear('La columna existe en todas las empresas (migracion 11)',
+    str_contains(leer('core/db/migraciones.php'),
+        "ADD COLUMN IF NOT EXISTS `active` TINYINT(1) NOT NULL DEFAULT 1"));
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────
 grupo('CUANDO ALGO FALLA · la pantalla sigue siendo la aplicación');

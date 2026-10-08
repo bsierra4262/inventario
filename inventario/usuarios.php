@@ -43,9 +43,11 @@ require_permission('user.view', $currentUser);
 // una sola vez con `php bin/migrar.php`.
 
 $allUsers = [];
-$res = $conn->query("SELECT id, username, email, role, created_at FROM `{$usersTable}` ORDER BY id ASC");
+$deBaja   = 0;
+$res = $conn->query("SELECT id, username, email, role, active, created_at FROM `{$usersTable}` ORDER BY id ASC");
 while ($row = $res->fetch_assoc()) {
     $allUsers[] = $row;
+    if ((int)($row['active'] ?? 1) !== 1) { $deBaja++; }
 }
 
 $csrf = generateCsrfToken('users_crud');
@@ -60,7 +62,8 @@ $tenant_name = empresa_nombre();
 $page_title      = 'Usuarios';
 $page_section    = 'usuarios';
 $topbar_title    = 'Usuarios';
-$topbar_subtitle = count($allUsers) . ' en la empresa';
+$topbar_subtitle = (count($allUsers) - $deBaja) . ' de alta'
+    . ($deBaja > 0 ? " · {$deBaja} de baja" : '');
 $topbar_user     = $currentUser['username'] ?? '';
 $topbar_email    = $currentUser['email']    ?? '';
 $topbar_actions  = hub_volver('configuracion');
@@ -113,6 +116,8 @@ require __DIR__ . '/../includes/layout/head.php';
             &laquo;Continuar con Google&raquo;. Para lo segundo, el correo tiene que ser
             <strong>exactamente</strong> el de la cuenta con la que inicia sesi&oacute;n.
           <?php endif; ?>
+          Para sacarle el acceso a alguien no hace falta borrarlo: se le da de baja
+          y deja de poder entrar, conservando su rol para cuando vuelva.
         </div>
       </div>
       <form method="POST" action="/backend/users_crud.php" autocomplete="off">
@@ -179,7 +184,7 @@ require __DIR__ . '/../includes/layout/head.php';
     <div class="ih-card__header">
       <div>
         <h2 class="ih-card__title"><i class="bi bi-person-lines-fill"></i> Usuarios registrados</h2>
-        <div class="ih-card__subtitle"><?= count($allUsers) ?> usuarios</div>
+        <div class="ih-card__subtitle"><?= $topbar_subtitle ?></div>
       </div>
     </div>
 
@@ -198,12 +203,14 @@ require __DIR__ . '/../includes/layout/head.php';
               <th>Usuario</th>
               <th>Correo con el que entra</th>
               <th>Rol</th>
+              <th>Estado</th>
               <th>Creado</th>
               <th class="ih-text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <?php foreach ($allUsers as $u): ?>
+              <?php $activo = (int)($u['active'] ?? 1) === 1; ?>
               <tr>
                 <td><strong>#<?= (int)$u['id'] ?></strong></td>
                 <td>
@@ -238,6 +245,15 @@ require __DIR__ . '/../includes/layout/head.php';
                   ?>
                   <span class="ih-badge <?= $roleClass ?>"><?= htmlspecialchars(role_label($u['role'])) ?></span>
                 </td>
+                <?php /* La baja es lo que reemplaza al «eliminar» cuando alguien
+                         se va: el rol queda guardado y el historial no se rompe.
+                         La columna `active` existía desde el principio pero no la
+                         leía nadie, así que apagarla no bloqueaba nada. */ ?>
+                <td>
+                  <span class="ih-badge <?= $activo ? 'ih-badge--success' : 'ih-badge--neutral' ?>">
+                    <?= $activo ? 'Activo' : 'De baja' ?>
+                  </span>
+                </td>
                 <?php /* Un «2026-05-25 22:42:46» pelado hace leer catorce cifras para
                          contestar «¿es de ahora?». Fecha arriba, hora abajo. */ ?>
                 <td class="ih-table__nowrap">
@@ -249,17 +265,34 @@ require __DIR__ . '/../includes/layout/head.php';
                     </div>
                   <?php else: ?><span class="ih-text-muted">—</span><?php endif; ?>
                 </td>
-                <td class="ih-text-center">
-                  <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
-                          onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['email'] ?? '', ENT_QUOTES) ?>', '<?= $u['role'] ?>')">
-                    <i class="bi bi-pencil"></i> Editar
-                  </button>
-                  <?php if ((int)$u['id'] !== $user_id): ?>
-                    <button class="ih-btn ih-btn--danger ih-btn--sm" type="button"
-                            onclick="confirmarEliminar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>')">
-                      <i class="bi bi-trash"></i>
+                <td class="ih-table__acciones">
+                  <div class="ih-acciones">
+                    <button class="ih-btn ih-btn--outline ih-btn--sm" type="button"
+                            onclick="abrirEditar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['email'] ?? '', ENT_QUOTES) ?>', '<?= $u['role'] ?>', <?= $activo ? 'true' : 'false' ?>)">
+                      <i class="bi bi-pencil"></i> Editar
                     </button>
-                  <?php endif; ?>
+                    <?php /* Darse de baja a uno mismo deja afuera a quien aprieta
+                             el botón en el próximo minuto, así que no se ofrece. */ ?>
+                    <?php if ((int)$u['id'] !== $user_id): ?>
+                      <form method="POST" action="/backend/users_crud.php">
+                        <?php csrfInput('users_crud'); ?>
+                        <input type="hidden" name="action" value="toggle_active">
+                        <input type="hidden" name="target_id" value="<?= (int)$u['id'] ?>">
+                        <button class="ih-btn ih-btn--ghost ih-btn--sm" type="submit"
+                                title="<?= $activo
+                                    ? 'Deja de poder entrar, pero conserva su rol y su historial'
+                                    : 'Vuelve a poder entrar con el rol que ya tenía' ?>">
+                          <i class="bi bi-<?= $activo ? 'person-dash' : 'person-check' ?>"></i>
+                          <?= $activo ? 'Dar de baja' : 'Reactivar' ?>
+                        </button>
+                      </form>
+                      <button class="ih-btn ih-btn--danger ih-btn--sm" type="button"
+                              title="Lo borra de la lista para siempre"
+                              onclick="confirmarEliminar(<?= (int)$u['id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>')">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    <?php endif; ?>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -288,7 +321,7 @@ require __DIR__ . '/../includes/layout/head.php';
           <input type="hidden" name="target_id" id="editTargetId">
 
           <div class="ih-field">
-            <label class="ih-field__label">Email</label>
+            <label class="ih-field__label">Correo con el que entra</label>
             <input type="email" name="email" id="editEmail" class="ih-input"
                    placeholder="Ej.: jperez@intellihelp.tech" <?= $soloSSO ? 'required' : '' ?>>
             <?php if ($soloSSO): ?>
@@ -313,6 +346,18 @@ require __DIR__ . '/../includes/layout/head.php';
             <div class="ih-field__hint">Mínimo 8 caracteres si la modificás.</div>
           </div>
           <?php endif; ?>
+          <?php /* El switch va SIEMPRE, incluso marcado: un checkbox sin marcar
+                   no viaja en el POST, así que el backend lee la ausencia como
+                   «de baja». Si el campo no estuviera, cada edición daría de baja
+                   a la persona sin que nadie lo haya pedido. */ ?>
+          <div class="ih-field">
+            <label class="ih-field__label">Estado</label>
+            <label class="ih-switch ih-mt-1">
+              <input type="checkbox" name="active" id="editActive" value="1">
+              <span class="ih-switch__slider"></span>
+            </label>
+            <span class="ih-text-sm ih-text-muted ih-ml-2" id="editActiveTexto"></span>
+          </div>
         </div>
         <div class="ih-modal__footer">
           <button type="button" class="ih-btn ih-btn--ghost" data-cerrar>Cancelar</button>
@@ -343,13 +388,24 @@ require __DIR__ . '/../includes/layout/head.php';
 </dialog>
 
 <script>
-function abrirEditar(id, username, email, role) {
+function abrirEditar(id, username, email, role, activo) {
   document.getElementById('editTargetId').value = id;
   document.getElementById('editUsername').textContent = username;
   document.getElementById('editEmail').value = email;
   document.getElementById('editRole').value = role;
+  const sw = document.getElementById('editActive');
+  sw.checked = activo;
+  pintarEstado();
   document.getElementById('modalEditar').showModal();
 }
+// Que el switch diga qué significa, y no sólo de qué lado está.
+function pintarEstado() {
+  const sw = document.getElementById('editActive');
+  document.getElementById('editActiveTexto').textContent = sw.checked
+    ? 'Puede entrar'
+    : 'De baja: no puede entrar';
+}
+document.getElementById('editActive').addEventListener('change', pintarEstado);
 function confirmarEliminar(id, username) {
   document.getElementById('deleteTargetId').value = id;
   document.getElementById('deleteUsername').textContent = username;
