@@ -31,6 +31,11 @@ if (is_file($vendorAutoload)) {
 // ── 1) Resolver empresa ───────────────────────────────────────────────────────
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
+/* Sólo son funciones: los logotipos de Google y Microsoft para los botones.
+   Estaba adentro del `try` que abre la base del tenant, o sea que si la base no
+   contestaba —y no contesta cuando el hosting llega a su tope de conexiones—
+   `marca_svg()` no existía y la PANTALLA DE ACCESO se caía con un fatal. */
+require_once __DIR__ . '/../includes/cloud_icons.php';
 
 $companies = [];
 $masterDbError = '';
@@ -93,7 +98,6 @@ $tenantDbError = '';
 if (!empty($_SESSION['company_id'])) {
     try {
         require_once __DIR__ . '/../backend/db.php';
-require_once __DIR__ . '/../includes/cloud_icons.php';
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
         if (isset($conn) && $conn instanceof mysqli) { @$conn->set_charset('utf8mb4'); }
     } catch (Throwable $e) {

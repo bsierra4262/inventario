@@ -6,6 +6,12 @@ require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
+/* Sólo definiciones. Vivían dentro del `try` que abre la base del tenant, y
+   `all_assignable_roles()` se llama trescientas líneas más abajo, fuera de él:
+   el día que la conexión falló, la pantalla que tenía que decir «no se pudo
+   conectar» se cayó con «Call to undefined function». */
+require_once __DIR__ . '/../core/security/permissions.php';
+require_once __DIR__ . '/../core/security/permissions_db.php';
 
 superadmin_require_login();
 csrf_start();
@@ -49,8 +55,6 @@ try {
     ] as $ddl) { try { $tconn->query($ddl); } catch (Throwable) {} }
 
     // Cargar roles asignables (builtin + custom) para el validador
-    require_once __DIR__ . '/../core/security/permissions.php';
-    require_once __DIR__ . '/../core/security/permissions_db.php';
     global $conn; $prevConn = $conn ?? null; $conn = $tconn;
     $rolesValidos = array_keys(all_assignable_roles($tconn));
     $conn = $prevConn;
@@ -365,6 +369,14 @@ require __DIR__ . '/../includes/layout/head.php';
          sistema de diseño—, así que su reset le ganaba a todo y esta pantalla
          no se parecía al resto del panel. Ver assets/css/componentes.css. */ ?>
 
+<?php /* Bajo la misma guarda que la tabla y el formulario. Sin base no hay a
+         quién editar —y, sobre todo, el `require_once` de permissions_db.php
+         vive dentro del `try` que abre la conexión: si esa conexión falla, el
+         `catch` salta antes de cargarlo y `all_assignable_roles()`, que se
+         llama acá abajo, no existe. La pantalla que tenía que decir «no se pudo
+         conectar» terminaba en un fatal, y el panel en un 500. */ ?>
+<?php if ($canManage && $tconn): ?>
+
 <dialog class="ih-modal" id="modalEditar">
   <div class="ih-modal__header">
     <h2 class="ih-modal__title"><i class="bi bi-pencil-square" aria-hidden="true"></i> Editar usuario</h2>
@@ -445,4 +457,6 @@ document.addEventListener('click', function (e) {
   if (e.target.tagName === 'DIALOG') { e.target.close(); }
 });
 </script>
+
+<?php endif; ?>
 <?php require __DIR__ . '/../includes/layout/foot.php'; ?>

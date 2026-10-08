@@ -2545,6 +2545,17 @@ chequear("Las {$reqPantallas} pantallas traen el archivo de cada función que ll
     $reqFalta === [],
     count($reqFalta) . ' sin resolver: ' . implode(' · ', array_slice($reqFalta, 0, 3))
     . ' — correr `php test/requires.php` para ver todas');
+
+/* Y que el require no dependa de que algo ANTES no haya fallado. Uno adentro de
+   un `try { } catch (Throwable) { }` sólo corre si la conexión de arriba
+   anduvo; lo que se llame afuera del try es un fatal el día que no ande. Pasó
+   en `empresa_usuarios.php` —la pantalla que tenía que avisar «no se pudo
+   conectar» se caía con «Call to undefined function»— y, peor, en la PANTALLA
+   DE ACCESO, con los logotipos de Google y Microsoft. */
+$reqCond = requires_condicionales();
+chequear('Y ninguno de esos require depende de que la base haya contestado',
+    $reqCond === [],
+    count($reqCond) . ': ' . implode(' · ', array_slice($reqCond, 0, 3)));
 // ───────────────────────────────────────────────────────────────────────────
 grupo('ORTOGRAFIA');
 //

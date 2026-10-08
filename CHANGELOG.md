@@ -39,6 +39,34 @@ cortes que se veían mal en los dos.
   paréntesis sin cerrar es un atributo que se cortó a la mitad. Y hay cuatro
   chequeos estáticos nuevos para la causa, no sólo para el síntoma.
 
+- **Tres `require_once` dependían de que la base hubiera contestado — y uno
+  estaba en la pantalla de acceso.**
+  Los encontró, uno a uno, la pantalla de error nueva del punto siguiente: en
+  cuanto los fallos dejaron de salir en blanco, el log mostró
+  `Call to undefined function all_assignable_roles()`.
+
+  El patrón: un `require_once` **dentro** de un `try { } catch (Throwable) { }`
+  sólo corre si nada falló antes adentro de ese mismo `try`. Si lo que falla es
+  la conexión a la base —y falla—, el `catch` salta, el archivo nunca se carga,
+  y cualquier llamada a sus funciones que esté **fuera** del `try` es un fatal.
+  Lo que esté adentro está a salvo, porque el mismo `catch` lo agarra; eso es lo
+  que hacía pasar el chequeo.
+
+  Dónde estaba:
+
+  - `auth/login.php` cargaba `cloud_icons.php` —los logotipos de Google y
+    Microsoft, puras funciones— dentro del `try` de la conexión al tenant. Con
+    la base caída, la **pantalla de acceso** se caía con ella;
+  - `dashboard/empresa_usuarios.php` cargaba `permissions.php` y
+    `permissions_db.php` ahí mismo, y llamaba a `all_assignable_roles()`
+    trescientas líneas más abajo. La pantalla que tenía que decir «no se pudo
+    conectar a la base de la empresa» terminaba en un 500.
+
+  Los tres son definiciones de funciones y nada más: cargarlos no puede fallar,
+  así que no hay razón para atarlos al éxito de una conexión. Van arriba, con el
+  resto. Y `test/requires.php` aprendió a ver el patrón: ahora mira **dónde**
+  está el require, no sólo si está.
+
 - **El panel contestaba un 500 con el cuerpo vacío cuando el servidor estaba
   ocupado.**
   O sea: la pantalla de error del navegador. Pasa de verdad —se lo encontró

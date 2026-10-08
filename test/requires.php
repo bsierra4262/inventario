@@ -369,6 +369,123 @@ function req_protegida(string $rel, string $fn): bool
 }
 }
 
+if (!function_exists('req_incluidos_con_posicion')) {
+/**
+ * Lo mismo que `req_incluidos_de()`, pero diciendo en qué token aparece cada uno.
+ *
+ * Hace falta para saber si un `require` está dentro de un `try` o fuera.
+ *
+ * @return array<array{0:string,1:int}> Pares (archivo incluido, índice de token).
+ */
+function req_incluidos_con_posicion(string $rel): array
+{
+    $tk  = req_tokens($rel);
+    $dir = dirname($rel);
+    $out = [];
+    foreach ($tk as $i => $t) {
+        if (is_string($t) || !in_array($t[0], [T_REQUIRE, T_REQUIRE_ONCE, T_INCLUDE, T_INCLUDE_ONCE], true)) {
+            continue;
+        }
+        /* La ruta literal que viene después: `__DIR__ . '/../x.php'`. Se junta
+           lo que haya hasta el `;`. */
+        $ruta = '';
+        for ($j = $i + 1, $n = count($tk); $j < $n && $tk[$j] !== ';'; $j++) {
+            if (!is_string($tk[$j]) && $tk[$j][0] === T_CONSTANT_ENCAPSED_STRING) {
+                $ruta .= trim($tk[$j][1], "'\"");
+            }
+        }
+        if ($ruta === '') { continue; }
+        $out[] = [req_normalizar($dir . '/' . ltrim($ruta, '/')), $i];
+    }
+    return $out;
+}
+}
+
+if (!function_exists('req_llamadas_con_posicion')) {
+/**
+ * Las llamadas a función de un archivo, con su índice de token y su línea.
+ *
+ * A diferencia de `req_llamadas_de()`, acá NO se saltean las que están dentro
+ * de un `try`: justamente lo que se quiere saber es de qué lado caen.
+ *
+ * @return array<array{0:string,1:int,2:int}> (nombre, índice de token, línea).
+ */
+function req_llamadas_con_posicion(string $rel): array
+{
+    $tk  = req_tokens($rel);
+    $out = [];
+    foreach ($tk as $i => $t) {
+        if (is_string($t) || $t[0] !== T_STRING) { continue; }
+        if (req_siguiente($tk, $i) !== '(') { continue; }
+        $ant = req_anterior($tk, $i);
+        if ($ant !== null && !is_string($ant) && in_array($ant[0],
+                [T_FUNCTION, T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NEW, T_NS_SEPARATOR,
+                 T_NULLSAFE_OBJECT_OPERATOR, T_ATTRIBUTE], true)) { continue; }
+        $out[] = [strtolower($t[1]), $i, $t[2]];
+    }
+    return $out;
+}
+}
+
+if (!function_exists('requires_condicionales')) {
+/**
+ * Requires que pueden no llegar a correr, con llamadas que no lo contemplan.
+ *
+ * Un `require_once` dentro de un `try { } catch (Throwable) { }` sólo corre si
+ * nada falló antes dentro de ese mismo `try`. Lo que se llame DENTRO del try
+ * está cubierto —el mismo catch lo agarra—; lo de AFUERA es un fatal el día que
+ * el catch salte.
+ *
+ * @return string[] Un aviso por cada llamada desprotegida.
+ */
+function requires_condicionales(): array
+{
+    $parciales = req_parciales();
+    $avisos    = [];
+
+    foreach (req_archivos() as $rel) {
+        $tries = req_tries_de($rel);
+        if ($tries === []) { continue; }
+
+        foreach (req_incluidos_con_posicion($rel) as [$incluido, $pos]) {
+            // ¿En qué try cae este require?
+            $dentro = null;
+            foreach ($tries as [$desde, $hasta]) {
+                if ($pos > $desde && $pos < $hasta) { $dentro = [$desde, $hasta]; break; }
+            }
+            if ($dentro === null) { continue; }
+            if (!is_file(RAIZ . '/' . $incluido)) { continue; }
+
+            $traeFn = req_funciones_de($incluido);
+            if ($traeFn === []) { continue; }
+
+            foreach (req_llamadas_con_posicion($rel) as [$fn, $iPos, $linea]) {
+                if (!in_array($fn, $traeFn, true)) { continue; }
+                if ($iPos > $dentro[0] && $iPos < $dentro[1]) { continue; }   // dentro del mismo try
+                if (req_protegida($rel, $fn)) { continue; }
+                /* Puede venir por otro lado sin condición: si algún otro
+                   require del archivo lo trae y ese está fuera de todo try, no
+                   hay problema. */
+                $seguro = false;
+                foreach (req_incluidos_con_posicion($rel) as [$otro, $otroPos]) {
+                    if ($otro !== $incluido || $otroPos === $pos) { continue; }
+                    $enTry = false;
+                    foreach ($tries as [$d, $h]) {
+                        if ($otroPos > $d && $otroPos < $h) { $enTry = true; break; }
+                    }
+                    if (!$enTry) { $seguro = true; break; }
+                }
+                if ($seguro) { continue; }
+
+                $avisos[] = "{$rel}:{$linea}  {$fn}() se llama fuera del try, pero "
+                          . basename($incluido) . ' sólo se carga adentro';
+            }
+        }
+    }
+    return array_values(array_unique($avisos));
+}
+}
+
 if (!function_exists('requires_faltantes')) {
 /**
  * Las llamadas que no tienen de dónde salir.
@@ -408,6 +525,7 @@ function requires_faltantes(): array
 // ── Modo suelto: `php test/requires.php` ─────────────────────────────────────
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === realpath(__FILE__)) {
     [$avisos, $pantallas] = requires_faltantes();
+    $avisos = array_merge($avisos, requires_condicionales());
     echo PHP_EOL . "  {$pantallas} pantallas revisadas" . PHP_EOL . PHP_EOL;
     if ($avisos === []) {
         echo "  Ninguna llamada quedó sin su require." . PHP_EOL . PHP_EOL;
