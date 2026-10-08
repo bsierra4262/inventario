@@ -250,6 +250,10 @@ Tres lugares la respetan, y hacen falta los tres:
 | `auth/superadmin_callback.php` | rechaza el acceso con Google o Microsoft. Acá sí se puede decir que la cuenta está de baja: para llegar ahí la persona ya se autenticó |
 | `backend/db.php` | cierra la sesión de quien **ya estaba adentro**. Sin esto la baja tardaría las ocho horas de la sesión en hacerse efectiva. La respuesta se cachea un minuto en `$_SESSION['_activo']`, para no agregar una consulta por request; un error de base no echa a nadie |
 
+El superadmin también puede darla de baja, desde **Usuarios de la empresa** del panel. Esa
+pantalla ya escribía `active` antes de que alguien la leyera: tenía un botón «Desactivar» que
+no bloqueaba absolutamente nada.
+
 Dos cosas que no se pueden hacer, por la misma razón que el anti-lockout del rol: darse de
 baja uno mismo, y dar de baja al último usuario de alta que pueda administrar usuarios —la
 empresa se quedaría sin forma de volver a dar de alta a nadie, y la pantalla para arreglarlo
@@ -898,7 +902,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 477 chequeos — análisis estático del árbol
+php test/run_tests.php            # 486 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

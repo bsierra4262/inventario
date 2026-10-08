@@ -49,12 +49,31 @@ class MasterDB {
            se podía saber si lo que había fallado era la master o la base del
            tenant, que son dos conexiones distintas a dos bases distintas con
            credenciales distintas. Media hora de leer logs para eso. */
-        try {
-            $this->conn = new mysqli(MASTER_DB_HOST, MASTER_DB_USER, MASTER_DB_PASS, MASTER_DB_NAME);
-        } catch (Throwable $e) {
-            platform_log('ERROR DB MASTER (' . $e->getCode() . '): ' . $e->getMessage());
-            throw new RuntimeException('No se puede conectar a la DB master [' . $e->getCode() . ']: '
-                . $e->getMessage(), (int)$e->getCode(), $e);
+        /* Se reintenta, con una espera corta y creciente. El límite de
+           conexiones simultáneas se toca y se suelta en milisegundos: el
+           pedido de al lado está cerrando la suya justo ahora. Reintentar en
+           el mismo instante encuentra el mismo socket ocupado y falla igual,
+           así que la espera es la parte que importa.
+
+           Es la misma idea que ya tenía `backend/db.php` alrededor del
+           arranque del tenant; acá adentro sirve a los DOS portales, que es
+           donde se notó que faltaba: el panel devolvía un 500 con el cuerpo
+           vacío mientras el portal del cliente seguía andando. */
+        $ultimo = null;
+        for ($intento = 1; $intento <= 3; $intento++) {
+            try {
+                $this->conn = new mysqli(MASTER_DB_HOST, MASTER_DB_USER, MASTER_DB_PASS, MASTER_DB_NAME);
+                $ultimo = null;
+                break;
+            } catch (Throwable $e) {
+                $ultimo = $e;
+                if ($intento < 3) { usleep($intento * 30000); }
+            }
+        }
+        if ($ultimo !== null) {
+            platform_log('ERROR DB MASTER (' . $ultimo->getCode() . ') tras 3 intentos: ' . $ultimo->getMessage());
+            throw new RuntimeException('No se puede conectar a la DB master [' . $ultimo->getCode() . ']: '
+                . $ultimo->getMessage(), (int)$ultimo->getCode(), $ultimo);
         }
         $this->conn->set_charset('utf8mb4');
         self::$compartida = $this->conn;

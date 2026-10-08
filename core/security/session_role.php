@@ -58,7 +58,44 @@ function platform_can(string $action): bool {
     return in_array($role, $matrix[$action], true);
 }
 
+/**
+ * Que un fallo inesperado del panel se vea como el panel.
+ *
+ * Una excepción sin atrapar dejaba un **500 con el cuerpo vacío**: la pantalla
+ * de error del navegador, sin decir qué pasó ni cómo volver. Pasa de verdad
+ * —se lo vio con `empresa_usuarios.php`— cuando el servidor toca su límite de
+ * conexiones simultáneas y `mysqli` contesta `Operation not permitted`.
+ *
+ * El portal del cliente ya hacía esto desde `backend/db.php`; el panel no tiene
+ * un arranque equivalente, así que se engancha acá, que es por donde pasan sus
+ * doce pantallas.
+ */
+function panel_pantalla_ante_fallos(): void {
+    set_exception_handler(static function (Throwable $e): void {
+        if (function_exists('platform_log')) {
+            platform_log('PANEL sin atrapar (' . get_class($e) . '): ' . $e->getMessage()
+                . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        }
+        /* Si ni siquiera se puede dibujar la pantalla, al menos un código y no
+           una página en blanco. La ruta va literal —y no armada en una
+           variable— para que `test/requires.php` pueda resolver de dónde sale
+           `pantalla_sin_base()`. */
+        if (!is_file(__DIR__ . '/../../includes/sin_base.php')) {
+            if (!headers_sent()) { http_response_code(500); }
+            return;
+        }
+        require_once __DIR__ . '/../../includes/sin_base.php';
+        pantalla_sin_base(
+            'No se puede abrir el panel en este momento',
+            'La base de la plataforma no respondió. Es algo momentáneo: volvé a '
+            . 'intentar en unos segundos. Si sigue igual, revisá el log de la plataforma.',
+            '/dashboard/dashboard_resumen.php'
+        );
+    });
+}
+
 function superadmin_require_login(): void {
+    panel_pantalla_ante_fallos();
     if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
     if (empty($_SESSION[SESSION_SUPERADMIN_FLAG]) || $_SESSION[SESSION_SUPERADMIN_FLAG] !== true) {
         header('Location: /auth/superadmin_login.php');

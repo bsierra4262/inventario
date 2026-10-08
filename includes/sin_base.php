@@ -36,7 +36,8 @@ if (!function_exists('pantalla_sin_base')) {
  */
 function pantalla_sin_base(
     string $subtitulo = 'No se puede acceder al inventario en este momento',
-    string $detalle   = 'La base de datos no respondió. Es algo momentáneo: volvé a intentar en unos segundos. Si sigue igual, avisale al administrador del sistema.'
+    string $detalle   = 'La base de datos no respondió. Es algo momentáneo: volvé a intentar en unos segundos. Si sigue igual, avisale al administrador del sistema.',
+    string $inicio    = '/inventario/index.php'
 ): never {
     if (!headers_sent()) { header('Retry-After: 15'); }
     require_once __DIR__ . '/pantalla_aviso.php';
@@ -54,8 +55,8 @@ function pantalla_sin_base(
                permitida». Así que en ese caso el botón lleva al listado. */
             ['texto' => 'Volver a intentar', 'icono' => 'arrow-clockwise',
              'href'  => (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET')
-                        ? (string)($_SERVER['REQUEST_URI'] ?? '/inventario/index.php')
-                        : '/inventario/index.php'],
+                        ? (string)($_SERVER['REQUEST_URI'] ?? $inicio)
+                        : $inicio],
         ],
     ]);
 }

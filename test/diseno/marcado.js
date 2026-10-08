@@ -19,6 +19,14 @@
  *     después quedaba FUERA del contenedor de la página, sin sus márgenes, y
  *     con un hueco de setecientos píxeles en el medio.
  *
+ * Y un tercero, que no se ve como un problema de diseño sino que directamente
+ * saltea una confirmación: el detalle de la empresa tenía
+ * `onsubmit="return confirm(<?= json_encode($texto) ?>)"`, y json_encode emite
+ * comillas DOBLES, que cierran el atributo antes de tiempo. Al navegador le
+ * llegaba `onsubmit="return confirm("` —un error de sintaxis, o sea ninguna
+ * confirmación— y el resto del mensaje entraba como atributos sueltos del
+ * `<form>`. El botón «Desactivar usuario» se disparaba sin preguntar nada.
+ *
  * Se mira el HTML **renderizado** y no el `.php` a propósito: en el archivo, un
  * `<div>` puede abrirse dentro de un `if` y cerrarse dentro de otro, y contar
  * etiquetas ahí da falsos positivos sin parar. En lo que sale no hay PHP: o
@@ -42,6 +50,30 @@ const AUTOCIERRAN = new Set(['li', 'dt', 'dd', 'p', 'option', 'thead', 'tbody', 
 
 /* Lo de adentro no es marcado. */
 const OPACAS = new Set(['script', 'style', 'textarea', 'pre']);
+
+/**
+ * ¿El código de un manejador tiene los paréntesis sin cerrar?
+ *
+ * Se saltean las cadenas: un `alert(')')` está perfecto. Y se cuenta sólo de
+ * más: `foo)` cerrando de más también está mal, pero lo que importa acá es el
+ * atributo truncado, que siempre deja paréntesis ABIERTOS.
+ */
+function desbalanceado(codigo) {
+  let prof = 0;
+  let comilla = '';
+  for (let i = 0; i < codigo.length; i++) {
+    const ch = codigo[i];
+    if (comilla) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === comilla) { comilla = ''; }
+      continue;
+    }
+    if (ch === '"' || ch === "'") { comilla = ch; continue; }
+    if (ch === '(') { prof++; }
+    else if (ch === ')') { prof--; }
+  }
+  return prof !== 0 || comilla !== '';
+}
 
 function revisar(html) {
   const fallas = [];
@@ -83,21 +115,45 @@ function revisar(html) {
         k += nom[0].length;
         const nombre = nom[1].toLowerCase();
         const igual = /^\s*=\s*/.exec(attrs.slice(k));
+        /* El valor SIN las comillas que lo delimitan: con ellas, un atributo
+           truncado como `onsubmit="return confirm("` se lee como una cadena
+           entera y bien cerrada, y el desbalanceo no se ve. */
+        let desdeValor = k;
+        let hastaValor = k;
         if (igual) {
           k += igual[0].length;
           const q = attrs[k];
           if (q === '"' || q === "'") {
             const fin = attrs.indexOf(q, k + 1);
+            desdeValor = k + 1;
+            hastaValor = fin === -1 ? attrs.length : fin;
             k = fin === -1 ? attrs.length : fin + 1;
           } else {
             const sinComillas = /^[^\s]*/.exec(attrs.slice(k));
+            desdeValor = k;
             k += sinComillas ? sinComillas[0].length : 0;
+            hastaValor = k;
           }
         }
         if (vistos.has(nombre)) {
           fallas.push(`linea ${linea(m.index)}: <${tag}> repite el atributo ${nombre}`);
         }
         vistos.add(nombre);
+
+        /* Un manejador con los paréntesis sin cerrar es un atributo que se
+           cortó a la mitad: casi siempre, una interpolación que metió una
+           comilla igual a la que delimita el atributo. El navegador no avisa
+           —el handler no compila y el formulario se manda igual—, así que la
+           confirmación que uno cree que puso no existe. */
+        if (nombre.startsWith('on')) {
+          const valor = attrs.slice(desdeValor, hastaValor);
+          if (desbalanceado(valor)) {
+            fallas.push(
+              `linea ${linea(m.index)}: <${tag} ${nombre}> se corta a la mitad ` +
+              `(parentesis sin cerrar): ${valor.trim().slice(0, 60)}`
+            );
+          }
+        }
       }
       pila.push({ tag, i: m.index });
       continue;

@@ -7,6 +7,9 @@ require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/tenants/install_tenant.php';
 require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/csrf.php';
+/* Sólo por TENANT_ROLE_LABELS: los nombres de los roles tienen que ser los
+   mismos que ve el cliente. El archivo no hace nada al cargarse. */
+require_once __DIR__ . '/../core/security/permissions.php';
 
 superadmin_require_login();
 if (!platform_can('company.view')) {
@@ -114,40 +117,12 @@ try {
                     }
                     break;
 
-                case 'reset_user_password':
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    $newPass = (string)($_POST['new_password'] ?? '');
-                    if ($uid > 0 && strlen($newPass) >= 8) {
-                        $hashed = password_hash($newPass, PASSWORD_DEFAULT);
-                        $usrT = $pf . 'users';
-                        $stmtRp = $tconn->prepare("UPDATE `{$usrT}` SET password = ?, must_change_password = 1 WHERE id = ?");
-                        $stmtRp->bind_param('si', $hashed, $uid);
-                        $stmtRp->execute();
-                        $aff = $stmtRp->affected_rows;
-                        $stmtRp->close();
-                        if ($aff > 0) {
-                            $adminFeedback = "Contraseña reseteada para usuario ID {$uid}. Se forzará cambio al próximo login.";
-                        } else {
-                            $adminFeedback = 'No se encontró el usuario.';
-                            $adminFeedbackOk = false;
-                        }
-                    } else {
-                        $adminFeedback = 'Contraseña debe tener al menos 8 caracteres.';
-                        $adminFeedbackOk = false;
-                    }
-                    break;
-
-                case 'toggle_user_active':
-                    $uid = (int)($_POST['user_id'] ?? 0);
-                    if ($uid > 0) {
-                        $usrT = $pf . 'users';
-                        $stmtTU = $tconn->prepare("UPDATE `{$usrT}` SET active = IF(active = 1, 0, 1) WHERE id = ?");
-                        $stmtTU->bind_param('i', $uid);
-                        $stmtTU->execute();
-                        $stmtTU->close();
-                        $adminFeedback = "Estado del usuario ID {$uid} cambiado.";
-                    }
-                    break;
+                /* `reset_user_password` y `toggle_user_active` vivian acá y se
+                   fueron con los botones que los llamaban: las dos acciones son
+                   de `empresa_usuarios.php`, que ya las hace con los modales y
+                   las confirmaciones del sistema. Dejar el `case` sin el botón
+                   habría conservado un camino para cambiarle la contraseña a
+                   alguien, o desactivarlo, sin pasar por ninguna pantalla. */
 
                 case 'sync_provider_from_cloud':
                     // Sincroniza companies.provider desde lo que tenga el tenant en cloud_config.storage_provider
@@ -249,13 +224,21 @@ try {
 }
 
 function roleBadge(string $role): string {
-    return match($role) {
-        'admin'   => '<span class="ih-badge ih-badge--purple">Admin</span>',
-        'manager' => '<span class="ih-badge ih-badge--info">Manager</span>',
-        'user'    => '<span class="ih-badge ih-badge--success">Usuario</span>',
-        'viewer'  => '<span class="ih-badge">Viewer</span>',
-        default   => '<span class="ih-badge">' . htmlspecialchars($role) . '</span>',
+    /* Un rol propio de la empresa —«auditor_externo»— se mostraba con la clave
+       cruda. Se busca su nombre en los que trae la empresa y, si ni eso, se
+       humaniza: guiones bajos a espacios y la primera en mayúscula. Mejor eso
+       que un `snake_case` en pantalla. */
+    global $tenantCustomRoles;
+    $texto = TENANT_ROLE_LABELS[$role]
+        ?? ($tenantCustomRoles[$role] ?? ucfirst(str_replace('_', ' ', $role)));
+    $clase = match($role) {
+        'admin'   => 'ih-badge ih-badge--purple',
+        'manager' => 'ih-badge ih-badge--info',
+        'user'    => 'ih-badge ih-badge--success',
+        'viewer'  => 'ih-badge',
+        default   => 'ih-badge',
     };
+    return '<span class="' . $clase . '">' . htmlspecialchars($texto) . '</span>';
 }
 
 $page_title      = 'Detalle empresa';
@@ -293,7 +276,7 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-stat">
         <div class="ih-stat__label">Usuarios <i class="bi bi-people"></i></div>
         <div class="ih-stat__value"><?= $stats['users_total'] ?></div>
-        <div class="ih-stat__delta"><?= $stats['users_active'] ?> activos</div>
+        <div class="ih-stat__delta"><?= $stats['users_active'] ?> de alta</div>
       </div>
       <div class="ih-stat ih-stat--green">
         <div class="ih-stat__label">Activos <i class="bi bi-pc-display"></i></div>
@@ -553,8 +536,23 @@ require __DIR__ . '/../includes/layout/head.php';
       <div class="ih-card__header">
         <div>
           <h2 class="ih-card__title"><i class="bi bi-people"></i> Usuarios de la empresa</h2>
-          <div class="ih-card__subtitle"><?= count($tenantUsers) ?> usuarios</div>
+          <div class="ih-card__subtitle">
+            <?php
+              $deBaja = 0;
+              foreach ($tenantUsers as $uu) { if ((int)($uu['active'] ?? 1) !== 1) { $deBaja++; } }
+              echo (count($tenantUsers) - $deBaja) . ' de alta' . ($deBaja > 0 ? " · {$deBaja} de baja" : '');
+            ?>
+          </div>
         </div>
+        <?php /* Acá se mira; se toca en «Usuarios», que es la pantalla hecha
+                 para eso. Tener los mismos botones en dos lugares significo
+                 durante un tiempo que acá estaban peor: el de desactivar salia
+                 sin confirmación y el de la contraseña usaba el prompt() del
+                 navegador. */ ?>
+        <a href="/dashboard/empresa_usuarios.php?id=<?= $id ?>"
+           class="ih-btn ih-btn--outline ih-btn--sm">
+          <i class="bi bi-pencil-square"></i> Administrar usuarios
+        </a>
       </div>
       <?php if (empty($tenantUsers)): ?>
         <div class="ih-empty">
@@ -572,7 +570,6 @@ require __DIR__ . '/../includes/layout/head.php';
                 <th>Rol</th>
                 <th>Estado</th>
                 <th>Contraseña</th>
-                <th class="ih-table__acciones">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -595,30 +592,6 @@ require __DIR__ . '/../includes/layout/head.php';
                     <?php else: ?>
                       <span class="ih-badge ih-badge--success"><i class="bi bi-check2"></i> Configurada</span>
                     <?php endif; ?>
-                  </td>
-                  <td class="ih-table__acciones"><div class="ih-acciones">
-                    <!-- Reset password -->
-                    <form method="POST" onsubmit="var p=prompt('Nueva contraseña para <?= htmlspecialchars($u['username']) ?> (min 8 caracteres):'); if(!p||p.length<8){alert('Cancelado o muy corta');return false;} this.new_password.value=p; return confirm('¿Restablecer contraseña de '+<?= json_encode($u['username']) ?>+'? Se forzará cambio al próximo login.');">
-                      <?php csrf_input(); ?>
-                      <input type="hidden" name="admin_action" value="reset_user_password">
-                      <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
-                      <input type="hidden" name="new_password" value="">
-                      <button type="submit" class="ih-btn ih-btn--ghost ih-btn--sm" title="Poner una contraseña nueva">
-                        <i class="bi bi-key"></i>
-                        <span class="ih-sr-only">Poner una contraseña nueva a <?= htmlspecialchars((string)$u['username']) ?></span>
-                      </button>
-                    </form>
-                    <!-- Toggle activo -->
-                    <form method="POST" onsubmit="return confirm(<?= json_encode(($isActive ? 'Desactivar' : 'Activar') . ' al usuario ' . $u['username'] . '?') ?>);">
-                      <?php csrf_input(); ?>
-                      <input type="hidden" name="admin_action" value="toggle_user_active">
-                      <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
-                      <button type="submit" class="ih-btn <?= $isActive ? 'ih-btn--ghost' : 'ih-btn--accent' ?> ih-btn--sm" title="<?= $isActive ? 'Desactivar' : 'Activar' ?>">
-                        <i class="bi <?= $isActive ? 'bi-person-slash' : 'bi-person-check' ?>"></i>
-                        <span class="ih-sr-only"><?= $isActive ? 'Desactivar' : 'Activar' ?> a <?= htmlspecialchars((string)$u['username']) ?></span>
-                      </button>
-                    </form>
-                    </div>
                   </td>
                 </tr>
               <?php endforeach; ?>

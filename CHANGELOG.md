@@ -11,6 +11,61 @@ cortes que se veían mal en los dos.
 
 ### Corregido
 
+- **El botón «Desactivar usuario» del panel se disparaba sin preguntar, y el de
+  «poner contraseña nueva» no podía funcionar nunca.**
+  Los dos estaban en el detalle de la empresa escritos así:
+
+  ```php
+  onsubmit="return confirm(<?= json_encode($texto) ?>);"
+  ```
+
+  `json_encode` emite comillas **dobles** — las mismas que delimitan el
+  atributo—, así que lo cerraba a la mitad. Al navegador le llegaba
+  `onsubmit="return confirm("`, un error de sintaxis, y el resto del mensaje
+  entraba como atributos sueltos del `<form>`. Resultado: el handler no
+  compilaba, la confirmación no aparecía y el formulario se mandaba igual. En el
+  de la contraseña era peor: el handler era justamente el que tenía que llenar
+  el campo, así que el servidor recibía la contraseña vacía y contestaba
+  «debe tener al menos 8 caracteres». Nunca pudo andar.
+
+  Las dos acciones ya existían, bien hechas, en «Usuarios de la empresa»: con
+  sus modales, su validación y las confirmaciones del sistema de diseño. El
+  detalle tenía una segunda copia, peor. Ahora el detalle **muestra** y manda
+  ahí; los dos `case` del backend se fueron con sus botones, porque dejarlos
+  habría conservado una forma de cambiarle la contraseña a alguien, o
+  desactivarlo, sin pasar por ninguna pantalla.
+
+  `test/diseno/marcado.js` aprendió a verlo: un manejador `on*` con los
+  paréntesis sin cerrar es un atributo que se cortó a la mitad. Y hay cuatro
+  chequeos estáticos nuevos para la causa, no sólo para el síntoma.
+
+- **El panel contestaba un 500 con el cuerpo vacío cuando el servidor estaba
+  ocupado.**
+  O sea: la pantalla de error del navegador. Pasa de verdad —se lo encontró
+  pidiendo `empresa_usuarios.php` varias veces seguidas— porque el hosting
+  limita las conexiones simultáneas y `mysqli` contesta `Operation not
+  permitted`, que no se parece a nada.
+
+  El portal del cliente ya convivía con eso desde `backend/db.php`: reintenta y,
+  si igual no entra, muestra «servicio no disponible». El panel no tenía nada
+  equivalente. Ahora:
+
+  - **la conexión a la master reintenta** tres veces con una espera corta y
+    creciente, que es donde está la causa y arregla los dos portales de una;
+  - si igual falla, el panel muestra **la misma tarjeta del sistema**, con 503 y
+    `Retry-After`, en vez de nada.
+
+  Verificado contra el servidor: 503, `Retry-After`, la tarjeta con la
+  tipografía de la marca, sin el volcado de la excepción, y registrado en el log
+  con archivo y línea.
+
+- **Los roles se llamaban distinto en cada portal.**
+  El cliente veía «Administrador», «Gerente», «Solo lectura»; el panel decía
+  «Admin», «Manager», «Viewer» —media traducción—, y a un rol propio de la
+  empresa lo mostraba con la clave cruda: `auditor_externo` en vez de «Auditor
+  externo». Ahora las etiquetas salen de `TENANT_ROLE_LABELS`, que es de donde
+  las saca el portal del cliente, en vez de estar escritas una segunda vez.
+
 - **`users.active` no la leía nadie: dar de baja a alguien no lo bloqueaba.**
   La columna estaba en el DDL desde el primer día. Ni `auth/login.php` ni la
   rama de empresa del callback la miraban, y ninguna pantalla la escribía. O

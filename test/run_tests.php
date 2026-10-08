@@ -1062,8 +1062,12 @@ foreach (['core/db/master_connection.php' => $mc, 'core/db/TenantDB.php' => $tdb
     chequear(basename($arch) . ' agarra la excepción de mysqli al conectar',
         preg_match('/try \{\s*\$\w+(?:->conn)? = new mysqli\(/', $src) === 1
         && !str_contains($src, '@new mysqli'));
+    /* El nombre de la variable da igual —en la master el `catch` guarda el
+       error del ultimo de tres intentos y se llama `$ultimo`—; lo que importa
+       es que el codigo de error llegue al log: con «Operation not permitted» a
+       secas no se sabe si lo que fallo fue la master o la base del tenant. */
     chequear(basename($arch) . ' deja en el log de qué conexión y con qué código',
-        str_contains($src, '$e->getCode()'));
+        str_contains($src, 'getCode()'));
 }
 
 /* Y la mitad que de verdad baja la cuenta: no pedir. La fila de la empresa —a
@@ -2017,6 +2021,71 @@ chequear('La columna existe en todas las empresas (migracion 11)',
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ───────────────────────────────────────────────────────────────────────────
+grupo('MARCADO · la comilla que rompe el atributo');
+//
+// Un `onsubmit="return confirm(` con un json_encode interpolado adentro parece
+// bien escrito y no lo esta: json_encode emite comillas DOBLES, las mismas que
+// delimitan el
+// atributo, asi que lo cierra a la mitad. Al navegador le llega
+// `onsubmit="return confirm("` —un error de sintaxis, o sea NINGUNA
+// confirmacion— y el resto del mensaje entra como atributos sueltos del <form>.
+//
+// Estuvo en el detalle de la empresa y no lo vio nadie: el boton «Desactivar
+// usuario» se disparaba sin preguntar, y el de «poner contraseña nueva» —roto
+// por la misma comilla, que venia de json_encode($u['username'])— no podia
+// funcionar NUNCA, porque el handler que tenia que llenar el campo con la
+// contraseña no compilaba y el servidor recibia el campo vacio.
+$fuentes = [];
+foreach (archivos_php() as $abs) {
+    $r = rel($abs);
+    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR) || str_starts_with($r, 'test/')) { continue; }
+    $fuentes[$r] = sin_comentarios((string)file_get_contents($abs));
+}
+
+$atribRotos = [];
+foreach ($fuentes as $r => $src) {
+    if (preg_match_all('/=\s*"[^"]*<\?=\s*json_encode/i', $src, $mm)) {
+        $atribRotos[] = basename($r) . ' (' . count($mm[0]) . ')';
+    }
+}
+chequear('Ningun atributo con comillas dobles interpola json_encode',
+    $atribRotos === [], implode(', ', $atribRotos));
+
+/* El otro lado del mismo problema: el interceptor de componentes.js sólo
+   reconoce `confirm('texto literal')`. Un mensaje armado con `+` se le escapa y
+   la confirmación sale siendo la gris del navegador. */
+$confirmArmados = [];
+foreach ($fuentes as $r => $src) {
+    /* Pegado: el `+` tiene que venir justo despues de la comilla que cierra.
+       Con un `.*?` y el modificador `s` esto cruzaba lineas y marcaba como
+       concatenado un `confirm('literal')` que mas abajo tenia una suma. */
+    if (preg_match('/confirm\(\s*(?:\'[^\']*\'|"[^"]*")\s*\+/', $src)) {
+        $confirmArmados[] = basename($r);
+    }
+}
+chequear('Ningun confirm() arma el mensaje concatenando',
+    $confirmArmados === [], implode(', ', $confirmArmados));
+
+/* prompt() y alert() son del navegador: gris, sin la tipografia ni los colores
+   del resto, y algunos navegadores directamente los bloquean. */
+$nativos = [];
+foreach ($fuentes as $r => $src) {
+    if (preg_match('/[^a-zA-Z_>](prompt|alert)\(/', $src)) {
+        $nativos[] = basename($r);
+    }
+}
+chequear('Ninguna pantalla usa prompt() ni alert() del navegador',
+    $nativos === [], implode(', ', $nativos));
+
+/* Y las dos acciones sobre un usuario de empresa viven en UNA pantalla. El
+   detalle tenia una segunda copia, peor: sin confirmación y con prompt(). */
+$det = leer('dashboard/empresa_detalle.php');
+chequear('El detalle de la empresa no duplica las acciones sobre usuarios',
+    !str_contains($det, "case 'reset_user_password'")
+    && !str_contains($det, "case 'toggle_user_active'")
+    && str_contains($det, 'empresa_usuarios.php?id='));
+
+// ───────────────────────────────────────────────────────────────────────────
 grupo('CUANDO ALGO FALLA · la pantalla sigue siendo la aplicación');
 //
 // Son las pantallas que casi nadie ve y que, por eso mismo, se escriben con un
@@ -2028,6 +2097,30 @@ grupo('CUANDO ALGO FALLA · la pantalla sigue siendo la aplicación');
 $pa = leer('includes/pantalla_aviso.php');
 chequear('Hay una pantalla de aviso con el diseño del sistema',
     str_contains($pa, 'function pantalla_aviso(') && str_contains($pa, 'ih-auth__card'));
+
+/* El panel devolvia un 500 con el cuerpo VACIO —la pantalla de error del
+   navegador— cuando el servidor tocaba su limite de conexiones simultaneas y
+   mysqli contestaba «Operation not permitted». El portal del cliente ya convivia
+   con eso desde backend/db.php; el panel no tenia nada. */
+$mc = leer('core/db/master_connection.php');
+chequear('La conexión a la master reintenta antes de darse por vencida',
+    str_contains($mc, 'for ($intento = 1; $intento <= 3; $intento++)')
+    && str_contains($mc, 'usleep($intento * 30000)'));
+chequear('Y deja dicho en el log que fue tras tres intentos',
+    str_contains($mc, 'tras 3 intentos'));
+
+$sr = leer('core/security/session_role.php');
+chequear('En el panel, un fallo inesperado es una pantalla y no un 500 en blanco',
+    str_contains($sr, 'set_exception_handler')
+    && str_contains($sr, 'pantalla_sin_base(')
+    && str_contains($sr, 'panel_pantalla_ante_fallos()'));
+chequear('Y queda registrado con archivo y línea',
+    str_contains($sr, "' @ ' . \$e->getFile() . ':' . \$e->getLine()"));
+
+/* Esa pantalla la comparten los dos portales, asi que el boton no puede llevar
+   siempre al inventario: desde el panel no existe. */
+chequear('La pantalla de «servicio no disponible» sabe a dónde volver en cada portal',
+    str_contains(leer('includes/sin_base.php'), 'string $inicio'));
 chequear('Que no define estilos propios', !str_contains($pa, '<style'));
 chequear('Y tira lo que se haya escrito antes, para no salir a medias',
     str_contains($pa, 'ob_end_clean'));
