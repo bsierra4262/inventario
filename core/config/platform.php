@@ -71,7 +71,6 @@ defined('DEFAULT_TENANT_MODE')   || define('DEFAULT_TENANT_MODE',   'prefix');
 defined('TENANT_PREFIX_BASE')    || define('TENANT_PREFIX_BASE',    't');
 
 // === Seguridad ===
-defined('CSRF_TOKEN_NAME')       || define('CSRF_TOKEN_NAME',       '_csrf');
 defined('SESSION_SUPERADMIN_FLAG') || define('SESSION_SUPERADMIN_FLAG', 'is_superadmin');
 
 // === Logo de la plataforma ===

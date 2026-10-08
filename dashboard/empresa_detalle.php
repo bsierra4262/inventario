@@ -63,11 +63,10 @@ try {
 
     // ── Procesar acciones admin del superadmin ──────────────────────────────
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_action'])) {
-        // Chequeo CSRF manual (no usamos csrf_validate porque hace die() en vez de retornar)
-        $csrfOk = isset($_POST[CSRF_TOKEN_NAME])
-                  && hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', (string)$_POST[CSRF_TOKEN_NAME]);
-
-        if (!$csrfOk) {
+        /* Sin cortar la página: acá el aviso va dentro de la pantalla, al lado
+           del resto de la información de la empresa. `csrf_validate()` la
+           reemplazaría entera. */
+        if (!csrf_ok()) {
             $adminFeedback = 'La validación de seguridad falló. Recargá la página.';
             $adminFeedbackOk = false;
         } elseif (!$puedeGestionar) {

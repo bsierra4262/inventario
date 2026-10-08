@@ -206,6 +206,25 @@ se le había atribuido a `session_regenerate_id()`, y por eso la rotación estab
 Una empresa con SSO puede **deshabilitar el login local** (`disable_local_login`), forzando
 que todos los accesos pasen por el proveedor.
 
+### CSRF
+
+Una sola implementación para los dos portales: `backend/csrf.php`. Token por **scope** (una
+acción), con vencimiento de 8 horas —lo mismo que la sesión, para que no venza antes que lo
+que lo sostiene—, huella del cliente y cookie espejo. El campo se llama `csrf_token` en los
+dos portales.
+
+`core/security/csrf.php` es la **fachada del panel**: conserva `csrf_start()`, `csrf_token()`,
+`csrf_input()`, `csrf_validate()` —los llaman doce pantallas— y agrega `csrf_ok()`, que
+devuelve un booleano para las que prefieren mostrar el aviso dentro de la página en vez de
+reemplazarla. Todo con el scope `panel`.
+
+Lo que separa los tokens de los dos portales es el **scope**, no el nombre del campo: el token
+del panel no vale en el inventario ni al revés, y eso está comprobado de punta a punta.
+
+La huella (`csrf_client_fingerprint()`) incluye `user_id` **y** `superadmin_user_id`: las dos
+sesiones comparten la cookie del navegador, así que mirar sólo una hacía que la huella cambiara
+a mitad de camino y los tokens murieran sin motivo.
+
 ### Cómo se da de alta a alguien
 
 **El acceso es una lista, no un dominio.** En el plano de empresa nadie entra por el dominio
@@ -902,7 +921,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 487 chequeos — análisis estático del árbol
+php test/run_tests.php            # 492 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

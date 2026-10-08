@@ -20,10 +20,8 @@ $db = new MasterDB();
 $feedback = ''; $feedbackOk = true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF chequeo manual (csrf_validate hace die)
-    $csrfOk = isset($_POST[CSRF_TOKEN_NAME])
-              && hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', (string)$_POST[CSRF_TOKEN_NAME]);
-    if (!$csrfOk) {
+    // Sin cortar la página: el aviso va arriba de la matriz de permisos.
+    if (!csrf_ok()) {
         $feedback = 'La validación de seguridad falló. Recargá la página.'; $feedbackOk = false;
     } else {
         $action = (string)($_POST['action'] ?? '');
@@ -132,7 +130,10 @@ require __DIR__ . '/../includes/layout/topbar.php';
   <?php foreach (PLATFORM_ROLES as $r): ?>
   <div class="role-panel" data-role-panel="<?= $r ?>" hidden>
     <form method="POST" action="/dashboard/superadmin_roles.php" id="form-role-<?= $r ?>">
-      <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '') ?>">
+      <?php /* Este campo estaba escrito a mano, leyendo la sesión directo. Es
+               justo cómo se llega a que un portal use un nombre y el otro, otro:
+               el helper existe para que el nombre esté en un solo lugar. */ ?>
+      <?php csrf_input(); ?>
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="role" value="<?= $r ?>">
 

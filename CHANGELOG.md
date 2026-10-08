@@ -9,6 +9,49 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 El portal del cliente quedó cerrado; esta tanda es el panel superadmin, más los
 cortes que se veían mal en los dos.
 
+### Cambiado
+
+- **Un solo CSRF para los dos portales.**
+  Había dos implementaciones del mismo mecanismo de seguridad:
+
+  | | `backend/csrf.php` | `core/security/csrf.php` |
+  |---|---|---|
+  | | 477 líneas | 45 líneas |
+  | Token | uno por acción (*scope*) | uno para toda la sesión |
+  | Vencimiento | 8 horas | ninguno |
+  | Huella del cliente | sí | no |
+  | Cookie espejo | sí | no |
+  | Campo | `csrf_token` | `_csrf` |
+
+  Ninguna estaba rota, pero dos implementaciones del mismo mecanismo se separan
+  con el tiempo y la que se arregla es siempre la que alguien está mirando: la
+  del panel se quedó sin vencimiento, sin huella y sin scope, y con otro nombre
+  de campo, así que para armar un formulario había que saber en qué portal
+  estabas parado.
+
+  Queda la del portal del cliente, que es la más fuerte. La del panel pasa a ser
+  una **fachada** de treinta líneas: conserva los cuatro nombres de función
+  —los llaman doce pantallas— apoyados en la implementación de verdad, con el
+  scope `panel`. Tres cosas más que hacían falta para que cerrara:
+
+  - **la huella del cliente ahora conoce las dos identidades.** Miraba sólo
+    `user_id`, que en el panel no existe; como las dos sesiones comparten la
+    cookie del navegador, abrir el panel y después entrar a una empresa hacía
+    aparecer ese campo a mitad de camino, la huella cambiaba y los tokens del
+    panel morían sin motivo;
+  - **la pantalla de 419 vuelve al portal de donde salió.** La comparten los
+    dos, y ofrecía siempre «Ir al inventario» — una dirección que para un
+    superadmin no existe;
+  - **dos pantallas del panel se chequeaban el token a mano**, «porque
+    `csrf_validate` hace `die()`». Ahora hay `csrf_ok()`, que devuelve un
+    booleano, y usan eso. Y un formulario que escribía el campo leyendo
+    `$_SESSION` directo usa el helper: el nombre vive en un solo lugar.
+
+  Verificado contra el servidor, y lo que importaba no era que el nombre
+  coincidiera sino que el mecanismo siguiera protegiendo: sin token no pasa, con
+  un token inventado no pasa, y **el token de un portal no vale en el otro** —los
+  separa el scope, no el nombre del campo—.
+
 ### Corregido
 
 - **El botón «Desactivar usuario» del panel se disparaba sin preguntar, y el de

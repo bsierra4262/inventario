@@ -76,9 +76,15 @@ function csrf_tenant_ns(): string {
  */
 function csrf_client_fingerprint(): string {
     $ua     = $_SERVER['HTTP_USER_AGENT'] ?? 'na';
+    /* Las DOS identidades. El panel no usa `user_id` sino
+       `superadmin_user_id`, y las dos sesiones comparten la misma cookie del
+       navegador: si alguien abría el panel y después entraba a una empresa,
+       `user_id` aparecía a mitad de camino, la huella cambiaba y los tokens
+       del panel dejaban de valer de un pedido al otro —un 419 sin motivo—. */
     $uid    = (string)($_SESSION['user_id'] ?? 'anon');
+    $sauid  = (string)($_SESSION['superadmin_user_id'] ?? 'anon');
     $tenant = csrf_tenant_ns();
-    return hash('sha256', $ua . '|' . $uid . '|' . $tenant);
+    return hash('sha256', $ua . '|' . $uid . '|' . $sauid . '|' . $tenant);
 }
 
 /**
@@ -329,6 +335,31 @@ function verifyCsrfToken(?string $token = null, ?string $scope = null, bool $one
  * Corta la ejecución si el token no es válido.
  * Devuelve 419 en vez de 500 porque es "expiró la sesión / no autorizado para esta acción".
  */
+/**
+ * A dónde lleva el botón de salida de la pantalla de 419.
+ *
+ * La pantalla la comparten los dos portales, así que no puede ofrecer siempre
+ * «Ir al inventario»: desde el panel esa dirección no existe. El adaptador del
+ * panel (`core/security/csrf.php`) la cambia al entrar.
+ */
+function csrf_inicio(?string $url = null): string {
+    static $destino = ['/inventario/index.php', 'Ir al inventario', 'box-seam'];
+    if ($url !== null) {
+        $destino = str_starts_with($url, '/dashboard/')
+            ? [$url, 'Ir al panel', 'speedometer2']
+            : [$url, 'Ir al inventario', 'box-seam'];
+    }
+    return $destino[0];
+}
+
+/** El texto y el ícono que acompañan a `csrf_inicio()`. */
+function csrf_inicio_boton(): array {
+    $url = csrf_inicio();
+    return str_starts_with($url, '/dashboard/')
+        ? ['Ir al panel', 'speedometer2']
+        : ['Ir al inventario', 'box-seam'];
+}
+
 function csrf_or_fail(?string $scope = null, bool $oneTime = false): void {
     if (verifyCsrfToken(null, $scope, $oneTime)) {
         return;
@@ -369,8 +400,8 @@ function csrf_or_fail(?string $scope = null, bool $oneTime = false): void {
         'acciones'  => [
             ['texto' => 'Volver a la pantalla anterior', 'icono' => 'arrow-left',
              'href'  => '#', 'onclick' => 'history.back(); return false;'],
-            ['texto' => 'Ir al inventario', 'icono' => 'box-seam',
-             'href'  => '/inventario/index.php', 'tipo' => 'ghost'],
+            ['texto' => csrf_inicio_boton()[0], 'icono' => csrf_inicio_boton()[1],
+             'href'  => csrf_inicio(), 'tipo' => 'ghost'],
         ],
     ]);
 }

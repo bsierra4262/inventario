@@ -2127,18 +2127,86 @@ chequear('Y tira lo que se haya escrito antes, para no salir a medias',
 
 $csrfT = leer('backend/csrf.php');
 $csrfS = leer('core/security/csrf.php');
+
+chequear('El rechazo del CSRF usa la pantalla del sistema',
+    str_contains($csrfT, 'pantalla_aviso('));
+/* Sin los comentarios: explicar POR QUÉ se sacó un `die('CSRF inválido')`
+   no puede contar como seguir teniéndolo. Es el mismo criterio que usa
+   test/colores.php con los colores que se explican al lado. */
 foreach (['backend/csrf.php' => $csrfT, 'core/security/csrf.php' => $csrfS] as $arch => $src) {
-    chequear(basename(dirname($arch)) . '/' . basename($arch) . ': el rechazo usa la pantalla del sistema',
-        str_contains($src, 'pantalla_aviso('));
-    /* Sin los comentarios: explicar POR QUÉ se sacó un `die('CSRF inválido')`
-       no puede contar como seguir teniéndolo. Es el mismo criterio que usa
-       test/colores.php con los colores que se explican al lado. */
-    chequear(basename(dirname($arch)) . '/' . basename($arch) . ': y ya no imprime HTML suelto',
+    chequear(basename(dirname($arch)) . '/' . basename($arch) . ': no imprime HTML suelto',
         !preg_match("/die\(|echo\s*['\"]<h1>/i", sin_comentarios($src)));
 }
 // El camino de vuelta importa tanto como el mensaje.
 chequear('El aviso ofrece volver a la pantalla anterior',
-    str_contains($csrfT, 'history.back()') && str_contains($csrfS, 'history.back()'));
+    str_contains($csrfT, 'history.back()'));
+
+// ───────────────────────────────────────────────────────────────────────────
+// UNA sola implementacion para los dos portales.
+//
+// Habia dos. `backend/csrf.php`: token por accion, con vencimiento, huella del
+// cliente y cookie espejo. `core/security/csrf.php`: un token para toda la
+// sesion, sin vencimiento, sin huella, sin scope, y con OTRO nombre de campo
+// (`_csrf` contra `csrf_token`). Dos implementaciones del mismo mecanismo de
+// seguridad se separan con el tiempo, y la que se arregla es siempre la que
+// alguien esta mirando.
+chequear('El CSRF del panel es una fachada, no una segunda implementación',
+    str_contains($csrfS, "require_once __DIR__ . '/../../backend/csrf.php'")
+    && str_contains($csrfS, 'csrf_or_fail(CSRF_SCOPE_PANEL)')
+    && !str_contains(sin_comentarios($csrfS), 'random_bytes'),
+    'tiene que delegar, no generar sus propios tokens');
+
+chequear('Y los dos portales mandan el token con el mismo nombre',
+    str_contains($csrfT, 'name="csrf_token"')
+    && !str_contains($csrfS, 'CSRF_TOKEN_NAME'));
+
+/* Escribir `name="csrf_token"` en un formulario es inofensivo —el nombre es uno
+   solo—. Lo que hace daño es sacar el token de `$_SESSION` a mano para armar el
+   campo: saltea el helper, y es justo por ahí por donde se escapó el nombre la
+   primera vez. Lo hacía `superadmin_roles.php`. */
+$aMano = [];
+foreach (archivos_php() as $abs) {
+    $r = rel($abs);
+    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR) || str_starts_with($r, 'test/')) { continue; }
+    if (in_array(basename($r), ['csrf.php'], true)) { continue; }
+    $src = sin_comentarios((string)file_get_contents($abs));
+    if (preg_match('/name=(["\'])(?:_csrf|csrf_token)\1[^>]*\$_SESSION/', $src)) {
+        $aMano[] = basename($r);
+    }
+}
+chequear('Ningún formulario saca el token de la sesión a mano',
+    $aMano === [], implode(', ', $aMano));
+
+/* La huella ata el token al cliente. Miraba `user_id`, que en el panel no
+   existe: con las dos sesiones en el mismo navegador cambiaba a mitad de
+   camino y los tokens del panel morian sin motivo. */
+chequear('La huella del cliente conoce las dos identidades',
+    str_contains($csrfT, "\$_SESSION['superadmin_user_id']")
+    && str_contains($csrfT, "\$_SESSION['user_id']"));
+
+/* La pantalla de 419 la comparten los dos portales: no puede ofrecer siempre
+   «Ir al inventario», que desde el panel no existe. */
+chequear('Y la pantalla de 419 vuelve al portal de donde salió',
+    str_contains($csrfT, 'function csrf_inicio(')
+    && str_contains($csrfS, "csrf_inicio('/dashboard/"));
+
+/* Dos pantallas del panel se chequeaban el token a mano «porque csrf_validate
+   hace die()». Hacerlo a mano es volver a tener dos implementaciones; para eso
+   está `csrf_ok()`, que devuelve un booleano.
+
+   Sólo el token CSRF: el `hash_equals` contra `$_SESSION['oauth_state_...']`
+   del callback compara el `state` que vuelve de Google, que es otra cosa y está
+   bien hecho así. */
+$aPulmon = [];
+foreach (archivos_php() as $abs) {
+    $r = rel($abs);
+    if (str_starts_with($r, 'test' . DIRECTORY_SEPARATOR) || str_starts_with($r, 'test/')) { continue; }
+    if (in_array(basename($r), ['csrf.php'], true)) { continue; }
+    $src = sin_comentarios((string)file_get_contents($abs));
+    if (preg_match('/hash_equals\s*\(\s*\$_SESSION\s*\[\s*[^\]]*csrf/i', $src)) { $aPulmon[] = basename($r); }
+}
+chequear('Ni nadie compara el token contra la sesión por su cuenta',
+    $aPulmon === [], implode(', ', $aPulmon));
 
 // Un token que vence antes que la sesión que lo sostiene sólo sirve para
 // interrumpir a alguien que está trabajando.
