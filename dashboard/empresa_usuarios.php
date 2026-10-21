@@ -56,7 +56,10 @@ try {
 
     // Cargar roles asignables (builtin + custom) para el validador
     global $conn; $prevConn = $conn ?? null; $conn = $tconn;
-    $rolesValidos = array_keys(all_assignable_roles($tconn));
+    /* El mapa entero y no solo las claves: los nombres hacen falta para
+       mostrar los roles propios de la empresa con su nombre y no con la clave. */
+    $rolesAsignables = all_assignable_roles($tconn);
+    $rolesValidos    = array_keys($rolesAsignables);
     $conn = $prevConn;
 
 } catch (Throwable $ex) {
@@ -158,12 +161,27 @@ if ($tconn) {
     } catch (Throwable) {}
 }
 
-$roleLabels = [
-    'admin'   => ['label' => 'Admin',    'class' => 'ih-badge--purple'],
-    'manager' => ['label' => 'Gerente',  'class' => 'ih-badge--info'],
-    'user'    => ['label' => 'Usuario',  'class' => 'ih-badge--green'],
-    'viewer'  => ['label' => 'Viewer',   'class' => 'ih-badge'],
+/* Los nombres salen de TENANT_ROLE_LABELS, que es de donde los saca el portal
+   del cliente: acá estaban escritos una tercera vez y decían «Admin» y
+   «Viewer» —media traducción— mientras el cliente leía «Administrador» y «Solo
+   lectura» para el mismo rol. */
+$roleClases = [
+    'admin'   => 'ih-badge--purple',
+    'manager' => 'ih-badge--info',
+    'user'    => 'ih-badge--green',
+    'viewer'  => 'ih-badge',
 ];
+/* Primero los asignables —que son los de siempre MÁS los propios de la
+   empresa—, y encima los nombres canónicos de los de siempre. En ese orden:
+   al revés, el segundo recorrido le devolvía a «Administrador» la insignia
+   gris de un rol propio. */
+$roleLabels = [];
+foreach (($rolesAsignables ?? []) as $rk => $rlbl) {
+    $roleLabels[$rk] = ['label' => $rlbl, 'class' => $roleClases[$rk] ?? 'ih-badge'];
+}
+foreach (TENANT_ROLE_LABELS as $rk => $rlbl) {
+    $roleLabels[$rk] = ['label' => $rlbl, 'class' => $roleClases[$rk] ?? 'ih-badge'];
+}
 
 $companyName     = htmlspecialchars((string)$company['nombre']);
 $page_title      = "Usuarios · $companyName";
@@ -281,7 +299,10 @@ require __DIR__ . '/../includes/layout/head.php';
             <tbody>
               <?php foreach ($tenantUsers as $u): ?>
                 <?php $isActive = (int)($u['active'] ?? 1) === 1; ?>
-                <?php $rl = $roleLabels[$u['role']] ?? ['label' => $u['role'], 'class' => 'ih-badge']; ?>
+                <?php /* Si ni siquiera está entre los propios, se humaniza la clave:
+                         mejor «Auditor externo» que `auditor_externo` en pantalla. */ ?>
+                <?php $rl = $roleLabels[$u['role']]
+                    ?? ['label' => ucfirst(str_replace('_', ' ', (string)$u['role'])), 'class' => 'ih-badge']; ?>
                 <tr <?= $isActive ? '' : ' class="es-inactiva"' ?>>
                   <td><strong>#<?= (int)$u['id'] ?></strong></td>
                   <td>
