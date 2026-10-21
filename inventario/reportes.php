@@ -1350,11 +1350,11 @@ require __DIR__ . '/../includes/layout/topbar.php';
        Son los mismos valores de la identidad visual, escritos aca porque este
        documento se arma fuera del navegador. */
     const PURPLE      = '#663399';
-    const PURPLE_DARK = '#522A7A';
+    const PURPLE_DARK = '#522980';
     const TEXT        = '#161922';
-    const TEXT_MUTED  = '#6F6A7D';
-    const STRIPE      = '#FAF9FC';
-    const BORDER      = '#E7E4EF';
+    const TEXT_MUTED  = '#6B6F7B';
+    const STRIPE      = '#FFF6FF';
+    const BORDER      = '#EBE2EF';
 
     // Orientation segun cantidad de columnas
     const orientation = totalColumns > 6 ? 'landscape' : 'portrait';

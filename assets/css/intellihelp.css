@@ -22,64 +22,76 @@
    cliente porque son los de la identidad —el #161922 y el #9CC930 están en la
    marca— y no al revés. */
 :root {
-  /* Paleta INTELLIHELP */
-  --ih-purple:        #663399;
-  --ih-purple-dark:   #522a7a;
-  --ih-purple-light:  #8C5BB8;
-  --ih-purple-50:     #f2ecf9;
-  --ih-purple-100:    #e6d9f5;
-  --ih-purple-200:    #d0bfea;
-  --ih-purple-300:    #b69bda;
+  /* Paleta INTELLIHELP — los mismos cuatro colores que el portal del cliente
+     y que RRHH: #663399 · #9f88b1 · #fff6ff · #fffade, sobre texto #161922.
 
-  --ih-green:         #9CC930;
-  --ih-green-dark:    #5f8a12;
-  --ih-green-light:   #b7dc5f;
-  --ih-green-50:      #eef6dc;
-  --ih-green-100:     #e5f1c7;
+     Los dos portales comparten `componentes.css`, así que estos valores tienen
+     que decir lo mismo que los de app.css: si no, el mismo componente sale de
+     dos colores distintos según dónde se mire. `test/tokens.php` lo comprueba. */
+  --ih-purple:        #663399;
+  --ih-purple-dark:   #522980;
+  --ih-purple-light:  #8C5BB8;
+  --ih-purple-50:     #fff6ff;
+  --ih-purple-100:    #e6dcec;
+  --ih-purple-200:    #d8cbe3;
+  --ih-purple-300:    #9f88b1;
+
+  /* El verde #9CC930 ya no está: lo positivo es violeta, igual que en RRHH.
+     Los nombres `--ih-green*` siguen porque los usa el markup de cincuenta
+     pantallas; lo que cambió es a qué apuntan. */
+  --ih-green:         #663399;
+  --ih-green-dark:    #522980;
+  --ih-green-light:   #9f88b1;
+  --ih-green-50:      #fff6ff;
+  --ih-green-100:     #e6dcec;
+
+  --ih-lilac:         #9f88b1;
+  --ih-cream:         #fffade;
 
   --ih-white:         #ffffff;
   --ih-black:         #161922;
 
   /* Grises: violáceos, no neutros. Es lo que ata el gris al violeta de marca. */
-  --ih-gray-50:       #faf9fc;
-  --ih-gray-100:      #f6f5fa;
-  --ih-gray-200:      #e7e4ef;
-  --ih-gray-300:      #cfcbd8;
-  --ih-gray-400:      #a7a3b4;
-  --ih-gray-500:      #6f6a7d;
-  --ih-gray-600:      #5b566a;
-  --ih-gray-700:      #434050;
+  --ih-gray-50:       #fff6ff;
+  --ih-gray-100:      #fff6ff;
+  --ih-gray-200:      #ebe2ef;
+  --ih-gray-300:      #ddd8e4;
+  --ih-gray-400:      #a8a2b4;
+  --ih-gray-500:      #6b6f7b;
+  --ih-gray-600:      #565a68;
+  --ih-gray-700:      #3d4150;
   --ih-gray-800:      #2b2836;
   --ih-gray-900:      #161922;
 
-  /* Estados */
-  --ih-success:       #5f8a12;
-  --ih-success-bg:    #eef6dc;
-  --ih-warning:       #a8620a;
-  --ih-warning-bg:    #fdf3e3;
-  --ih-danger:        #a12a1e;
-  --ih-danger-bg:     #fdeceb;
-  --ih-danger-line:   #f3c9c4;
-  --ih-info:          #1f6f9c;
-  --ih-info-bg:       #e7f2f9;
+  /* Estados. El rojo y el amarillo se quedan: son estados, no identidad, y un
+     error en violeta no se lee como un error. */
+  --ih-success:       #522980;
+  --ih-success-bg:    #fff6ff;
+  --ih-warning:       #6e5a00;
+  --ih-warning-bg:    #fffade;
+  --ih-danger:        #c0392b;
+  --ih-danger-bg:     #fcedeb;
+  --ih-danger-line:   #f0c9c4;
+  --ih-info:          #522980;
+  --ih-info-bg:       #fff6ff;
 
   /* Sombras: con tinte violeta, como las del cliente. */
   --ih-shadow-xs:     0 1px 2px rgba(16,20,30,.05);
-  --ih-shadow-sm:     0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
+  --ih-shadow-sm:     0 1px 2px rgba(22,25,34,.04), 0 4px 16px rgba(22,25,34,.05);
   --ih-shadow-md:     0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
-  --ih-shadow-lg:     0 24px 60px -20px rgba(74,36,112,.42);
+  --ih-shadow-lg:     0 10px 40px rgba(45,22,71,.14);
   --ih-shadow-xl:     0 24px 60px -20px rgba(74,36,112,.42);
 
   /* Radios */
   /* La línea tenue de una fila de tabla y el radio de una insignia: los usa
      `componentes.css`, que es compartida, así que el nombre tiene que existir
      en las dos hojas. */
-  --ih-line-soft:    #f0edf6;
+  --ih-line-soft:    #f5eef7;
   --ih-pill:         20px;
 
   --ih-radius-sm:     9px;
   --ih-radius-md:     10px;
-  --ih-radius-lg:     15px;
+  --ih-radius-lg:     14px;
 
   /* Geometría de los controles de formulario. Los lee componentes.css, que es
      la hoja compartida: con dos juegos de valores, el mismo desplegable salía
@@ -88,12 +100,12 @@
   --ih-ctl-min-h:     40px;
   --ih-ctl-line:      normal;   /* los <input> del navegador usan normal */
   --ih-ctl-radius:    9px;
-  --ih-ctl-border:    #e7e4ef;
-  --ih-ctl-hover:     #cfcbd8;
-  --ih-ctl-ring:      #f2ecf9;
+  --ih-ctl-border:    #ddd8e4;
+  --ih-ctl-hover:     #ddd8e4;
+  --ih-ctl-ring:      #fff6ff;
   --ih-ctl-font:      14px;
   --ih-ctl-bg:        #ffffff;
-  --ih-ctl-placeholder: #a7a3b4;
+  --ih-ctl-placeholder: #a8a2b4;
 
   --ih-radius-xl:     20px;
   --ih-radius-full:   9999px;
@@ -275,7 +287,7 @@ img { max-width: 100%; height: auto; display: block; }
 .ih-user-chip:hover { border-color: var(--ih-purple-200); background: var(--ih-purple-50); }
 .ih-user-chip__avatar {
   width: 28px; height: 28px; border-radius: var(--ih-radius-full);
-  background: linear-gradient(135deg, var(--ih-purple), var(--ih-purple-dark));
+  background: var(--ih-purple);   /* plano: la identidad nueva no usa degradados */
   color: var(--ih-white); display: inline-flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 12px;
 }

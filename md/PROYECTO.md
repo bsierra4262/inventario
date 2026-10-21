@@ -206,6 +206,34 @@ se le había atribuido a `session_regenerate_id()`, y por eso la rotación estab
 Una empresa con SSO puede **deshabilitar el login local** (`disable_local_login`), forzando
 que todos los accesos pasen por el proveedor.
 
+### Identidad visual
+
+Cuatro colores, planos y sin degradados, iguales a los del portal de RRHH:
+
+| | | |
+|---|---|---|
+| `#663399` | primario | botones, barra lateral, lo positivo |
+| `#9f88b1` | lila | bordes que tienen que notarse sin gritar |
+| `#fff6ff` | fondo | el canvas de la página y los avisos tenues |
+| `#fffade` | crema | lo que espera: advertencias, contadores |
+
+sobre texto `#161922`. Más el rojo de error y el ámbar de advertencia, que
+**no** pueden ser violetas sin dejar de leerse.
+
+El verde `#9CC930` fue el acento hasta la versión 1.11 y ya no está: lo
+positivo es violeta. Si aparece un `#9cc930` en una hoja es paleta vieja que
+quedó, y `test/run_tests.php` lo marca.
+
+**Dónde viven los colores.** En dos lugares, y tienen que decir lo mismo:
+`assets/css/app.css` (portal del cliente) y `assets/css/intellihelp.css`
+(panel). Los dos portales comparten `assets/css/componentes.css`, así que si
+los tokens no coinciden el mismo componente sale de dos colores según dónde se
+mire — `test/tokens.php` compara los dos juegos y falla si se separan.
+
+Cambiar la paleta es cambiar esos dos bloques `:root`: las pantallas no nombran
+colores, nombran tokens. `test/colores.php` guarda la lista blanca y marca
+cualquier color escrito a mano fuera de ella.
+
 ### CSRF
 
 Una sola implementación para los dos portales: `backend/csrf.php`. Token por **scope** (una
@@ -921,7 +949,7 @@ Ver `SECURITY.md` para el detalle. Resumen de los controles:
 Siete baterías. La primera corre sola, sin base ni servidor, y es la que se usa a cada rato:
 
 ```bash
-php test/run_tests.php            # 492 chequeos — análisis estático del árbol
+php test/run_tests.php            # 501 chequeos — análisis estático del árbol
 php test/run_tests.php seguridad  # un grupo
 
 php test/ortografia.php           # faltas de ortografía y vocabulario en el texto visible

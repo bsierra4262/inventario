@@ -4,6 +4,59 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.11.0] — 2026-10-21
+
+La identidad visual de los dos portales pasa a la del portal de RRHH.
+
+### Cambiado
+
+- **Paleta nueva en los dos portales.** Cuatro colores —`#663399`, `#9f88b1`,
+  `#fff6ff`, `#fffade`— sobre texto `#161922`, planos y sin degradados. Los
+  mismos que el portal de RRHH.
+
+  | | Antes | Ahora |
+  |---|---|---|
+  | Primario | `#663399` | `#663399` |
+  | Lo positivo | `#9CC930` (verde) | `#663399` (violeta) |
+  | Fondo de página | `#f6f5fa` (gris) | `#fff6ff` |
+  | Advertencia | `#fdf3e3` | `#fffade` |
+  | Radio | 15 px | 14 px |
+
+  **El verde `#9CC930` ya no está.** Era el color de lo positivo —guardar, la
+  insignia «Activo», el aviso de éxito— y ahora eso es violeta. El rojo de
+  error y el ámbar de advertencia se quedan: son estados, no identidad, y un
+  error en violeta no se lee como un error.
+
+  El cambio es de **tokens**: las 29 pantallas no se tocaron. La hoja del
+  portal del cliente ya decía *«cambia la piel, no el HTML»*, y era cierto.
+
+- **El portal del cliente pasa a barra lateral.** Tenía la navegación en una
+  fila horizontal de pestañas; ahora es la misma barra lateral violeta que el
+  panel superadmin y que RRHH: 264 px, la marca arriba, la navegación al medio
+  y la cuenta abajo.
+
+  Tampoco hizo falta tocar el markup: ya decía `.ih-sidebar`, y lo que lo
+  dibujaba horizontal era sólo el CSS. Lo único que se movió en PHP fue la
+  marca, que estaba en el topbar porque no había columna izquierda.
+
+  En teléfono la barra se esconde y se abre con el botón de menú, que ya
+  existía y ya estaba cableado —lo usa el panel—, así que no hubo JavaScript
+  nuevo.
+
+### Corregido
+
+- **El botón principal se leía peor que los secundarios.** `.ih-btn--accent`
+  llevaba texto violeta oscuro, que tenía sentido sobre el verde claro de la
+  identidad anterior. Sobre el violeta nuevo quedaba casi ilegible. Ahora es
+  texto blanco.
+
+- **El fondo de la pantalla de acceso era un degradado.** Un
+  `radial-gradient` de `#522980` a `#3d1f5c`, que se notaba. La identidad nueva
+  es de colores planos, así que el chequeo que lo impide ahora mira los tres
+  tipos de degradado y no sólo `linear-`.
+
+---
+
 ## [1.10.0] — 2026-10-07
 
 El portal del cliente quedó cerrado; esta tanda es el panel superadmin, más los

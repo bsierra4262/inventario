@@ -1325,24 +1325,56 @@ foreach (['core/security/permissions_db.php', 'core/tenants/tenant_settings.php'
 // ═══════════════════════════════════════════════════════════════════════════
 grupo('DISENO · identidad visual');
 // ═══════════════════════════════════════════════════════════════════════════
-// El portal tenant tiene que hablar el mismo idioma visual que el CRM y APP
-// Tickets: mismos tokens, misma fuente, mismo acento.
+// Los dos portales hablan el mismo idioma visual que el portal de RRHH:
+// cuatro colores —#663399, #9f88b1, #fff6ff, #fffade— sobre texto #161922.
 $css = leer('assets/css/app.css');
 chequear('Existe la hoja del portal tenant', $css !== '');
 $tokens = [
     '--ink:#161922'      => 'texto/neutro',
     '--primary:#663399'  => 'primario',
-    '--accent:#9CC930'   => 'acento',
+    '--lilac:#9f88b1'    => 'lila',
+    '--cream:#fffade'    => 'crema',
     '--surface:#ffffff'  => 'superficie',
-    '--bg:#f6f5fa'       => 'fondo',
-    '--radius:15px'      => 'radio',
+    '--bg:#fff6ff'       => 'fondo',
+    '--radius:14px'      => 'radio',
 ];
 foreach ($tokens as $tk => $desc) {
-    chequear("Token de {$desc} igual al del CRM/Tickets ({$tk})", str_contains(str_replace(' ', '', $css), $tk));
+    chequear("Token de {$desc} igual al de RRHH ({$tk})", str_contains(str_replace(' ', '', $css), $tk));
 }
 chequear("La fuente es Saira", str_contains($css, "--font:'Saira'"));
-chequear('El acento verde no compite con un "success" propio',
+
+/* El verde #9CC930 se fue de la identidad: lo positivo es violeta, igual que
+   en RRHH. Si vuelve a aparecer en una hoja es paleta vieja que quedó —y se
+   vería al lado del violeta, que es donde se nota—. */
+foreach (['assets/css/app.css', 'assets/css/intellihelp.css', 'assets/css/componentes.css'] as $hoja) {
+    /* Sin los comentarios: explicar que el verde se fue -y por que- no puede
+       contar como seguir teniendolo. Mismo criterio que el de degradados y que
+       el de `die()` en csrf.php. */
+    chequear(basename($hoja) . ' ya no tiene el verde de la identidad anterior',
+        !preg_match('/#9cc930/i', sin_comentarios(leer($hoja))));
+}
+/* Y la identidad nueva es de colores planos. */
+foreach (['assets/css/app.css', 'assets/css/intellihelp.css', 'assets/css/componentes.css'] as $hoja) {
+    /* Cualquier degradado, no solo `linear-`: el fondo del acceso era un
+       `radial-gradient` y se colaba por mirar una sola palabra. */
+    chequear(basename($hoja) . ' no usa degradados',
+        !preg_match('/(?:linear|radial|conic)-gradient/i', sin_comentarios(leer($hoja))));
+}
+
+chequear('El acento ya no compite con un "success" propio',
     !preg_match('/--ih-success:\s*#(?!.*var\()/i', $css));
+
+/* La barra lateral: los dos portales la dibujan igual. El del cliente la tuvo
+   horizontal un tiempo, y el markup no cambió —sólo el CSS—, así que lo que
+   hay que comprobar es que la hoja la dibuje como columna. */
+chequear('El portal del cliente dibuja la navegación como barra lateral',
+    preg_match('/\.ih-sidebar,\.ih-app__sidebar\{[^}]*position:fixed/', str_replace(["\r", "\n", ' '], '', $css)) === 1
+    || (str_contains(str_replace(' ', '', $css), '--ih-sidebar-w:264px')
+        && str_contains(str_replace(' ', '', $css), 'flex-direction:column')));
+/* El padding va en el CONTENEDOR, no en el `<main>`: el topbar es hermano de
+   main, y corriendo solo a main el topbar quedaba debajo de la barra. */
+chequear('Y el contenido se corre para dejarle lugar',
+    str_contains(str_replace(' ', '', $css), 'padding-left:var(--ih-sidebar-w)'));
 chequear('Saira se carga por <link>, no por @import',
     str_contains(leer('includes/layout/head.php'), 'fonts.googleapis.com/css2?family=Saira')
  && !str_contains($css, '@import'));

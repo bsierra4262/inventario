@@ -6,14 +6,20 @@
  *
  * La identidad visual de INTELLIHELP son cuatro colores:
  *
- *   Fondo       #FFFFFF
  *   Primario    #663399
- *   Texto       #161922
- *   Acento      #9CC930   — sólo para lo positivo
+ *   Lila        #9f88b1
+ *   Fondo       #fff6ff   — blanco con una gota de violeta
+ *   Crema       #fffade
  *
- * más la escala de grises violáceos y los tres colores de estado —advertencia,
- * error, información— que derivan de ellos. Todo eso vive en los tokens de
- * assets/css/app.css, y está acá como lista blanca.
+ * sobre texto #161922, más la escala de grises violáceos y los dos colores de
+ * estado —error y advertencia— que no pueden ser violetas sin dejar de
+ * leerse. Todo eso vive en los tokens de assets/css/app.css y de
+ * assets/css/intellihelp.css, y está acá como lista blanca.
+ *
+ * El acento verde #9CC930 YA NO ESTÁ. Era el color de lo positivo —guardar, la
+ * insignia «Activo», el aviso de éxito— y ahora eso es violeta, igual que en el
+ * portal de RRHH. Si aparece un #9cc930 en el árbol, este test lo marca: es
+ * paleta vieja que quedó.
  *
  * Un color escrito a mano en una pantalla no se ve mal por sí solo: se ve mal
  * al lado del de al lado. Los avisos del listado usaban #16a34a, #d97706 y
@@ -34,19 +40,16 @@ defined('RAIZ') || define('RAIZ', dirname(__DIR__));
  * no debería ser algo que pase sin que nadie lo note.
  */
 const COLORES_MARCA = [
-    // Base
-    '#ffffff', '#fff', '#161922', '#663399', '#9cc930',
-    // Violetas
-    '#522a7a', '#f2ecf9', '#e6d9f5', '#8c5bb8', '#d0bfea', '#b69bda', '#4e247a',
-    // Acento
-    '#eef6dc', '#5f8a12', '#b7dc5f', '#e5f1c7', '#233010', '#3d5a0c', '#d6e8ac',
-    // Estados
-    '#a8620a', '#fdf3e3', '#eccfa4',
-    '#a12a1e', '#fdeceb', '#f3c9c4',
-    '#1f6f9c', '#e7f2f9', '#bcdcee',
+    // Los cuatro de la paleta, más el texto
+    '#ffffff', '#fff', '#161922', '#663399', '#9f88b1', '#fff6ff', '#fffade',
+    // Violetas derivados
+    '#522980', '#3d1f5c', '#e6dcec', '#8c5bb8', '#d8cbe3',
+    // Estados: error y advertencia. No pueden ser violetas sin dejar de leerse.
+    '#6e5a00', '#ece3a6',
+    '#c0392b', '#fcedeb', '#f0c9c4',
     // Grises violáceos
-    '#e7e4ef', '#f0edf6', '#f6f5fa', '#faf9fc',
-    '#6f6a7d', '#cfcbd8', '#a7a3b4', '#5b566a', '#434050', '#2b2836',
+    '#ebe2ef', '#f5eef7',
+    '#6b6f7b', '#ddd8e4', '#a8a2b4', '#565a68', '#3d4150', '#2b2836',
 ];
 
 /**

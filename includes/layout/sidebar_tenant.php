@@ -2,9 +2,10 @@
 /**
  * Navegación del portal tenant — INTELLIHELP
  *
- * El markup conserva las clases `ih-sidebar*` porque así lo llaman las pantallas
- * que arman la página, pero assets/css/app.css lo dibuja como una fila de
- * pestañas debajo del topbar: la misma silueta que el CRM y APP Tickets.
+ * Es la barra lateral violeta: la misma silueta que el panel superadmin y que
+ * el portal de RRHH. Durante un tiempo este mismo markup se dibujó como una
+ * fila de pestañas horizontal —sólo cambiaba el CSS—, y por eso las clases se
+ * llaman `ih-sidebar*` desde antes de que hubiera una barra lateral.
  *
  * ## Por qué cinco y no once
  *
@@ -78,6 +79,16 @@ $sb_hijas_datos  = ['exportar', 'importar'];
 $sb_hijas_config = ['catalogos', 'campos', 'integracion', 'usuarios', 'roles'];
 ?>
 <nav class="ih-sidebar ih-app__sidebar" aria-label="Secciones">
+  <?php /* La marca vivía en el topbar, de cuando la navegación era una fila y
+           no había columna izquierda. Acá arriba es lo primero que se lee. */ ?>
+  <a href="/inventario/index.php" class="ih-sidebar__brand">
+    <span class="ih-sidebar__logo"><?= platform_logo_html() ?></span>
+    <span class="ih-sidebar__brand-text">
+      <strong>Asset Vault</strong>
+      <span><?= htmlspecialchars($tenant_name) ?></span>
+    </span>
+  </a>
+
   <div class="ih-sidebar__nav">
     <div class="ih-sidebar__group">
 

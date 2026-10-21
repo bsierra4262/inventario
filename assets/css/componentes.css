@@ -81,18 +81,22 @@
 .ih-btn:disabled,.ih-btn.is-disabled{opacity:.5;cursor:not-allowed}
 .ih-btn--primary{background:var(--ih-purple);color:#fff}
 .ih-btn--primary:hover{background:var(--ih-purple-dark);color:#fff}
-.ih-btn--accent,.ih-btn--success{background:var(--ih-green);color:#233010}
-.ih-btn--accent:hover,.ih-btn--success:hover{filter:brightness(.96);color:#233010}
+/* Texto BLANCO. Llevaba violeta oscuro porque el fondo era el verde claro de
+   la identidad anterior; con el fondo violeta eso quedaba casi ilegible —un
+   boton principal que se leia peor que los secundarios—. */
+.ih-btn--accent,.ih-btn--success{background:var(--ih-green);color:#fff;
+  box-shadow:0 2px 8px rgba(102,51,153,.25)}
+.ih-btn--accent:hover,.ih-btn--success:hover{background:var(--ih-green-dark);color:#fff}
 .ih-btn--ghost,.ih-btn--outline{background:var(--ih-white);color:var(--ih-purple);border-color:var(--ih-gray-200)}
 .ih-btn--ghost:hover,.ih-btn--outline:hover{background:var(--ih-purple-50);color:var(--ih-purple)}
 .ih-btn--danger{background:#fff;color:var(--ih-danger);border-color:var(--ih-danger-line)}
 .ih-btn--danger:hover{background:var(--ih-danger-bg);color:var(--ih-danger)}
-.ih-btn--warning{background:#fff;color:var(--ih-warning);border-color:#eccfa4}
+.ih-btn--warning{background:#fff;color:var(--ih-warning);border-color:#ece3a6}
 .ih-btn--warning:hover{background:var(--ih-warning-bg);color:var(--ih-warning)}
-.ih-btn--google{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
-.ih-btn--google:hover{background:#f7f8fa;color:#3c4043}
-.ih-btn--microsoft{background:#fff;color:#3c4043;border-color:#dadce0;font-weight:700}
-.ih-btn--microsoft:hover{background:#f7f8fa;color:#3c4043}
+.ih-btn--google{background:#fff;color:#3d4150;border-color:#ddd8e4;font-weight:700}
+.ih-btn--google:hover{background:#fff6ff;color:#3d4150}
+.ih-btn--microsoft{background:#fff;color:#3d4150;border-color:#ddd8e4;font-weight:700}
+.ih-btn--microsoft:hover{background:#fff6ff;color:#3d4150}
 .ih-btn--block{width:100%}
 .ih-btn--sm{padding:.34rem .72rem;font-size:12.5px;min-height:30px;border-radius:9px}
 .ih-btn--lg{padding:.7rem 1.1rem;font-size:14.5px;min-height:44px}
@@ -156,10 +160,10 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
 .ih-alert,.ih-flash{display:flex;align-items:flex-start;gap:.65rem;padding:.8rem 1rem;
   border-radius:var(--ih-radius-md);font-size:13px;margin-bottom:1rem;
   border:1px solid transparent;}
-.ih-alert--success,.ih-flash--success{background:var(--ih-green-50);color:#3d5a0c;border-color:#d6e8ac}
-.ih-alert--warning,.ih-flash--warn{background:var(--ih-warning-bg);  color:var(--ih-warning); border-color:#eccfa4}
+.ih-alert--success,.ih-flash--success{background:var(--ih-green-50);color:#522980;border-color:#d8cbe3}
+.ih-alert--warning,.ih-flash--warn{background:var(--ih-warning-bg);  color:var(--ih-warning); border-color:#ece3a6}
 .ih-alert--danger, .ih-flash--danger{background:var(--ih-danger-bg);color:var(--ih-danger);border-color:var(--ih-danger-line)}
-.ih-alert--info,   .ih-flash--info{background:var(--ih-info-bg);  color:var(--ih-info); border-color:#bcdcee}
+.ih-alert--info,   .ih-flash--info{background:var(--ih-info-bg);  color:var(--ih-info); border-color:#d8cbe3}
 .ih-alert__close,.ih-flash__close{margin-left:auto;background:none;border:0;color:inherit;opacity:.55;cursor:pointer;
   font-size:18px;line-height:1;padding:0 .1rem;flex:none}
 .ih-alert__close:hover,.ih-flash__close:hover{opacity:1}
@@ -167,8 +171,10 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
 .ih-empty__icon{font-size:44px;color:var(--ih-purple-100);margin-bottom:.5rem;line-height:1}
 .ih-empty__title{font-size:15px;font-weight:700;color:var(--ih-gray-900);margin-bottom:.2rem}
 .ih-empty__text{font-size:13px;max-width:420px;margin:0 auto}
+/* Violeta plano. Era un radial-gradient de #522980 a #3d1f5c: se notaba
+   —el centro arriba quedaba mas claro— y la identidad nueva no usa degradados. */
 .ih-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;
-  background:radial-gradient(120% 120% at 50% 0,#6b3aa0 0,#3f1f63 100%);}
+  background:var(--ih-purple);}
 .ih-auth__card{width:100%;max-width:420px;background:var(--ih-white);
   border-radius:var(--ih-radius-lg);box-shadow:var(--ih-shadow-lg);overflow:hidden}
 .ih-auth__header{padding:2rem 1.9rem 1.2rem;text-align:center}
@@ -198,7 +204,7 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   position: fixed;   /* lo ancla el JS al <body>: cualquier ancestro con overflow lo recortaria */
   z-index: 1200;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 12px);
   box-shadow: 0 18px 44px -12px rgba(74, 36, 112, .28), 0 2px 8px rgba(16, 20, 30, .06);
   overflow: hidden;
@@ -235,35 +241,35 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   line-height: var(--ih-ctl-line, normal);
   color: var(--ih-gray-900, #161922);
   background: var(--ih-ctl-bg, #fff);
-  border: 1px solid var(--ih-ctl-border, #e7e4ef);
+  border: 1px solid var(--ih-ctl-border, #ebe2ef);
   border-radius: var(--ih-ctl-radius, 9px);
   cursor: pointer; text-align: left;
   transition: border-color .15s, box-shadow .15s;
 }
-.ihc-select__btn:hover:not(:disabled) { border-color: var(--ih-ctl-hover, #cfcbd8); }
+.ihc-select__btn:hover:not(:disabled) { border-color: var(--ih-ctl-hover, #ddd8e4); }
 .ihc-select__btn:focus-visible,
 .ihc-select.is-open .ihc-select__btn {
   outline: none;
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #f2ecf9);
+  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #fff6ff);
 }
-.ihc-select__btn:disabled { opacity: .55; cursor: not-allowed; background: var(--ih-gray-50, #faf9fc); }
+.ihc-select__btn:disabled { opacity: .55; cursor: not-allowed; background: var(--ih-gray-50, #fff6ff); }
 .ihc-select__valor { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ihc-select__valor.is-vacio { color: var(--ih-ctl-placeholder, #a7a3b4); }
+.ihc-select__valor.is-vacio { color: var(--ih-ctl-placeholder, #a8a2b4); }
 .ihc-select__flecha {
-  flex: none; width: 16px; height: 16px; color: var(--ih-gray-500, #6f6a7d);
+  flex: none; width: 16px; height: 16px; color: var(--ih-gray-500, #6b6f7b);
   transition: transform .15s;
 }
 .ihc-select.is-open .ihc-select__flecha { transform: rotate(180deg); color: var(--ih-purple, #663399); }
 
 .ihc-select__pop { max-height: 300px; display: flex; flex-direction: column; }
 .ihc-select__buscador {
-  padding: .5rem; border-bottom: 1px solid var(--ih-gray-100, #f0edf6); flex: none;
+  padding: .5rem; border-bottom: 1px solid var(--ih-gray-100, #f5eef7); flex: none;
 }
 .ihc-select__buscador input {
   width: 100%; padding: .45rem .6rem; font-family: inherit; font-size: 13px;
-  border: 1px solid var(--ih-gray-200, #e7e4ef); border-radius: var(--ih-radius-sm, 9px);
-  color: var(--ih-gray-900, #161922); background: var(--ih-gray-50, #faf9fc);
+  border: 1px solid var(--ih-gray-200, #ebe2ef); border-radius: var(--ih-radius-sm, 9px);
+  color: var(--ih-gray-900, #161922); background: var(--ih-gray-50, #fff6ff);
 }
 .ihc-select__buscador input:focus {
   outline: none; border-color: var(--ih-purple, #663399); background: var(--ih-white, #fff);
@@ -277,15 +283,15 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
 }
 .ihc-select__op[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 /* `is-activa` es el ítem bajo el cursor del teclado; `is-elegida` el guardado. */
-.ihc-select__op.is-activa { background: var(--ih-purple-50, #f4f1f9); }
+.ihc-select__op.is-activa { background: var(--ih-purple-50, #fff6ff); }
 .ihc-select__op.is-elegida { font-weight: 600; color: var(--ih-purple, #663399); }
 .ihc-select__op-check { flex: none; width: 15px; height: 15px; opacity: 0; }
 .ihc-select__op.is-elegida .ihc-select__op-check { opacity: 1; }
 .ihc-select__grupo {
   padding: .5rem .6rem .25rem; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .04em; color: var(--ih-gray-400, #a7a3b4);
+  text-transform: uppercase; letter-spacing: .04em; color: var(--ih-gray-400, #a8a2b4);
 }
-.ihc-select__vacio { padding: .9rem .6rem; text-align: center; font-size: 13px; color: var(--ih-gray-400, #a7a3b4); }
+.ihc-select__vacio { padding: .9rem .6rem; text-align: center; font-size: 13px; color: var(--ih-gray-400, #a8a2b4); }
 
 /* ---------------------------------------------------------------------------
    3. Fecha
@@ -300,7 +306,7 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   transition: box-shadow .15s;
 }
 .ihc-fecha:focus-within .ihc-fecha__campo,
-.ihc-fecha.is-open .ihc-fecha__campo { box-shadow: 0 0 0 3px var(--ih-ctl-ring, #f2ecf9); }
+.ihc-fecha.is-open .ihc-fecha__campo { box-shadow: 0 0 0 3px var(--ih-ctl-ring, #fff6ff); }
 .ihc-fecha__texto {
   flex: 1 1 auto; min-width: 0;
   padding: var(--ih-ctl-pad, .6rem .75rem);
@@ -310,22 +316,22 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   font-variant-numeric: tabular-nums;
   color: var(--ih-gray-900, #161922);
   background: var(--ih-ctl-bg, #fff);
-  border: 1px solid var(--ih-ctl-border, #e7e4ef);
+  border: 1px solid var(--ih-ctl-border, #ebe2ef);
   border-right: 0;
   border-radius: var(--ih-ctl-radius, 9px) 0 0 var(--ih-ctl-radius, 9px);
 }
-.ihc-fecha__texto::placeholder { color: var(--ih-ctl-placeholder, #a7a3b4); }
+.ihc-fecha__texto::placeholder { color: var(--ih-ctl-placeholder, #a8a2b4); }
 .ihc-fecha__abrir {
   flex: none; width: 42px;
   font-family: inherit; font-size: var(--ih-ctl-font, 14px);
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--ih-ctl-bg, #fff);
-  border: 1px solid var(--ih-ctl-border, #e7e4ef);
+  border: 1px solid var(--ih-ctl-border, #ebe2ef);
   border-radius: 0 var(--ih-ctl-radius, 9px) var(--ih-ctl-radius, 9px) 0;
-  color: var(--ih-gray-500, #6f6a7d); cursor: pointer;
+  color: var(--ih-gray-500, #6b6f7b); cursor: pointer;
   transition: color .15s, background .15s;
 }
-.ihc-fecha__abrir:hover { color: var(--ih-purple, #663399); background: var(--ih-purple-50, #f4f1f9); }
+.ihc-fecha__abrir:hover { color: var(--ih-purple, #663399); background: var(--ih-purple-50, #fff6ff); }
 .ihc-fecha:focus-within .ihc-fecha__texto,
 .ihc-fecha:focus-within .ihc-fecha__abrir,
 .ihc-fecha.is-open .ihc-fecha__texto,
@@ -343,13 +349,13 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   flex: none; width: 30px; height: 30px; display: inline-flex;
   align-items: center; justify-content: center;
   border: 0; background: transparent; border-radius: var(--ih-radius-sm, 9px);
-  color: var(--ih-gray-600, #5b566a); cursor: pointer;
+  color: var(--ih-gray-600, #565a68); cursor: pointer;
 }
-.ihc-cal__nav:hover { background: var(--ih-purple-50, #f4f1f9); color: var(--ih-purple, #663399); }
+.ihc-cal__nav:hover { background: var(--ih-purple-50, #fff6ff); color: var(--ih-purple, #663399); }
 .ihc-cal__dias, .ihc-cal__grilla { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .ihc-cal__dia {
   text-align: center; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .03em; color: var(--ih-gray-400, #a7a3b4); padding: .35rem 0;
+  letter-spacing: .03em; color: var(--ih-gray-400, #a8a2b4); padding: .35rem 0;
 }
 .ihc-cal__celda {
   aspect-ratio: 1; display: inline-flex; align-items: center; justify-content: center;
@@ -358,25 +364,25 @@ select:focus,.ih-select:focus{background-image:url("data:image/svg+xml;charset=u
   color: var(--ih-gray-800, #2b2836); cursor: pointer;
   transition: background .12s, color .12s;
 }
-.ihc-cal__celda:hover { background: var(--ih-purple-50, #f4f1f9); }
-.ihc-cal__celda.es-otro-mes { color: var(--ih-gray-300, #cfcbd8); }
-.ihc-cal__celda.es-hoy { box-shadow: inset 0 0 0 1.5px var(--ih-purple-200, #d0bfea); font-weight: 700; }
+.ihc-cal__celda:hover { background: var(--ih-purple-50, #fff6ff); }
+.ihc-cal__celda.es-otro-mes { color: var(--ih-gray-300, #ddd8e4); }
+.ihc-cal__celda.es-hoy { box-shadow: inset 0 0 0 1.5px var(--ih-purple-200, #d8cbe3); font-weight: 700; }
 .ihc-cal__celda.es-elegido {
   background: var(--ih-purple, #663399); color: #fff; font-weight: 700;
 }
-.ihc-cal__celda.es-elegido:hover { background: var(--ih-purple-dark, #4E247A); }
+.ihc-cal__celda.es-elegido:hover { background: var(--ih-purple-dark, #522980); }
 .ihc-cal__celda:focus-visible { outline: 2px solid var(--ih-purple, #663399); outline-offset: -2px; }
 .ihc-cal__pie {
   display: flex; justify-content: space-between; align-items: center;
-  margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--ih-gray-100, #f0edf6);
+  margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--ih-gray-100, #f5eef7);
 }
 .ihc-cal__accion {
   border: 0; background: transparent; cursor: pointer; padding: .3rem .5rem;
   font-family: inherit; font-size: 12.5px; font-weight: 600;
   color: var(--ih-purple, #663399); border-radius: var(--ih-radius-sm, 9px);
 }
-.ihc-cal__accion:hover { background: var(--ih-purple-50, #f4f1f9); }
-.ihc-cal__accion.es-borrar { color: var(--ih-gray-500, #6f6a7d); }
+.ihc-cal__accion:hover { background: var(--ih-purple-50, #fff6ff); }
+.ihc-cal__accion.es-borrar { color: var(--ih-gray-500, #6b6f7b); }
 
 /* ---------------------------------------------------------------------------
    4. Diálogo de confirmación
@@ -407,12 +413,12 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
 .ihc-modal__icono {
   flex: none; width: 44px; height: 44px; border-radius: var(--ih-radius-md, 12px);
   display: inline-flex; align-items: center; justify-content: center; font-size: 22px;
-  background: var(--ih-purple-50, #f4f1f9); color: var(--ih-purple, #663399);
+  background: var(--ih-purple-50, #fff6ff); color: var(--ih-purple, #663399);
 }
-.ihc-modal--peligro .ihc-modal__icono { background: var(--ih-danger-bg, #fdeceb); color: var(--ih-danger, #a12a1e); }
+.ihc-modal--peligro .ihc-modal__icono { background: var(--ih-danger-bg, #fcedeb); color: var(--ih-danger, #c0392b); }
 .ihc-modal__texto { flex: 1 1 auto; min-width: 0; }
 .ihc-modal__titulo { margin: 0 0 .3rem; font-size: 16px; font-weight: 700; color: var(--ih-gray-900, #161922); }
-.ihc-modal__detalle { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ih-gray-600, #5b566a); }
+.ihc-modal__detalle { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ih-gray-600, #565a68); }
 .ihc-modal__acciones {
   display: flex; gap: .5rem; justify-content: flex-end;
   padding: .75rem 1.5rem 1.5rem;
@@ -431,7 +437,7 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
 .ihc-modal__campo-label {
   display: block; margin: .9rem 0 .35rem;
   font-size: var(--ih-text-sm, 12.5px); font-weight: 700;
-  color: var(--ih-gray-600, #5b566a);
+  color: var(--ih-gray-600, #565a68);
 }
 .ihc-modal__campo {
   width: 100%;
@@ -441,18 +447,18 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
   line-height: var(--ih-ctl-line, normal);
   color: var(--ih-gray-900, #161922);
   background: var(--ih-ctl-bg, #fff);
-  border: 1px solid var(--ih-ctl-border, #e7e4ef);
+  border: 1px solid var(--ih-ctl-border, #ebe2ef);
   border-radius: var(--ih-ctl-radius, 9px);
   transition: border-color .15s, box-shadow .15s;
 }
 .ihc-modal__campo:focus {
   outline: none;
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #f2ecf9);
+  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #fff6ff);
 }
 .ihc-modal__error {
   margin: .45rem 0 0; font-size: var(--ih-text-sm, 12.5px);
-  color: var(--ih-danger, #a12a1e);
+  color: var(--ih-danger, #c0392b);
 }
 
 /* ---------------------------------------------------------------------------
@@ -473,24 +479,24 @@ dialog.ihc-modal::backdrop { background: rgba(17, 20, 24, .45); }
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; line-height: 1;
   background: var(--ih-ctl-bg, #fff);
-  border: 1px solid var(--ih-ctl-border, #e7e4ef);
+  border: 1px solid var(--ih-ctl-border, #ebe2ef);
   border-radius: var(--ih-ctl-radius, 9px);
   color: var(--ih-purple, #663399);
   transition: background .15s, border-color .15s, box-shadow .15s;
 }
 .cat-add:hover:not(:disabled) {
-  background: var(--ih-purple-50, #f2ecf9);
-  border-color: var(--ih-purple-200, #d0bfea);
+  background: var(--ih-purple-50, #fff6ff);
+  border-color: var(--ih-purple-200, #d8cbe3);
 }
 .cat-add:focus-visible {
   outline: none;
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #f2ecf9);
+  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #fff6ff);
 }
 .cat-add:disabled { opacity: .5; cursor: default; }
 .cat-huerfano {
   display: block; margin-top: 4px;
-  font-size: var(--ih-text-xs, 11px); color: var(--ih-warning, #a8620a);
+  font-size: var(--ih-text-xs, 11px); color: var(--ih-warning, #6e5a00);
 }
 .cat-aviso { margin-top: 4px; font-size: var(--ih-text-xs, 11px); }
 
@@ -519,7 +525,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   background: var(--ih-purple, #663399); color: #fff; padding: .9rem 1.15rem;
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
 }
-.ih-modal__header--peligro { background: var(--ih-danger, #a12a1e); }
+.ih-modal__header--peligro { background: var(--ih-danger, #c0392b); }
 .ih-modal__title { font-size: var(--ih-text-md, 15.5px); font-weight: 700; margin: 0; color: #fff; }
 .ih-modal__close {
   background: none; border: 0; color: #fff; opacity: .8; cursor: pointer;
@@ -529,8 +535,8 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ih-modal__close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ih-modal__body { padding: 1.15rem; display: grid; gap: .85rem; }
 .ih-modal__footer {
-  padding: .9rem 1.15rem; border-top: 1px solid var(--ih-gray-100, #f0edf6);
-  background: var(--ih-gray-50, #faf9fc);
+  padding: .9rem 1.15rem; border-top: 1px solid var(--ih-gray-100, #f5eef7);
+  background: var(--ih-gray-50, #fff6ff);
   display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap;
 }
 @media (max-width: 420px) {
@@ -550,21 +556,21 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ihc-archivo__zona {
   display: flex; flex-direction: column; align-items: center; gap: .4rem;
   padding: 1.5rem 1rem; text-align: center; cursor: pointer;
-  border: 1.5px dashed var(--ih-gray-200, #e7e4ef);
+  border: 1.5px dashed var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-lg, 15px);
-  background: var(--ih-gray-50, #faf9fc);
-  color: var(--ih-gray-500, #6f6a7d);
+  background: var(--ih-gray-50, #fff6ff);
+  color: var(--ih-gray-500, #6b6f7b);
   transition: border-color .15s, background .15s, color .15s;
 }
 .ihc-archivo__zona:hover,
 .ihc-archivo.is-arrastrando .ihc-archivo__zona {
   border-color: var(--ih-purple, #663399);
-  background: var(--ih-purple-50, #f4f1f9);
+  background: var(--ih-purple-50, #fff6ff);
   color: var(--ih-purple, #663399);
 }
 .ihc-archivo__nativo:focus-visible + .ihc-archivo__zona {
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-purple-50, #f4f1f9);
+  box-shadow: 0 0 0 3px var(--ih-purple-50, #fff6ff);
 }
 .ihc-archivo__icono { font-size: 26px; line-height: 1; }
 .ihc-archivo__cta { font-weight: 600; color: var(--ih-gray-800, #2b2836); }
@@ -574,11 +580,11 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   display: flex; align-items: center; gap: .5rem;
   padding: .45rem .6rem; font-size: 13px;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-sm, 9px);
 }
 .ihc-archivo__item-nombre { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ihc-archivo__item-peso { flex: none; font-size: 11.5px; color: var(--ih-gray-400, #a7a3b4); font-variant-numeric: tabular-nums; }
+.ihc-archivo__item-peso { flex: none; font-size: 11.5px; color: var(--ih-gray-400, #a8a2b4); font-variant-numeric: tabular-nums; }
 /* Quitar uno de la lista. Antes no se podía: elegir cuatro archivos y
    arrepentirse del tercero obligaba a volver a elegir los cuatro. */
 .ihc-archivo__quitar {
@@ -586,13 +592,13 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   width: 22px; height: 22px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; font-size: 16px; line-height: 1;
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
   background: transparent; border: 0; border-radius: 6px;
   cursor: pointer; transition: background .15s, color .15s;
 }
 .ihc-archivo__quitar:hover {
-  color: var(--ih-danger, #a12a1e);
-  background: var(--ih-danger-bg, #fdeceb);
+  color: var(--ih-danger, #c0392b);
+  background: var(--ih-danger-bg, #fcedeb);
 }
 .ihc-archivo__quitar:focus-visible {
   outline: 2px solid var(--ih-purple, #663399); outline-offset: 1px;
@@ -602,7 +608,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 .ihc-archivo__error {
   margin: .5rem 0 0;
   font-size: var(--ih-text-sm, 12.5px); line-height: 1.5;
-  color: var(--ih-danger, #a12a1e);
+  color: var(--ih-danger, #c0392b);
 }
 
 /* ---------------------------------------------------------------------------
@@ -620,7 +626,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 @media (max-width: 1024px) { .ih-edit-grid-3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 860px)  { .ih-edit-grid, .ih-edit-grid-3 { grid-template-columns: 1fr; } }
 
-.ih-badge--neutral { background: var(--ih-gray-100, #f0edf6); color: var(--ih-gray-500, #6f6a7d); }
+.ih-badge--neutral { background: var(--ih-gray-100, #f5eef7); color: var(--ih-gray-500, #6b6f7b); }
 
 /* El icono de la cabecera de una tarjeta. La regla estaba sólo en
    intellihelp.css: en el portal del cliente el icono salía del color del texto
@@ -632,9 +638,9 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 /* Utilidades de color de texto. Vivían sólo en app.css, y las pantallas que
    abren los dos portales (backend/edit.php, includes/campo_catalogo.php) las
    usan: en el panel el mensaje de error salía del color del texto normal. */
-.ih-text-danger  { color: var(--ih-danger, #a12a1e); }
-.ih-text-success { color: var(--ih-success, #5f8a12); }
-.ih-text-warning { color: var(--ih-warning, #a8620a); }
+.ih-text-danger  { color: var(--ih-danger, #c0392b); }
+.ih-text-success { color: var(--ih-success, #522980); }
+.ih-text-warning { color: var(--ih-warning, #6e5a00); }
 
 /* ---------------------------------------------------------------------------
    5 ter. Tarjetas de acceso (las pantallas que agrupan otras)
@@ -661,7 +667,7 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
   display: flex; align-items: center; gap: 1rem;
   padding: .95rem 1.15rem;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-lg, 15px);
   box-shadow: var(--ih-shadow-xs, 0 1px 2px rgba(16, 20, 30, .05));
   color: inherit; text-decoration: none;
@@ -669,20 +675,20 @@ dialog.ih-modal::backdrop { background: rgba(22, 25, 34, .45); }
 }
 .ih-hub__item:hover {
   text-decoration: none;
-  border-color: var(--ih-purple-200, #d0bfea);
+  border-color: var(--ih-purple-200, #d8cbe3);
   box-shadow: var(--ih-shadow-sm, 0 1px 2px rgba(16, 20, 30, .05), 0 8px 24px -12px rgba(74, 36, 112, .18));
 }
 .ih-hub__item:focus-visible {
   outline: none;
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #f2ecf9);
+  box-shadow: 0 0 0 3px var(--ih-ctl-ring, #fff6ff);
 }
 
 .ih-hub__icono {
   flex: none; width: 40px; height: 40px;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--ih-radius-md, 10px);
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   color: var(--ih-purple, #663399);
   font-size: 18px; line-height: 1;
   transition: background .15s, color .15s;
@@ -723,11 +729,11 @@ button.ih-hub__item {
 .ih-hub__desc {
   display: block; margin: 0;
   font-size: var(--ih-text-sm, 12.5px); line-height: 1.5;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-hub__flecha {
   flex: none; width: 18px; height: 18px;
-  color: var(--ih-gray-300, #cfcbd8);
+  color: var(--ih-gray-300, #ddd8e4);
   transition: color .15s, transform .15s;
 }
 .ih-hub__item:hover .ih-hub__flecha {
@@ -741,7 +747,7 @@ button.ih-hub__item {
    para que la pantalla no cambie de forma según quién entra. */
 .ih-hub__item.es-bloqueado {
   opacity: .6; pointer-events: none;
-  background: var(--ih-gray-50, #faf9fc); box-shadow: none;
+  background: var(--ih-gray-50, #fff6ff); box-shadow: none;
 }
 
 /* En un teléfono la fila se apila: con 40px de icono más la flecha, la
@@ -756,7 +762,7 @@ button.ih-hub__item {
 .ih-hub-grupo__titulo {
   margin: 0; font-size: var(--ih-text-xs, 11px); font-weight: 800;
   text-transform: uppercase; letter-spacing: .06em;
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
 }
 .ih-hub + .ih-hub-grupo { margin-top: 1.6rem; }
 
@@ -772,7 +778,7 @@ button.ih-hub__item {
   display: flex; flex-wrap: wrap; gap: .4rem;
   padding: .6rem;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-lg, 15px);
   position: sticky; top: .5rem; z-index: 5;
 }
@@ -780,14 +786,14 @@ button.ih-hub__item {
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .4rem .7rem;
   font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
-  color: var(--ih-gray-600, #5b566a);
+  color: var(--ih-gray-600, #565a68);
   border-radius: var(--ih-radius-sm, 9px);
   text-decoration: none;
   transition: background .15s, color .15s;
 }
 .ficha-indice a:hover {
   text-decoration: none;
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   color: var(--ih-purple, #663399);
 }
 .ficha-indice .ih-badge { font-size: 10.5px; padding: 1px 6px; }
@@ -828,7 +834,7 @@ button.ih-hub__item {
 .ih-subtabs {
   display: flex; flex-wrap: wrap; gap: 0;
   background: var(--ih-white, #fff);
-  border-bottom: 2px solid var(--ih-gray-200, #e7e4ef);
+  border-bottom: 2px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-lg, 15px) var(--ih-radius-lg, 15px) 0 0;
   margin-bottom: 1.25rem;
   overflow-x: auto;
@@ -839,7 +845,7 @@ button.ih-hub__item {
   display: inline-flex; align-items: center; gap: .4rem;
   padding: .7rem 1.2rem;
   font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
-  color: var(--ih-gray-600, #5b566a);
+  color: var(--ih-gray-600, #565a68);
   text-decoration: none; white-space: nowrap;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
@@ -848,7 +854,7 @@ button.ih-hub__item {
 .ih-subtab:hover { color: var(--ih-purple, #663399); text-decoration: none; }
 .ih-subtab:focus-visible {
   outline: none; color: var(--ih-purple, #663399);
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   border-radius: var(--ih-radius-sm, 9px) var(--ih-radius-sm, 9px) 0 0;
 }
 .ih-subtab.is-active {
@@ -866,8 +872,8 @@ button.ih-hub__item {
   align-items: end;
   padding: 1rem;
   margin-bottom: 1.25rem;
-  background: var(--ih-gray-50, #faf9fc);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  background: var(--ih-gray-50, #fff6ff);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 10px);
 }
 .ih-filtros__acciones { display: flex; gap: .5rem; flex-wrap: wrap; align-items: end; }
@@ -895,7 +901,7 @@ button.ih-hub__item {
 }
 .ih-pager__info {
   display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
-  font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d);
+  font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-pager__info .ihc-select, .ih-pager__info select { width: auto; min-width: 90px; }
 .ih-pager__paginas { display: flex; gap: .25rem; list-style: none; padding: 0; margin: 0; }
@@ -907,7 +913,7 @@ button.ih-hub__item {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 34px; min-height: 34px; padding: 0 .6rem;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-sm, 9px);
   color: var(--ih-purple, #663399);
   font-size: var(--ih-text-sm, 12.5px); font-weight: 700;
@@ -916,17 +922,17 @@ button.ih-hub__item {
 }
 .ih-pager__link:hover {
   text-decoration: none;
-  background: var(--ih-purple-50, #f2ecf9);
-  border-color: var(--ih-purple-200, #d0bfea);
+  background: var(--ih-purple-50, #fff6ff);
+  border-color: var(--ih-purple-200, #d8cbe3);
 }
 .ih-pager__item.is-active .ih-pager__link {
   background: var(--ih-purple, #663399); color: #fff;
   border-color: var(--ih-purple, #663399);
 }
 .ih-pager__item.is-disabled .ih-pager__link {
-  color: var(--ih-gray-300, #cfcbd8);
-  background: var(--ih-gray-50, #faf9fc);
-  border-color: var(--ih-gray-100, #f0edf6);
+  color: var(--ih-gray-300, #ddd8e4);
+  background: var(--ih-gray-50, #fff6ff);
+  border-color: var(--ih-gray-100, #f5eef7);
   pointer-events: none;
 }
 @media (max-width: 700px) {
@@ -942,13 +948,13 @@ button.ih-hub__item {
 .ih-dato {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; padding: .55rem 0;
-  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  border-bottom: 1px solid var(--ih-gray-100, #f5eef7);
 }
 .ih-dato:last-child { border-bottom: 0; }
 .ih-dato__label {
   flex: 0 0 auto;
   font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-dato__valor {
   flex: 1 1 auto; min-width: 0; text-align: right;
@@ -956,7 +962,7 @@ button.ih-hub__item {
   color: var(--ih-gray-900, #161922);
   overflow-wrap: anywhere;
 }
-.ih-dato__valor.es-vacio { color: var(--ih-gray-300, #cfcbd8); font-weight: 400; }
+.ih-dato__valor.es-vacio { color: var(--ih-gray-300, #ddd8e4); font-weight: 400; }
 /* Dos columnas cuando los datos son muchos y cortos: el detalle de un activo
    tiene treinta campos, y en una sola columna son treinta renglones de scroll
    con media pantalla vacía a la derecha. */
@@ -990,7 +996,7 @@ button.ih-hub__item {
   margin-bottom: 1rem;
 }
 .ih-barra__titulo { margin: 0; font-size: var(--ih-text-lg, 16px); font-weight: 700; color: var(--ih-gray-800, #2b2836); }
-.ih-barra__ayuda { margin: .25rem 0 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d); }
+.ih-barra__ayuda { margin: .25rem 0 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6b6f7b); }
 .ih-barra__acciones { display: flex; gap: .5rem; flex-wrap: wrap; }
 /* El lado del texto. Hace falta nombrarlo cuando el título lleva insignias al
    lado: sin él, el bloque no se encoge y las insignias empujan los botones
@@ -1051,7 +1057,7 @@ button.ih-hub__item {
 .ih-buscador__campo .ih-input { flex: 1 1 auto; min-width: 0; padding-left: 2.15rem; }
 .ih-buscador__lupa {
   position: absolute; left: .7rem; top: 50%; transform: translateY(-50%);
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
   font-size: 14px; line-height: 1; pointer-events: none;
 }
 
@@ -1118,7 +1124,7 @@ button.ih-hub__item {
 .ih-opcion {
   display: flex; flex-direction: column;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-lg, 15px);
   padding: 1.5rem;
 }
@@ -1128,7 +1134,7 @@ button.ih-hub__item {
   display: flex; align-items: center; justify-content: center;
   font-size: 22px;
   color: var(--ih-purple, #663399);
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   border-radius: var(--ih-radius-md, 10px);
 }
 .ih-opcion__titulo {
@@ -1139,7 +1145,7 @@ button.ih-hub__item {
 .ih-opcion__texto {
   margin: 0 0 1.15rem;
   font-size: var(--ih-text-sm, 12.5px); line-height: 1.6;
-  color: var(--ih-gray-600, #5b566a);
+  color: var(--ih-gray-600, #565a68);
 }
 /* El botón se va al pie, para que dos tarjetas de distinto largo lo tengan a la
    misma altura: si uno queda más arriba que el otro, la columna más corta
@@ -1152,7 +1158,7 @@ button.ih-hub__item {
 .ih-opcion__nota {
   margin: .6rem 0 0;
   font-size: var(--ih-text-xs, 11px);
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 
 /* ── Una lista de nombres ────────────────────────────────────────────────────
@@ -1169,8 +1175,8 @@ button.ih-hub__item {
   display: inline-flex; align-items: center;
   padding: .2rem .55rem;
   font-size: var(--ih-text-xs, 11px); font-weight: 500;
-  color: var(--ih-gray-600, #5b566a);
-  background: var(--ih-gray-100, #f0edf6);
+  color: var(--ih-gray-600, #565a68);
+  background: var(--ih-gray-100, #f5eef7);
   border-radius: var(--ih-radius-sm, 7px);
   white-space: nowrap;
 }
@@ -1194,7 +1200,7 @@ button.ih-hub__item {
   position: relative;
   padding-left: 2.2rem;
   font-size: var(--ih-text-base, 14px); line-height: 1.6;
-  color: var(--ih-gray-700, #434050);
+  color: var(--ih-gray-700, #3d4150);
 }
 .ih-pasos > li::before {
   content: counter(ih-paso);
@@ -1203,7 +1209,7 @@ button.ih-hub__item {
   display: flex; align-items: center; justify-content: center;
   font-size: var(--ih-text-xs, 11px); font-weight: 800;
   color: var(--ih-purple, #663399);
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   border-radius: 50%;
 }
 
@@ -1273,13 +1279,13 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
    `<span style="color:var(--ih-danger)">*</span>` en nueve lugares de la misma
    pantalla. Además del color, le faltaba lo que importa: un asterisco rojo no
    le dice nada a quien usa un lector de pantalla, y «*» se lee «asterisco». */
-.ih-field__req { color: var(--ih-danger, #a12a1e); font-weight: 700; }
+.ih-field__req { color: var(--ih-danger, #c0392b); font-weight: 700; }
 /* Y su contrario: decir que un campo se puede dejar vacío. Va en peso normal
    adentro de un rótulo que es negrita, porque es una aclaración y no parte del
    nombre del campo. */
 .ih-field__opcional {
   font-weight: 400;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 
 /* La ayuda que aparece cuando un desplegable se queda sin opciones.
@@ -1287,7 +1293,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
    sistemas de los que no tenemos las versiones. Un desplegable que no abre
    nada y no dice por qué parece roto; esto lo explica. Va en ámbar y no en
    gris porque es una salvedad, no una aclaración más. */
-.cat-sin-opciones { color: var(--ih-warning, #a8620a); }
+.cat-sin-opciones { color: var(--ih-warning, #6e5a00); }
 /* El icono que acompaña al rótulo de un campo y cambia con lo que la persona
    elige —la carpeta de la categoría en el alta de un activo—. */
 .ih-label__icono {
@@ -1313,8 +1319,8 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
    armaban con cinco declaraciones cada una (fondo, borde, radio, relleno,
    margen) y un título con otras cuatro. */
 .ih-resumen {
-  background: var(--ih-gray-50, #faf9fc);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  background: var(--ih-gray-50, #fff6ff);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 10px);
   padding: .75rem 1rem;
   margin-bottom: 1rem;
@@ -1324,7 +1330,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-resumen .ih-seccion__titulo { margin-top: 0; padding-bottom: 0; border-bottom: 0; }
 .ih-resumen__fila {
   font-size: var(--ih-text-sm, 12.5px);
-  color: var(--ih-gray-700, #434050);
+  color: var(--ih-gray-700, #3d4150);
   display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
 }
 .ih-resumen__fila + .ih-resumen__fila { margin-top: .3rem; }
@@ -1346,13 +1352,13 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-nota {
   display: flex; align-items: flex-start; gap: .65rem;
   padding: .8rem 1rem;
-  background: var(--ih-gray-50, #faf9fc);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
-  border-left: 3px solid var(--ih-purple-200, #d0bfea);
+  background: var(--ih-gray-50, #fff6ff);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
+  border-left: 3px solid var(--ih-purple-200, #d8cbe3);
   border-radius: var(--ih-radius-md, 10px);
   margin-bottom: .75rem;
 }
-.ih-nota > .bi { flex: none; margin-top: .1rem; color: var(--ih-gray-400, #a7a3b4); }
+.ih-nota > .bi { flex: none; margin-top: .1rem; color: var(--ih-gray-400, #a8a2b4); }
 .ih-nota__cuerpo { flex: 1 1 auto; min-width: 0; }
 /* `pre-wrap`: si alguien escribió una lista con saltos de línea, se respeta.
    Sin esto, cuatro renglones se ven como un párrafo corrido. */
@@ -1365,7 +1371,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-nota__firma {
   margin: .3rem 0 0;
   font-size: var(--ih-text-xs, 11px);
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 
 /* Tarjetas en dos columnas que se acomodan solas, cada una ocupando lo que
@@ -1409,7 +1415,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-linea-tiempo__item::before {
   content: "";
   position: absolute; left: 9px; top: 1.3rem; bottom: 0;
-  width: 1px; background: var(--ih-gray-200, #e7e4ef);
+  width: 1px; background: var(--ih-gray-200, #ebe2ef);
 }
 .ih-linea-tiempo__item:last-child { padding-bottom: 0; }
 .ih-linea-tiempo__item:last-child::before { display: none; }
@@ -1418,8 +1424,8 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
   width: 19px; height: 19px; margin-top: .1rem;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: var(--ih-gray-100, #f0edf6);
-  color: var(--ih-gray-500, #6f6a7d);
+  background: var(--ih-gray-100, #f5eef7);
+  color: var(--ih-gray-500, #6b6f7b);
   font-size: 10px;
 }
 /* Lo que todavía está pasando —sigue en la papelera— se marca, porque no es un
@@ -1428,8 +1434,8 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
   /* Los tokens que la hoja ya define, no un ámbar nuevo: `--ih-warning-050`
      y `--ih-warning-600` no existen y habrían caído en su color de respaldo,
      que es un ámbar parecido pero distinto del de las demás advertencias. */
-  background: var(--ih-warning-bg, #fdf4e7);
-  color: var(--ih-warning, #a8620a);
+  background: var(--ih-warning-bg, #fffade);
+  color: var(--ih-warning, #6e5a00);
 }
 .ih-linea-tiempo .ih-nota-pie { margin-top: .15rem; }
 
@@ -1440,7 +1446,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
 .ih-fila-lista {
   display: flex; align-items: center; gap: .75rem;
   padding: .65rem 0;
-  border-bottom: 1px solid var(--ih-gray-100, #f6f5fa);
+  border-bottom: 1px solid var(--ih-gray-100, #fff6ff);
 }
 .ih-fila-lista:last-child { border-bottom: 0; }
 .ih-fila-lista__texto { flex: 1 1 auto; min-width: 0; }
@@ -1450,7 +1456,7 @@ dialog.ih-modal.ih-modal--angosta { width: min(26rem, calc(100vw - 2rem)); }
    espacios) y se ve que es un dato y no un campo que se escribe. */
 .ih-copiable {
   flex: 1 1 auto; min-width: 0;
-  background: var(--ih-purple-50, #f2ecf9);
+  background: var(--ih-purple-50, #fff6ff);
   color: var(--ih-gray-800, #2b2836);
   cursor: text;
   word-break: break-all;
@@ -1472,7 +1478,7 @@ details[open] > .ih-resumen-abrible > .bi { transform: rotate(180deg); }
 
 /* Una tarjeta cuyo contenido no se puede deshacer. El borde de color es lo
    único que la distingue antes de leerla. */
-.ih-card--peligro { border-left: 4px solid var(--ih-danger, #a12a1e); }
+.ih-card--peligro { border-left: 4px solid var(--ih-danger, #c0392b); }
 
 /* El valor de un KPI que es una palabra y no un número: «Activa», «Sin
    configurar». A 28 px, una palabra ocupa toda la tarjeta y compite con el
@@ -1485,7 +1491,7 @@ details[open] > .ih-resumen-abrible > .bi { transform: rotate(180deg); }
   margin: .6rem 0 0;
   font-size: var(--ih-text-xs, 11px);
   line-height: 1.45;
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
 }
 /* Un enlace dentro de un KPI. Hereda el color del número de al lado —pintarlo
    de violeta ahí adentro lo hace competir con la cifra, que es lo que la
@@ -1501,9 +1507,9 @@ details[open] > .ih-resumen-abrible > .bi { transform: rotate(180deg); }
    debajo de la fecha. Es el dato de apoyo, no el dato. */
 /* El violeta de la marca para un icono suelto dentro de un texto. */
 .ih-text-primary { color: var(--ih-purple, #663399); }
-.ih-text-apagado { color: var(--ih-gray-400, #a7a3b4); }
+.ih-text-apagado { color: var(--ih-gray-400, #a8a2b4); }
 a.ih-text-apagado { text-decoration: none; }
-a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: underline; }
+a.ih-text-apagado:hover { color: var(--ih-gray-600, #565a68); text-decoration: underline; }
 
 /* Un logo dentro de una línea de texto o de un botón: el de Google, el de
    Microsoft, el de Drive. Un `<svg>` es `inline` por defecto, así que se apoya
@@ -1534,7 +1540,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   padding: .5rem 0;
   text-align: center;
   font-size: var(--ih-text-sm, 12.5px);
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
 }
 .ih-vacio-chico > .bi {
   display: block;
@@ -1555,10 +1561,10 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 .ih-seccion__titulo {
   margin: 1.25rem 0 .75rem;
   padding-bottom: .5rem;
-  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  border-bottom: 1px solid var(--ih-gray-100, #f5eef7);
   font-size: var(--ih-text-xs, 11px); font-weight: 800;
   text-transform: uppercase; letter-spacing: .05em;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-seccion__titulo:first-child { margin-top: 0; }
 
@@ -1688,8 +1694,8 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 .ih-barra-fina {
   display: flex; justify-content: flex-end;
   padding: .5rem 1.25rem;
-  background: var(--ih-gray-50, #faf9fc);
-  border-top: 1px solid var(--ih-gray-100, #f0edf6);
+  background: var(--ih-gray-50, #fff6ff);
+  border-top: 1px solid var(--ih-gray-100, #f5eef7);
 }
 
 /* Un menú que cuelga de un botón. No es `.ihc-pop` —ese lo construye el
@@ -1700,7 +1706,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   position: absolute; right: 0; top: calc(100% + .4rem); z-index: 60;
   min-width: 15rem; padding: .75rem 1rem;
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 10px);
   box-shadow: var(--ih-shadow-lg, 0 24px 60px -20px rgba(74, 36, 112, .42));
 }
@@ -1708,7 +1714,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   margin: 0 0 .6rem;
   font-size: var(--ih-text-xs, 11px); font-weight: 800;
   text-transform: uppercase; letter-spacing: .05em;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-menu__opcion {
   display: flex; align-items: center; gap: .5rem;
@@ -1720,7 +1726,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 .ih-menu__pie {
   display: flex; gap: .4rem;
   margin-top: .6rem; padding-top: .6rem;
-  border-top: 1px solid var(--ih-gray-100, #f0edf6);
+  border-top: 1px solid var(--ih-gray-100, #f5eef7);
 }
 .ih-menu__pie .ih-btn { flex: 1; }
 
@@ -1748,7 +1754,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   margin-top: .1rem;
   font-size: var(--ih-text-xs, 11px);
   line-height: 1.35;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
   display: flex; align-items: center; gap: .35rem;
   /* Un renglón y no los que haga falta: con `wrap`, la lista de opciones de un
      campo —«LTO-1 · LTO-2 · LTO-3 · LTO-4 · LTO-5»— partía en tres líneas y
@@ -1776,7 +1782,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 
 /* Un valor con su icono al lado, dentro de una celda. */
 .ih-con-icono { display: inline-flex; align-items: center; gap: .4rem; }
-.ih-con-icono > .bi { color: var(--ih-gray-500, #6f6a7d); }
+.ih-con-icono > .bi { color: var(--ih-gray-500, #6b6f7b); }
 /* Y lo que cuelga debajo de ese valor, alineado con el texto y no con el
    icono: la subcategoría debajo de la categoría. */
 .ih-colgado {
@@ -1788,7 +1794,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 .ih-table__vacio {
   padding: 3rem 1rem;
   text-align: center;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 .ih-table__vacio > .bi {
   display: block;
@@ -1831,11 +1837,11 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   border-radius: var(--ih-radius-lg, 15px);
 }
 /* Cuando lo que sigue no se deshace, el icono lo dice. */
-.ih-foco__icono--aviso  { background: var(--ih-warning, #a8620a); }
-.ih-foco__icono--peligro { background: var(--ih-danger, #a12a1e); }
+.ih-foco__icono--aviso  { background: var(--ih-warning, #6e5a00); }
+.ih-foco__icono--peligro { background: var(--ih-danger, #c0392b); }
 
 .ih-foco__titulo { margin: 0; font-size: var(--ih-text-lg, 16px); font-weight: 700; color: var(--ih-gray-800, #2b2836); }
-.ih-foco__sub    { margin: 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6f6a7d); }
+.ih-foco__sub    { margin: 0; font-size: var(--ih-text-sm, 12.5px); color: var(--ih-gray-500, #6b6f7b); }
 
 /* Los botones del pie, del mismo ancho: ninguna de las dos salidas es «la
    obvia» —archivar o no archivar— así que ninguna se ve más grande. */
@@ -1848,8 +1854,8 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   margin-bottom: 1.25rem;
   font-size: 4rem; line-height: 1;
 }
-.ih-foco__marca--bien { color: var(--ih-success, #5f8a12); }
-.ih-foco__marca--mal  { color: var(--ih-danger, #a12a1e); }
+.ih-foco__marca--bien { color: var(--ih-success, #522980); }
+.ih-foco__marca--mal  { color: var(--ih-danger, #c0392b); }
 /* El detalle va alineado a la izquierda aunque el resto esté centrado: puede
    ser una lista de archivos o un mensaje de error de varias líneas, y eso
    centrado no se lee. */
@@ -1857,8 +1863,8 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   margin-bottom: 2rem; padding: 1rem;
   text-align: left;
   font-size: var(--ih-text-sm, 12.5px);
-  color: var(--ih-gray-600, #5b566a);
-  background: var(--ih-gray-50, #faf9fc);
+  color: var(--ih-gray-600, #565a68);
+  background: var(--ih-gray-50, #fff6ff);
   border-radius: var(--ih-radius-md, 10px);
 }
 
@@ -1868,18 +1874,18 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 1rem;
 }
-.ih-camino { border: 2px solid var(--ih-gray-200, #e7e4ef); }
-.ih-camino--peligro { border-color: var(--ih-danger-line, #f3c9c4); }
-.ih-camino--seguro  { border-color: var(--ih-purple-200, #d0bfea); }
+.ih-camino { border: 2px solid var(--ih-gray-200, #ebe2ef); }
+.ih-camino--peligro { border-color: var(--ih-danger-line, #f0c9c4); }
+.ih-camino--seguro  { border-color: var(--ih-purple-200, #d8cbe3); }
 .ih-camino__cabecera { display: flex; align-items: center; gap: .5rem; }
 .ih-camino__cabecera > .bi { font-size: 1.4rem; }
-.ih-camino--peligro .ih-camino__cabecera > .bi { color: var(--ih-danger, #a12a1e); }
+.ih-camino--peligro .ih-camino__cabecera > .bi { color: var(--ih-danger, #c0392b); }
 .ih-camino--seguro  .ih-camino__cabecera > .bi { color: var(--ih-purple, #663399); }
 .ih-camino__titulo { font-size: var(--ih-text-sm, 12.5px); font-weight: 700; }
 .ih-camino__texto {
   margin: 0;
   font-size: var(--ih-text-xs, 11px); line-height: 1.5;
-  color: var(--ih-gray-500, #6f6a7d);
+  color: var(--ih-gray-500, #6b6f7b);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1897,7 +1903,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
    --------------------------------------------------------------------------- */
 .ih-filas { display: grid; gap: .25rem; margin-bottom: .9rem; }
 .ih-fila { position: relative; padding: .9rem 0; }
-.ih-fila + .ih-fila { border-top: 1px dashed var(--ih-gray-200, #e7e4ef); }
+.ih-fila + .ih-fila { border-top: 1px dashed var(--ih-gray-200, #ebe2ef); }
 .ih-fila:first-child { padding-top: 0; }
 
 /* El botón de quitar va arriba a la derecha de su fila, fuera del flujo de los
@@ -1929,22 +1935,22 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   padding: .55rem 1rem;
   font-family: inherit;
   font-size: var(--ih-text-sm, 12.5px); font-weight: 600;
-  color: var(--ih-gray-700, #434050);
+  color: var(--ih-gray-700, #3d4150);
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 10px);
   cursor: pointer; text-decoration: none; white-space: nowrap;
   transition: background .15s, color .15s, border-color .15s;
 }
 .ih-pill:hover {
   text-decoration: none;
-  border-color: var(--ih-purple-200, #d0bfea);
-  background: var(--ih-gray-50, #faf9fc);
+  border-color: var(--ih-purple-200, #d8cbe3);
+  background: var(--ih-gray-50, #fff6ff);
 }
 .ih-pill:focus-visible {
   outline: none;
   border-color: var(--ih-purple, #663399);
-  box-shadow: 0 0 0 3px var(--ih-purple-50, #f2ecf9);
+  box-shadow: 0 0 0 3px var(--ih-purple-50, #fff6ff);
 }
 .ih-pill.is-active {
   background: var(--ih-purple, #663399);
@@ -1952,10 +1958,10 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   border-color: var(--ih-purple, #663399);
 }
 /* Una pastilla de algo propio de esta empresa, no del sistema. */
-.ih-pill--propia { border-color: var(--ih-purple-200, #d0bfea); }
+.ih-pill--propia { border-color: var(--ih-purple-200, #d8cbe3); }
 /* La de «agregar»: se distingue del resto sin gritar. */
 .ih-pill--nueva { border-style: dashed; color: var(--ih-purple, #663399); }
-.ih-pill--nueva:hover { background: var(--ih-purple-50, #f2ecf9); }
+.ih-pill--nueva:hover { background: var(--ih-purple-50, #fff6ff); }
 .ih-pill .ih-badge { font-size: 10px; padding: 1px 6px; }
 .ih-pill.is-active .ih-badge { background: rgba(255, 255, 255, .22); color: #fff; }
 
@@ -1963,25 +1969,25 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
 .ih-permisos { display: grid; gap: .9rem; }
 .ih-permisos__grupo {
   background: var(--ih-white, #fff);
-  border: 1px solid var(--ih-gray-200, #e7e4ef);
+  border: 1px solid var(--ih-gray-200, #ebe2ef);
   border-radius: var(--ih-radius-md, 10px);
   overflow: hidden;
 }
 .ih-permisos__titulo {
   padding: .75rem 1rem;
-  background: var(--ih-gray-50, #faf9fc);
-  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  background: var(--ih-gray-50, #fff6ff);
+  border-bottom: 1px solid var(--ih-gray-100, #f5eef7);
   font-size: var(--ih-text-xs, 11px); font-weight: 800;
   text-transform: uppercase; letter-spacing: .05em;
-  color: var(--ih-gray-600, #5b566a);
+  color: var(--ih-gray-600, #565a68);
 }
 .ih-permisos__fila {
   display: flex; align-items: center; gap: .75rem;
   padding: .65rem 1rem;
-  border-bottom: 1px solid var(--ih-gray-100, #f0edf6);
+  border-bottom: 1px solid var(--ih-gray-100, #f5eef7);
 }
 .ih-permisos__fila:last-child { border-bottom: 0; }
-.ih-permisos__fila:hover { background: var(--ih-gray-50, #faf9fc); }
+.ih-permisos__fila:hover { background: var(--ih-gray-50, #fff6ff); }
 .ih-permisos__fila label {
   display: flex; align-items: center; gap: .65rem;
   flex: 1 1 auto; min-width: 0;
@@ -1995,7 +2001,7 @@ a.ih-text-apagado:hover { color: var(--ih-gray-600, #5b566a); text-decoration: u
   flex: none; margin-left: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--ih-text-xs, 11px);
-  color: var(--ih-gray-400, #a7a3b4);
+  color: var(--ih-gray-400, #a8a2b4);
 }
 @media (max-width: 560px) {
   .ih-permisos__fila { flex-wrap: wrap; }

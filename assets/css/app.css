@@ -13,28 +13,44 @@
    ============================================================ */
 
 /* ------------------------------------------------------------------
-   1. TOKENS — idénticos a CMR / APP Tickets
+   1. TOKENS — los mismos que el portal de RRHH
+
+   Cuatro colores: #663399 · #9f88b1 · #fff6ff · #fffade, sobre texto #161922.
+   Planos, sin degradados.
+
+   El verde #9CC930 YA NO ESTÁ. Era el color de lo positivo —guardar, la
+   insignia «Activo», el aviso de éxito— y ahora eso es violeta, igual que en
+   RRHH. El rojo y el amarillo se quedan: son estados, no identidad, y un error
+   en violeta no se lee como un error.
    ------------------------------------------------------------------ */
 :root{
-  --ink:#161922; --muted:#6f6a7d; --line:#e7e4ef; --line-soft:#f0edf6;
-  --surface:#ffffff; --bg:#f6f5fa; --soft:#faf9fc;
-  --primary:#663399; --primary-700:#522a7a; --primary-050:#f2ecf9; --primary-100:#e6d9f5;
-  --accent:#9CC930; --accent-050:#eef6dc; --accent-600:#5f8a12;
-  --warn:#a8620a; --warn-bg:#fdf3e3;
-  --danger:#a12a1e; --danger-bg:#fdeceb; --danger-line:#f3c9c4;
-  --info:#1f6f9c; --info-bg:#e7f2f9;
+  --ink:#161922; --ink-2:#3d4150; --muted:#6b6f7b;
+  --line:#ebe2ef; --line-soft:#f5eef7;
+  --surface:#ffffff; --bg:#fff6ff; --soft:#fff6ff;
+  --primary:#663399; --primary-700:#522980; --primary-900:#3d1f5c;
+  --primary-050:#fff6ff; --primary-100:#e6dcec;
+  /* Los dos de la paleta que no son ni el violeta ni el blanco: el lila para
+     los bordes que tienen que notarse sin gritar, y el crema para lo que
+     espera —una advertencia, un contador—. */
+  --lilac:#9f88b1; --cream:#fffade;
+  /* Lo positivo es violeta. El token sigue llamándose `accent` porque lo
+     nombran cincuenta reglas; lo que cambió es a qué apunta. */
+  --accent:#663399; --accent-050:#fff6ff; --accent-600:#522980;
+  --warn:#6e5a00; --warn-bg:#fffade;
+  --danger:#c0392b; --danger-bg:#fcedeb; --danger-line:#f0c9c4;
+  --info:#522980; --info-bg:#fff6ff;
 
   /* Los dos que `componentes.css` necesita y que sólo existían acá con nombre
      local: `--line-soft` era la línea tenue de una fila de tabla, y `--pill` el
      radio de una insignia. Con nombre `--ih-*` los declaran las dos hojas. */
-  --ih-line-soft:#f0edf6;
+  --ih-line-soft:#f5eef7;
   --ih-pill:20px;
 
-  --shadow:0 1px 2px rgba(16,20,30,.05), 0 8px 24px -12px rgba(74,36,112,.18);
-  --shadow-lg:0 24px 60px -20px rgba(74,36,112,.42);
+  --shadow:0 1px 2px rgba(22,25,34,.04), 0 4px 16px rgba(22,25,34,.05);
+  --shadow-lg:0 10px 40px rgba(45,22,71,.14);
 
   --font:'Saira',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --radius:15px; --radius-sm:10px; --radius-xs:9px; --pill:20px;
+  --radius:14px; --radius-sm:10px; --radius-xs:9px; --pill:20px;
 
   --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem; --sp-5:1.25rem; --sp-6:1.5rem; --sp-8:2rem;
 
@@ -44,13 +60,16 @@
   --ih-primary:var(--primary);
   --ih-purple:var(--primary); --ih-purple-dark:var(--primary-700);
   --ih-purple-light:#8C5BB8; --ih-purple-50:var(--primary-050);
-  --ih-purple-100:var(--primary-100); --ih-purple-200:#d0bfea; --ih-purple-300:#b69bda;
+  --ih-purple-100:var(--primary-100); --ih-purple-200:#d8cbe3; --ih-purple-300:var(--lilac);
+  /* `--ih-green*` quedó sin verde al que apuntar: los nombra el markup de
+     cincuenta pantallas, así que siguen existiendo y hoy son el violeta. */
   --ih-green:var(--accent); --ih-green-dark:var(--accent-600);
-  --ih-green-light:#b7dc5f; --ih-green-50:var(--accent-050); --ih-green-100:#e5f1c7;
+  --ih-green-light:var(--lilac); --ih-green-50:var(--accent-050); --ih-green-100:var(--primary-100);
+  --ih-lilac:var(--lilac); --ih-cream:var(--cream);
   --ih-white:var(--surface); --ih-black:var(--ink);
   --ih-gray-50:var(--soft);  --ih-gray-100:var(--bg);   --ih-gray-200:var(--line);
-  --ih-gray-300:#cfcbd8;     --ih-gray-400:#a7a3b4;     --ih-gray-500:var(--muted);
-  --ih-gray-600:#5b566a;     --ih-gray-700:#434050;     --ih-gray-800:#2b2836;
+  --ih-gray-300:#ddd8e4;     --ih-gray-400:#a8a2b4;     --ih-gray-500:var(--muted);
+  --ih-gray-600:#565a68;     --ih-gray-700:var(--ink-2); --ih-gray-800:#2b2836;
   --ih-gray-900:var(--ink);
   --ih-success:var(--accent-600); --ih-success-bg:var(--accent-050);
   --ih-warning:var(--warn);       --ih-warning-bg:var(--warn-bg);
@@ -64,7 +83,7 @@
   --ih-radius-lg:var(--radius);    --ih-radius-xl:var(--radius);
   --ih-radius-full:9999px;
   --ih-font:var(--font);
-  --ih-topbar-h:58px; --ih-content-max:1500px;
+  --ih-topbar-h:64px; --ih-sidebar-w:264px; --ih-content-max:1500px;
   --ih-trans-fast:.15s; --ih-trans-base:.2s;
 
   /* Geometria de los controles de formulario. Los lee assets/css/componentes.css
@@ -75,12 +94,12 @@
   --ih-ctl-min-h:     40px;
   --ih-ctl-line:      normal;   /* los <input> del navegador usan normal */
   --ih-ctl-radius:    var(--radius-xs);
-  --ih-ctl-border:    var(--line);
-  --ih-ctl-hover:     #cfcbd8;
+  --ih-ctl-border:    #ddd8e4;
+  --ih-ctl-hover:     #ddd8e4;
   --ih-ctl-ring:      var(--primary-050);
   --ih-ctl-font:      14px;
   --ih-ctl-bg:        var(--surface);
-  --ih-ctl-placeholder: #a7a3b4;
+  --ih-ctl-placeholder: #a8a2b4;
 
 /* Escala tipografica. Los valores NO son inventados: son los que realmente
      usa APP Tickets (11 / 12.5 / 13 / 14 / 15.5 / 18 / 20 / 22 / 26), contados
@@ -124,23 +143,27 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
 *::-webkit-scrollbar-thumb:hover{background:#c4bed4;background-clip:padding-box}
 
 /* ------------------------------------------------------------------
-   3. SHELL — topbar + topnav (igual que CRM y Tickets)
+   3. SHELL — barra lateral + topbar
 
-   El markup sigue diciendo `.ih-sidebar`, pero acá se dibuja como una barra
-   de pestañas horizontal debajo del topbar. Así el portal queda con la misma
-   silueta que las otras apps sin tocar los 12 archivos que arman la página.
+   Acá se dibujaba una fila de pestañas horizontal. Ahora es una barra lateral
+   violeta, la misma silueta que el panel superadmin y que el portal de RRHH:
+   264px fijos, la marca arriba, la navegación al medio, la cuenta abajo.
+
+   El markup no cambió: ya decía `.ih-sidebar`. Lo único que lo dibujaba
+   horizontal era este bloque.
    ------------------------------------------------------------------ */
-.ih-app{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
-/* Las páginas incluyen el sidebar ANTES del topbar (así estaba armado el layout
-   de columnas). Con `order` los reubicamos sin tocar los 12 archivos que
-   componen la página: topbar arriba, pestañas debajo, contenido al final. */
-.ih-app__topbar,.ih-topbar{order:1}
-.ih-app__sidebar,.ih-sidebar{order:2}
-.ih-app__main{order:3}
+/* La barra lateral esta `fixed`, o sea fuera del flujo: lo que deja lugar a su
+   izquierda es el padding del contenedor. Tiene que ser el CONTENEDOR y no el
+   `<main>`, porque el topbar es hermano de main —no su padre—, y corriendo
+   solo a main el topbar quedaba debajo de la barra. */
+.ih-app{min-height:100vh;display:flex;flex-direction:column;background:var(--bg);
+  padding-left:var(--ih-sidebar-w)}
+.ih-app__main{flex:1;min-width:0;display:flex;flex-direction:column}
 
 .ih-topbar,.ih-app__topbar{
-  background:var(--surface);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:1rem;padding:0 1.25rem;height:58px;
+  background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(12px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:0 1.75rem;height:64px;
   position:sticky;top:0;z-index:30;
 }
 .ih-topbar__burger{display:none}
@@ -173,30 +196,65 @@ hr{border:0;border-top:1px solid var(--line);margin:var(--sp-5) 0}
   width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;
   font-weight:700;font-size:12px;flex:none}
 
-/* Navegación: `.ih-sidebar` se dibuja como fila de pestañas */
+/* La barra lateral. Violeta sólido, texto blanco: es la columna que da el
+   color a toda la aplicación. */
 .ih-sidebar,.ih-app__sidebar{
-  background:var(--surface);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:.25rem;padding:0 1.25rem;
-  overflow-x:auto;scrollbar-width:none;position:sticky;top:58px;z-index:29;
+  position:fixed;inset:0 auto 0 0;width:var(--ih-sidebar-w);z-index:40;
+  background:var(--primary);color:#fff;
+  display:flex;flex-direction:column;padding:20px 14px;overflow-y:auto;
 }
-.ih-sidebar::-webkit-scrollbar{display:none}
-.ih-sidebar__brand{display:none}          /* la marca ya está en el topbar */
-.ih-sidebar__footer{display:none}
-.ih-sidebar__nav{display:flex;align-items:center;gap:.25rem;flex:1;min-width:0}
-.ih-sidebar__group{display:flex;align-items:center;gap:.25rem}
-/* El grupo que cierra la navegación se va a la derecha: Datos y
-   Configuración no son pestañas del inventario, son lo de al lado. */
-.ih-sidebar__group--fin{margin-left:auto}
-.ih-sidebar__group-title{display:none}    /* los títulos de grupo no aplican en horizontal */
+.ih-sidebar::-webkit-scrollbar{width:6px}
+.ih-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2)}
+
+.ih-sidebar__brand{
+  display:flex;align-items:center;gap:12px;padding:4px 8px 22px;
+  color:#fff;text-decoration:none;flex-shrink:0;
+}
+.ih-sidebar__brand:hover{color:#fff;text-decoration:none}
+.ih-sidebar__logo{
+  width:40px;height:40px;border-radius:10px;flex:none;
+  background:#fff;color:var(--primary);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:17px;letter-spacing:-.5px;overflow:hidden;
+}
+.ih-sidebar__logo img{width:100%;height:100%;object-fit:contain}
+.ih-sidebar__brand-text{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+.ih-sidebar__brand-text strong{font-size:16px;font-weight:600}
+.ih-sidebar__brand-text span{font-size:11.5px;opacity:.75;letter-spacing:.02em}
+
+.ih-sidebar__nav{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.ih-sidebar__group{display:flex;flex-direction:column;gap:2px}
+.ih-sidebar__group + .ih-sidebar__group{margin-top:18px}
+/* El grupo que cierra —Contraseña y Salir— se va abajo del todo, separado por
+   una línea: es la cuenta, no una sección del inventario. */
+.ih-sidebar__group--fin{
+  margin-top:auto;padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.15);
+}
+.ih-sidebar__group-title{
+  font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+  opacity:.6;margin:0 12px 6px;font-weight:600;
+}
 .ih-sidebar__link{
-  display:inline-flex;align-items:center;gap:.4rem;padding:.7rem .7rem;
-  color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap;
-  border-bottom:2px solid transparent;border-radius:0;text-decoration:none;
-  transition:color var(--ih-trans-fast),border-color var(--ih-trans-fast);
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;
+  color:rgba(255,255,255,.82);font-weight:500;font-size:14px;text-decoration:none;
+  transition:background var(--ih-trans-fast),color var(--ih-trans-fast);
 }
-.ih-sidebar__link:hover{color:var(--ink);text-decoration:none}
-.ih-sidebar__link.is-active{color:var(--primary);border-bottom-color:var(--primary)}
-.ih-sidebar__link i,.ih-sidebar__link svg{flex:none}
+.ih-sidebar__link:hover{background:rgba(255,255,255,.09);color:#fff;text-decoration:none}
+.ih-sidebar__link.is-active{
+  background:#fff;color:var(--primary);font-weight:600;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);
+}
+.ih-sidebar__link i,.ih-sidebar__link svg{flex:none;font-size:17px;opacity:.9}
+.ih-sidebar__link.is-active i{opacity:1}
+.ih-sidebar__footer{
+  border-top:1px solid rgba(255,255,255,.15);
+  padding:14px 12px 0;margin-top:10px;font-size:11px;opacity:.55;
+}
+/* Con la barra lateral puesta, la marca del topbar sobra: dice lo mismo dos
+   veces y a dos centímetros. */
+.ih-portal-tenant .ih-topbar__brand,
+.ih-portal-tenant .ih-topbar__sep{display:none}
 
 .ih-app__main{
   flex:1;width:100%;max-width:var(--ih-content-max);margin:0 auto;
@@ -382,8 +440,21 @@ select::-ms-expand{display:none}
 @media (max-width:860px){
   .ih-hidden-mobile{display:none !important}
   .ih-topbar{padding:0 .9rem;gap:.6rem}
-  .ih-sidebar{padding:0 .9rem;top:58px}
+  /* Con una barra lateral fija de 264px no queda pantalla: se esconde fuera de
+     la vista y se abre con el botón de menú. El botón ya está en el topbar y
+     ya está cableado en componentes.js —lo usa el panel—, así que es la misma
+     clase `is-open` y no hace falta JavaScript nuevo. */
+  .ih-sidebar,.ih-app__sidebar{
+    transform:translateX(-100%);
+    transition:transform var(--ih-trans-base);
+    z-index:1100;
+  }
+  .ih-app.is-open .ih-sidebar,.ih-app.is-open .ih-app__sidebar{transform:translateX(0)}
+  .ih-app{padding-left:0}
   .ih-app__main{padding:1.1rem .9rem}
+  .ih-topbar__burger{display:inline-flex}
+  /* Sin barra lateral a la vista, la marca del topbar vuelve a hacer falta. */
+  .ih-portal-tenant .ih-topbar__brand{display:flex}
   .ih-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem}
   .ih-stat__value{font-size:22px}
   .ih-card__body,.ih-card__header{padding:.9rem}
@@ -411,14 +482,10 @@ select::-ms-expand{display:none}
 .ih-sort-link{display:inline-flex;align-items:center;gap:4px;color:inherit;text-decoration:none;white-space:nowrap}
 .ih-sort-link:hover,.ih-sort-link.is-active,.ih-sort-link.is-active i{color:var(--ih-green)}
 
-/* Marca del sidebar: en el tenant vive dentro de .ih-sidebar__brand, que esta
-   oculto porque la marca ya esta en el topbar. Se define igual para que la
-   cobertura por portal sea real y no dependa de que el padre siga oculto. */
-.ih-sidebar__logo{width:40px;height:40px;border-radius:var(--radius);overflow:hidden;flex:none;
-  background:var(--surface);color:var(--primary);display:flex;align-items:center;justify-content:center;
-  font-weight:800;font-size:18px}
-.ih-sidebar__logo img{width:100%;height:100%;object-fit:contain;display:block}
-.ih-sidebar__brand-text{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+/* La marca del sidebar se define arriba, con el resto de la barra lateral.
+   Acá había una segunda copia de `.ih-sidebar__logo` y `.ih-sidebar__brand-text`
+   de cuando el sidebar estaba oculto y la marca vivía en el topbar: dos reglas
+   para lo mismo, y ganaba la de más abajo. */
 
 /* Utilidad de layout usada por el markup del tenant. */
 
@@ -462,9 +529,6 @@ select::-ms-expand{display:none}
   /* Un formulario de 260px minimo mas el padding no entra en un telefono
      angosto: por debajo de este ancho se reparte libre. */
   .ih-form-grid{grid-template-columns:1fr}
-  /* Las pestanas se desplazan en horizontal en vez de apilarse y comerse la
-     pantalla. El scrollbar se oculta pero el gesto sigue funcionando. */
-  .ih-sidebar,.ih-app__sidebar{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
   .ih-topbar__actions .ih-btn span{display:none}
 }
 
