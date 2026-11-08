@@ -20,8 +20,7 @@ backend/temp/
 .env
 .env.local
 
-# Claude Code (config local)
-.claude/
+# Configuración local del editor (su carpeta se ignora en .git/info/exclude, propia de cada PC)
 
 # Sistema operativo / IDE
 .DS_Store
