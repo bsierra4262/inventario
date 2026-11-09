@@ -22,6 +22,7 @@
 ## Índice
 
 - [Descripción](#descripción)
+- [La aplicación por dentro](#la-aplicación-por-dentro)
 - [Características](#características)
 - [Arquitectura del sistema](#arquitectura-del-sistema)
 - [Multiempresa: cómo se resuelve la empresa](#multiempresa-cómo-se-resuelve-la-empresa)
@@ -55,6 +56,111 @@ nada de los demás.
 > Producción (privada): `https://desarrollo.intellihelp.tech` · primera empresa: INTELLIHELP S.A. (`ITH`)
 
 Documento maestro completo: [`md/PROYECTO.md`](md/PROYECTO.md).
+
+## La aplicación por dentro
+
+> Las capturas salen de una instalación local de prueba con datos **ficticios**: la empresa
+> «Logística Austral Demo», sus usuarios, proveedores, contratos y activos son inventados.
+> Google Drive y el inicio de sesión con Google o Microsoft quedaron sin configurar; ningún
+> inventario real llega a una captura.
+
+### Portal de la empresa
+
+<table>
+  <tr>
+    <td width="50%"><b>Ingreso al portal de la empresa</b><br><img src="docs/capturas/login.png" alt="Ingreso al portal de la empresa"></td>
+    <td width="50%"><b>Inventario de activos</b><br><img src="docs/capturas/inventario.png" alt="Listado de activos"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Alta de un activo</b><br><img src="docs/capturas/alta.png" alt="Alta de activo"></td>
+    <td width="50%"><b>Ficha técnica</b><br><img src="docs/capturas/ficha.png" alt="Ficha técnica de un activo"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Reportes</b><br><img src="docs/capturas/reportes.png" alt="Reportes"></td>
+    <td width="50%"><b>Papelera con restauración</b><br><img src="docs/capturas/papelera.png" alt="Papelera"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Datos: CSV y respaldo completo</b><br><img src="docs/capturas/datos.png" alt="Importación, exportación y respaldo"></td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
+- **Ingreso:** usuario y contraseña, o el botón de Google o Microsoft cuando la empresa tiene SSO configurado.
+- **Inventario:** indicadores de total, valor, garantías próximas, activos sin asignar y archivados; filtros por categoría y garantía, columnas configurables.
+- **Alta:** datos principales, categoría y subcategoría, sistema operativo, garantía y fechas en un solo formulario.
+- **Ficha técnica:** sistema operativo, componentes, red, relaciones, contratos, documentos y notas de cada activo.
+- **Reportes:** inventario general, ranking por cantidad, amortización, trazabilidad y archivados, con exportación a PDF y CSV.
+- **Papelera:** archivar un activo es reversible; al restaurarlo vuelve al inventario con su historial.
+- **Datos:** planilla CSV de entrada y salida, y copia de seguridad completa de la empresa.
+
+### Configuración de la empresa
+
+<table>
+  <tr>
+    <td width="50%"><b>Configuración</b><br><img src="docs/capturas/configuracion.png" alt="Configuración de la empresa"></td>
+    <td width="50%"><b>Listas desplegables</b><br><img src="docs/capturas/catalogos.png" alt="Catálogo Asignado a"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Ubicaciones en árbol</b><br><img src="docs/capturas/ubicaciones.png" alt="Árbol de ubicaciones"></td>
+    <td width="50%"><b>Campos por categoría</b><br><img src="docs/capturas/campos.png" alt="Campos por categoría"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Proveedores y contratos</b><br><img src="docs/capturas/contratos.png" alt="Proveedores y contratos"></td>
+    <td width="50%"><b>Usuarios de la empresa</b><br><img src="docs/capturas/usuarios.png" alt="Usuarios"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Roles y permisos</b><br><img src="docs/capturas/roles.png" alt="Roles y permisos"></td>
+    <td width="50%"><b>Adjuntos en la nube</b><br><img src="docs/capturas/integracion.png" alt="Integración con Google Drive y OneDrive"></td>
+  </tr>
+</table>
+
+- **Listas y ubicaciones:** los valores de «Asignado a», marcas, modelos o ubicaciones se mantienen en un solo lugar, con cuántos activos usa cada uno.
+- **Campos por categoría:** cada tipo de activo pide sólo los datos que le corresponden.
+- **Contratos:** soporte, mantenimiento y licencias con vencimiento, preaviso y los activos que cubren.
+- **Usuarios y roles:** alta de cuentas, matriz de permisos por rol y roles personalizados.
+- **Adjuntos en la nube:** credenciales y carpeta raíz de Google Drive o OneDrive de la empresa.
+
+### Panel de plataforma
+
+<table>
+  <tr>
+    <td width="50%"><b>Acceso del SuperAdmin</b><br><img src="docs/capturas/sa-login.png" alt="Ingreso al panel de plataforma"></td>
+    <td width="50%"><b>Resumen de la plataforma</b><br><img src="docs/capturas/sa-resumen.png" alt="Resumen de la plataforma"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Empresas cliente</b><br><img src="docs/capturas/sa-panel.png" alt="Empresas"></td>
+    <td width="50%"><b>Alta de una empresa</b><br><img src="docs/capturas/sa-empresa-nueva.png" alt="Nueva empresa"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Detalle de una empresa</b><br><img src="docs/capturas/sa-empresa-detalle.png" alt="Detalle de empresa"></td>
+    <td width="50%"><b>Usuarios de una empresa</b><br><img src="docs/capturas/sa-empresa-usuarios.png" alt="Usuarios de la empresa desde la plataforma"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Usuarios de plataforma</b><br><img src="docs/capturas/sa-usuarios.png" alt="Usuarios de plataforma"></td>
+    <td width="50%"><b>Roles y permisos de plataforma</b><br><img src="docs/capturas/sa-roles.png" alt="Roles de plataforma"></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Integraciones (SSO Google y Microsoft)</b><br><img src="docs/capturas/sa-integraciones.png" alt="Integraciones"></td>
+    <td width="50%"><b>Auditoría del sistema</b><br><img src="docs/capturas/sa-logs.png" alt="Auditoría"></td>
+  </tr>
+</table>
+
+- **Empresas:** alta con su base propia o con tablas prefijadas, estado, proveedor de nube y respaldo completo desde el detalle.
+- **Usuarios y roles de plataforma:** quién administra la plataforma y con qué permisos.
+- **Integraciones:** credenciales de SSO de la plataforma y URI de callback para registrar en Google y Microsoft.
+- **Auditoría:** ingresos, instalaciones y cambios, con filtros por texto, tipo, etiqueta y fecha.
+
+### En el celular
+
+La barra lateral se guarda en un botón y los indicadores y formularios pasan a una columna.
+
+<p align="center">
+  <img src="docs/capturas/movil-login.png" alt="Ingreso en celular" width="30%">
+  &nbsp;
+  <img src="docs/capturas/movil-inventario.png" alt="Inventario en celular" width="30%">
+  &nbsp;
+  <img src="docs/capturas/movil-ficha.png" alt="Ficha técnica en celular" width="30%">
+</p>
 
 ## Características
 
