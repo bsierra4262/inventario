@@ -868,5 +868,6 @@ escrito del autor. El autor conserva su derecho moral de reconocimiento de autor
 
 ## Autor
 
-**Brian Sierra** — diseño, desarrollo e implementación completos: arquitectura multiempresa,
-modelo de permisos, integración con Google Drive, front-end, despliegue y documentación.
+**Brian Sierra** — Administrador de sistemas (SysAdmin) en Intellihelp · [LinkedIn](https://www.linkedin.com/in/brian-gabriel-sierra/) · [GitHub](https://github.com/bsierra4262)
+
+Diseño, desarrollo e implementación completos: arquitectura multiempresa, modelo de permisos, integración con Google Drive, front-end, despliegue y documentación.
