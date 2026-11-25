@@ -4,6 +4,46 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## [1.12.0] — 2026-11-25
+
+La empresa ITH y el panel SuperAdmin entran con ITHub, la sesión única de Intellihelp. Las
+empresas clientes no cambian.
+
+### Agregado
+
+- **Ingreso con ITHub para la empresa ITH.** `auth/login.php?company=ITH` (o elegir ITH en el
+  selector) va directo a ITHub por OpenID Connect (código + PKCE `S256`); si la sesión única ya
+  estaba abierta, se entra sin ver nada. El `id_token` se valida entero: RS256 con la clave de
+  `/oauth/jwks` (PEM armado desde el JWK, en caché una hora), emisor, destinatario,
+  vencimiento y nonce. El rol (`admin | manager | user | viewer | auditor_externo`) llega en el
+  token y se aplica en cada ingreso; la fila de `users` se crea la primera vez.
+- **Ingreso con ITHub para el panel SuperAdmin**, con su propio cliente
+  (`inventario-superadmin`, roles `superadmin | admin | support | viewer`). Reemplaza al Google
+  propio del panel mientras esté configurado.
+- **Salir cierra la sesión única.** `auth/logout.php` y `auth/superadmin_logout.php` siguen a
+  `/oauth/logout` de ITHub con el `id_token` como pista y vuelven a la pantalla de acceso.
+- **Aviso de cierre por detrás** (back-channel logout): `auth/ithub_logout.php` y
+  `auth/superadmin_ithub_logout.php` validan la firma del `logout_token` y anotan el `sid` en
+  `ithub_sesiones_cerradas` (migración 2 de la master); `backend/db.php` y
+  `superadmin_require_login()` cortan esa sesión en el pedido siguiente. 400 si el token no vale.
+- **«Conectar Google Drive»** (`auth/drive_conectar.php`). Con ITHub, Google ya no es el login,
+  así que el permiso de Drive para adjuntar archivos se pide aparte, una vez por sesión, y tiene
+  que ser la misma cuenta de la sesión.
+- Usuarios (de la empresa y del panel) avisan que el acceso y el rol se administran en ITHub.
+- 40 pruebas nuevas en el grupo `ITHUB` (`test/ithub.php`): firma con una clave generada en el
+  momento, `aud` cruzado entre los dos clientes, nonce, vencimiento, state de un solo uso.
+
+### Cambiado
+
+- Para ITH, la pantalla de acceso sólo se ve con un aviso (`?err`, `?bye`) o con `?manual=1`, y
+  ofrece «Ingresar con ITHub». No arma Google ni Microsoft y no acepta contraseña; el callback de
+  Google tampoco deja entrar a ITH por esa vía.
+
+Todo depende de las claves `ITHUB_*` de `secure/config/secrets.php`: sin ellas, todo sigue
+como antes.
+
+---
+
 ## [1.11.0] — 2026-10-21
 
 La identidad visual de los dos portales pasa a la del portal de RRHH.

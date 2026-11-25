@@ -127,7 +127,31 @@ ruta. **No tocar esos dos bloques.**
 
 ---
 
-## 6. Verificación
+## 6. Ingreso con ITHub (empresa ITH y panel)
+
+Opcional. Con estas claves en `secure/config/secrets.php`, la empresa `ITHUB_EMPRESA` (ITH) y el
+panel SuperAdmin entran con la sesión única de ITHub; las empresas clientes no cambian.
+
+1. En ITHub → Aplicaciones, dos apps:
+
+   | | `inventario` | `inventario-superadmin` |
+   |---|---|---|
+   | Roles | `admin, manager, user, viewer, auditor_externo` | `superadmin, admin, support, viewer` |
+   | URI de vuelta | `https://<dominio>/auth/ithub_callback.php` | `https://<dominio>/auth/superadmin_ithub_callback.php` |
+   | URIs después de salir | `https://<dominio>/auth/login.php?company=ITH&bye=1` | `https://<dominio>/auth/superadmin_login.php?bye=1` |
+   | Aviso de cierre | `https://<dominio>/auth/ithub_logout.php` | `https://<dominio>/auth/superadmin_ithub_logout.php` |
+
+2. Generar el secreto de cada una (se muestra una sola vez) y guardarlo en el repo `-claves`.
+3. Agregar a `secrets.php` las claves `ITHUB_*` (ver `core/config/secrets.example.php`).
+4. `php bin/migrar.php` (crea `ithub_sesiones_cerradas` en la master).
+5. Antes de activarlo, dar a cada usuario activo el permiso equivalente en ITHub: quien no
+   tenga el inventario en ITHub deja de poder entrar.
+
+Para volver atrás alcanza con sacar las claves `ITHUB_*`: el código sigue con el login de siempre.
+
+---
+
+## 7. Verificación
 
 ```bash
 php test/run_tests.php

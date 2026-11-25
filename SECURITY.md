@@ -71,6 +71,11 @@ generada al azar y mostrada una sola vez. Ninguna página pública crea usuarios
 - El ID de sesión **se regenera en los tres puntos de autenticación** (login local del tenant,
   SSO del tenant y SSO/local del superadmin), y la sesión se escribe en disco *antes* del
   redirect. Sin eso, un `PHPSESSID` fijado de antemano sobrevivía al login.
+- **ITHub** (empresa ITH y panel, `core/security/ithub.php`): el `id_token` se valida con firma
+  RS256, emisor, destinatario por cliente, vencimiento y nonce, con PKCE `S256` y state de un solo
+  uso. Los secretos (`ITHUB_CLIENT_SECRET`, `ITHUB_SA_CLIENT_SECRET`) viven sólo en
+  `secrets.php` y en el repo `-claves`. Un cierre en ITHub corta la sesión local en el pedido
+  siguiente (back-channel logout); el aviso sin firma válida responde 400.
 
 ## Aislamiento entre empresas
 

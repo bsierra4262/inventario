@@ -50,6 +50,12 @@ if (empty($_SESSION['user_id'])) {
 // Si el flujo requiere Drive, validamos token de Drive
 if ($requiresDrive && !isset($_SESSION['access_token'])) {
     log_event($user_id, 'ERROR', 'Acceso denegado a resultado.php: sin token de acceso Drive.', 'transaccion');
+    // Con ITHub volver al login no trae Drive (Google ya no es el login): se
+    // pide el permiso aparte. Ver auth/drive_conectar.php.
+    if (($_SESSION['ithub_cliente'] ?? '') === 'inventario') {
+        header('Location: /auth/drive_conectar.php');
+        exit();
+    }
     header('Location: ' . tenant_login_url((int)($_SESSION['company_id'] ?? 0)));
     exit();
 }

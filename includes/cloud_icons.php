@@ -145,6 +145,24 @@ function cloud_upload_disponible(mysqli $conn): bool {
  */
 if (!function_exists('cloud_upload_disabled_notice')) {
 function cloud_upload_disabled_notice(string $rol = ''): string {
+    /* Quien entró con ITHub (empresa ITH) no trae el permiso de Drive en la
+       sesión, porque Google ya no es el login: lo conecta él mismo, una vez,
+       con su propia cuenta (auth/drive_conectar.php). */
+    if (($_SESSION['ithub_cliente'] ?? '') === 'inventario') {
+        $volver = htmlspecialchars(rawurlencode((string)($_SERVER['REQUEST_URI'] ?? '/inventario/index.php')), ENT_QUOTES);
+        return <<<HTML
+<div class="ih-alert ih-alert--info ih-alert--accion">
+  <i class="bi bi-cloud-slash"></i>
+  <div class="ih-alert__cuerpo">
+    <strong>Conectá Google Drive para adjuntar archivos</strong><br>
+    Los archivos de cada activo se guardan en el Drive de la empresa. Como entraste con
+    ITHub, Google pide el permiso aparte, una sola vez por sesión y con tu misma cuenta.
+    <a href="/auth/drive_conectar.php?volver={$volver}" class="ih-btn ih-btn--primary ih-btn--sm">
+      <i class="bi bi-google"></i> Conectar Google Drive</a>
+  </div>
+</div>
+HTML;
+    }
     $isAdmin = ($rol === 'admin');
     /* Para quien puede resolverlo, el boton que lo resuelve. Para quien no, a
        quien pedirselo —un aviso que dice «no se puede» y no dice quien puede

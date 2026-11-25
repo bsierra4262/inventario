@@ -12,19 +12,25 @@ declare(strict_types=1);
  *   m:{rand32}              → Superadmin con Microsoft
  *   tg:{rand32}:{company}  → Tenant con Google
  *   tm:{rand32}:{company}  → Tenant con Microsoft
+ *   td:{rand32}:{company}  → Conectar Google Drive (quien ya entró con ITHub,
+ *                            ver auth/drive_conectar.php)
  */
 
 require_once __DIR__ . '/../core/config/platform.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/session_guard.php';
+require_once __DIR__ . '/../core/security/ithub.php';
+require_once __DIR__ . '/../includes/pantalla_aviso.php';
+require_once __DIR__ . '/../core/tenants/install_tenant.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 app_session_start();
 
 // Ya autenticado como superadmin — SOLO si NO viene de un flujo tenant (tg: o tm:)
 $_incomingState = $_GET['state'] ?? '';
-$_isTenantState = str_starts_with($_incomingState, 'tg:') || str_starts_with($_incomingState, 'tm:');
+$_isTenantState = str_starts_with($_incomingState, 'tg:') || str_starts_with($_incomingState, 'tm:')
+                || str_starts_with($_incomingState, 'td:');
 if (!$_isTenantState
     && !empty($_SESSION[SESSION_SUPERADMIN_FLAG])
     && $_SESSION[SESSION_SUPERADMIN_FLAG] === true
@@ -46,8 +52,17 @@ $stateParam      = $_GET['state'] ?? '';
 $tenantCompanyId = 0;
 $isTenantFlow    = false;
 $tenantProvider  = '';  // 'google' | 'microsoft' (solo para flujos tenant)
+$isDriveFlow     = false;
 
-if (preg_match('/^tg:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
+if (preg_match('/^td:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
+    // Conectar Google Drive (sesión de ITHub ya abierta)
+    $providerCode    = 'g';
+    $randPart        = $sm[1];
+    $tenantCompanyId = (int)$sm[2];
+    $isDriveFlow     = true;
+    $stateKey        = 'tenant_drive_state_rand';
+
+} elseif (preg_match('/^tg:([a-f0-9]{32}):(\d+)$/', $stateParam, $sm)) {
     // Tenant — Google
     $providerCode    = 'g';
     $randPart        = $sm[1];
@@ -79,6 +94,80 @@ if (empty($_SESSION[$stateKey]) || !hash_equals($_SESSION[$stateKey], $randPart)
     sa_cb_error('Estado OAuth expirado o inválido. Intentá de nuevo.');
 }
 unset($_SESSION[$stateKey]);
+
+// ── Conectar Google Drive (quien entró con ITHub) ────────────────────────────
+// No es un login: la persona ya está adentro. Sólo se guarda el permiso de
+// Drive en su sesión, y únicamente si Google devolvió la MISMA cuenta.
+if ($isDriveFlow) {
+    $volver = (string)($_SESSION['drive_volver'] ?? '/inventario/index.php');
+    unset($_SESSION['drive_volver']);
+    $driveError = static function (string $msg) use ($volver): never {
+        pantalla_aviso([
+            'titulo'   => 'No se pudo conectar Google Drive',
+            'detalle'  => htmlspecialchars($msg),
+            'acciones' => [['texto' => 'Volver', 'href' => $volver, 'icono' => 'arrow-left']],
+        ]);
+    };
+    $sesionEmail = strtolower((string)($_SESSION['user_email'] ?? ''));
+    if (empty($_SESSION['user_id']) || $sesionEmail === ''
+        || (int)($_SESSION['auth_company_id'] ?? 0) !== $tenantCompanyId) {
+        $driveError('Tu sesión ya no está abierta. Volvé a ingresar y conectá Drive de nuevo.');
+    }
+    if (empty($_GET['code'])) {
+        $driveError('Se canceló el permiso en Google.');
+    }
+    try {
+        ['conn' => $tconn, 'prefix' => $pf] = tenant_conn_by_company($tenantCompanyId);
+        $dId = GOOGLE_CLIENT_ID;
+        $dSecret = GOOGLE_CLIENT_SECRET;
+        $res = $tconn->query("SELECT config_key, config_value FROM `{$pf}cloud_config` WHERE provider = 'google'");
+        if ($res) while ($row = $res->fetch_assoc()) {
+            if ($row['config_key'] === 'client_id')     $dId     = (string)$row['config_value'];
+            if ($row['config_key'] === 'client_secret') $dSecret = (string)$row['config_value'];
+        }
+        $gClient = new Google_Client();
+        $gClient->setClientId($dId);
+        $gClient->setClientSecret($dSecret);
+        $gClient->setRedirectUri($callbackUri);
+        $token = $gClient->fetchAccessTokenWithAuthCode($_GET['code']);
+        if (isset($token['error'])) {
+            throw new Exception($token['error_description'] ?? 'Google error: ' . $token['error']);
+        }
+        $gClient->setAccessToken($token);
+        $gEmail = strtolower((string)((new Google_Service_Oauth2($gClient))->userinfo->get()->email ?? ''));
+    } catch (Throwable $de) {
+        $driveError('Google no respondió como se esperaba. Volvé a intentar.');
+    }
+    if ($gEmail === '' || $gEmail !== $sesionEmail) {
+        // Otra cuenta: se devuelve el permiso para no dejar un token ajeno vivo.
+        try { $gClient->revokeToken($token); } catch (Throwable) {}
+        $driveError('Elegiste otra cuenta de Google. Conectá Drive con ' . $sesionEmail . ', la misma de tu sesión.');
+    }
+    $_SESSION['access_token']         = $token;
+    $_SESSION['google_authenticated'] = true;
+    if (is_file(__DIR__ . '/../logs/logger.php')) require_once __DIR__ . '/../logs/logger.php';
+    if (function_exists('log_event')) {
+        log_event($sesionEmail, 'DRIVE_CONECTADO', "cid={$tenantCompanyId} (sesión de ITHub)", 'auth');
+    }
+    app_session_cerrar_y_redirigir($volver);
+}
+
+// La empresa que entra con ITHub no acepta el login con Google o Microsoft:
+// el acceso y el rol los decide ITHub. (login.php ya no ofrece esos botones
+// para ITH; esto cierra la puerta también a un enlace armado a mano.)
+if ($isTenantFlow) {
+    $sub = '';
+    try {
+        $stSub = (new MasterDB())->pquery('SELECT subdomain FROM companies WHERE id = ? LIMIT 1', 'i', [$tenantCompanyId]);
+        $sub = (string)($stSub->get_result()->fetch_assoc()['subdomain'] ?? '');
+        $stSub->close();
+    } catch (Throwable) {}
+    if (ithub_empresa_es($sub)) {
+        header('Location: /auth/login.php?company=' . urlencode($sub) . '&manual=1&err='
+            . urlencode('En esta empresa se ingresa con ITHub.'));
+        exit;
+    }
+}
 
 $provider = $providerCode === 'g' ? 'google' : 'microsoft';
 

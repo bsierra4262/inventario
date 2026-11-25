@@ -32,6 +32,19 @@ return [
     'MS_TENANT_ID'     => 'common',
     'MS_REDIRECT_URI'  => '',
 
+    // === Ingreso con ITHub (core/security/ithub.php) — opcional ===
+    // Sólo la empresa ITHUB_EMPRESA (ITH) y el panel SuperAdmin. Dos clientes
+    // de OIDC distintos, cada uno con su secreto (se genera en ITHub y se
+    // muestra una sola vez). Sin client_id y secreto, ese portal sigue con su
+    // login de siempre; las empresas clientes nunca cambian.
+    'ITHUB_ISSUER'           => 'https://ithub.intellihelp.tech',
+    'ITHUB_BASE_URL'         => '',          // https://desarrollo.intellihelp.tech
+    'ITHUB_EMPRESA'          => 'ITH',       // companies.subdomain
+    'ITHUB_CLIENT_ID'        => '',          // inventario
+    'ITHUB_CLIENT_SECRET'    => '',
+    'ITHUB_SA_CLIENT_ID'     => '',          // inventario-superadmin
+    'ITHUB_SA_CLIENT_SECRET' => '',
+
     // === Herramientas destructivas (bin/) ===
     // Dejar en false salvo que se esté ejecutando un reset intencional.
     'ASSET_VAULT_DEV' => false,

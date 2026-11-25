@@ -295,6 +295,40 @@ flowchart TD
 El `session_write_close()` antes del redirect no es un detalle: en hosting compartido, si el
 `Location` sale primero, el request siguiente puede leer la sesión todavía vacía.
 
+### Ingreso con ITHub: la empresa ITH y el panel
+
+ITHub es la sesión única de Intellihelp (OpenID Connect). **Sólo dos entradas pasan a ITHub;
+las empresas clientes siguen con su login de siempre**, sin ningún cambio.
+
+| | Antes | Con ITHub |
+|---|---|---|
+| Empresa ITH (`login.php?company=ITH`) | Google con Drive, o usuario y contraseña | Directo a ITHub; si la sesión única ya estaba abierta, entra sin ver nada |
+| Panel SuperAdmin | Google propio del panel (`sa_google_*`) | Directo a ITHub, con su propio cliente |
+| Quién entra y con qué rol | La tabla `users` de ITH / `users_platform` | ITHub (claim `rol`); la fila local se crea o se actualiza en cada ingreso |
+| Salir | Cierra sólo el inventario | Cierra la sesión única en todas las apps (`/oauth/logout`) |
+| Cierre desde ITHub | — | Aviso por detrás (back-channel); la sesión cae en el pedido siguiente |
+| Google Drive | Venía con el login de Google | «Conectar Google Drive», una vez por sesión y con la misma cuenta |
+| Empresas clientes | Su SSO o su formulario | Igual |
+
+Son **dos clientes de OIDC** con secretos distintos, porque son dos apps en ITHub:
+
+| App en ITHub | Roles | Vuelta | Aviso de cierre |
+|---|---|---|---|
+| `inventario` | `admin`, `manager`, `user`, `viewer`, `auditor_externo` | `auth/ithub_callback.php` | `auth/ithub_logout.php` |
+| `inventario-superadmin` | `superadmin`, `admin`, `support`, `viewer` | `auth/superadmin_ithub_callback.php` | `auth/superadmin_ithub_logout.php` |
+
+Todo vive en `core/security/ithub.php` y depende de las claves `ITHUB_*` de
+`secure/config/secrets.php`: sin `ITHUB_CLIENT_ID` y `ITHUB_CLIENT_SECRET`, ITH sigue con
+Google; sin `ITHUB_SA_CLIENT_ID` y `ITHUB_SA_CLIENT_SECRET`, el panel sigue con el suyo. El
+`id_token` se valida entero sin dependencias: RS256 con la clave de `/oauth/jwks` (el PEM se arma
+desde el JWK y queda en caché una hora en `secure/cache-ithub/`), emisor, destinatario
+—un token del inventario no sirve para el panel—, vencimiento y nonce, con PKCE `S256`.
+
+Los `sid` que ITHub avisa cerrados se anotan en `ithub_sesiones_cerradas` (master, migración 2),
+por cliente: quitarle a alguien el panel en ITHub no lo saca del inventario. `backend/db.php` y
+`superadmin_require_login()` los consultan en cada pedido. La pantalla de acceso sólo se ve con un
+aviso (`?err`, `?bye`) o con `?manual=1`, y ahí ofrece el botón «Ingresar con ITHub».
+
 ## Permisos
 
 Dos matrices independientes, cada una con overrides por base de datos.

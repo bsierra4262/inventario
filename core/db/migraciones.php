@@ -931,6 +931,27 @@ function migraciones_master(): array {
             foreach ($ddl as $q) { try { @$c->query($q); } catch (Throwable) {} }
         },
 
+        2 => function (mysqli $c): void {
+            // Ingreso con ITHub (core/security/ithub.php). Cuando la sesión
+            // única se cierra, ITHub avisa por detrás (back-channel logout) a
+            // auth/ithub_logout.php o auth/superadmin_ithub_logout.php, que
+            // anotan el `sid` acá. backend/db.php y superadmin_require_login()
+            // lo consultan: la sesión abierta con ese sid se corta en el
+            // pedido siguiente.
+            //
+            // `cliente` porque son dos apps de ITHub (inventario y panel):
+            // quitarle a alguien el panel en ITHub no lo saca del inventario.
+            // Vive en la master porque el panel no tiene tenant. No toca datos
+            // y es idempotente.
+            $c->query("CREATE TABLE IF NOT EXISTS `ithub_sesiones_cerradas` (
+                cliente    VARCHAR(20) NOT NULL,
+                sid        VARCHAR(64) NOT NULL,
+                cerrada_en DATETIME    NOT NULL,
+                PRIMARY KEY (cliente, sid),
+                KEY idx_ithub_cerrada_en (cerrada_en)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        },
+
     ];
 }
 }
