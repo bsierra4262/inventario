@@ -101,6 +101,19 @@ function superadmin_require_login(): void {
         header('Location: /auth/superadmin_login.php');
         exit;
     }
+    // Sesión del panel abierta con ITHub que ITHub ya cerró (aviso por detrás
+    // en auth/superadmin_ithub_logout.php): se corta acá, en el primer pedido
+    // después del aviso. Ver core/security/ithub.php.
+    if (($_SESSION['ithub_cliente'] ?? '') === 'superadmin' && !empty($_SESSION['ithub_sid'])) {
+        require_once __DIR__ . '/ithub.php';
+        if (ithub_sid_cerrado('superadmin', (string)$_SESSION['ithub_sid'])) {
+            platform_log('SUPERADMIN cierre desde ITHub (sesión única): ' . ($_SESSION['superadmin_email'] ?? ''));
+            $_SESSION = [];
+            session_destroy();
+            header('Location: /auth/superadmin_login.php?manual=1');
+            exit;
+        }
+    }
     // Lazy-load del rol para sesiones anteriores al sistema de roles
     if (empty($_SESSION['superadmin_role']) && !empty($_SESSION['superadmin_user_id'])) {
         try {

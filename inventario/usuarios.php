@@ -77,6 +77,21 @@ require __DIR__ . '/../includes/layout/head.php';
 
 <main class="ih-app__main ih-anim-fade">
 
+  <?php /* ITH entra con ITHub: ahí se decide quién tiene el inventario y con
+           qué rol, y el rol se vuelve a aplicar en cada ingreso. Lo que se
+           cambie acá dura hasta que la persona vuelva a entrar. */ ?>
+  <?php if (($_SESSION['ithub_cliente'] ?? '') === 'inventario'): ?>
+    <div class="ih-alert ih-alert--info">
+      <i class="bi bi-info-circle-fill"></i>
+      <div>
+        <strong>En esta empresa el acceso y el rol se administran en ITHub.</strong>
+        Quien tenga el inventario habilitado en ITHub entra con el rol que tiene ah&iacute;,
+        y se crea solo en esta lista la primera vez. Un cambio de rol hecho ac&aacute; se
+        pisa en el pr&oacute;ximo ingreso.
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php if ($feedbackMsg !== ''): ?>
     <div class="ih-alert ih-alert--<?= $feedbackType === 'danger' ? 'danger' : 'success' ?>">
       <i class="bi bi-<?= $feedbackType === 'danger' ? 'exclamation-triangle' : 'check-circle' ?>-fill"></i>

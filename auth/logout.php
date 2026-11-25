@@ -6,7 +6,9 @@
  * - Borra TODAS las variables de sesión (incluida company_id)
  * - Elimina la cookie de sesión
  * - Destruye la sesión y arranca una limpia
- * - Redirige al login del inventario
+ * - Redirige al login del inventario. Si se entró con ITHub (empresa ITH),
+ *   sigue a /oauth/logout de ITHub, que cierra la sesión única en todas las
+ *   apps y vuelve a este mismo login (core/security/ithub.php).
  */
 
 declare(strict_types=1);
@@ -36,6 +38,11 @@ require_once __DIR__ . '/../core/tenants/tenant_url_helper.php';
 $company_id_logout = (int)($_SESSION['company_id'] ?? 0);
 $loginUrlAfterLogout = tenant_login_url($company_id_logout, ['bye' => 1]);
 
+// Sesión abierta con ITHub: hay que salir también de la sesión única.
+require_once __DIR__ . '/../core/security/ithub.php';
+$ithubIdToken = (string)($_SESSION['ithub_id_token'] ?? '');
+$porIthub     = ($_SESSION['ithub_cliente'] ?? '') === 'inventario' && ithub_habilitado('inventario');
+
 // Revocar token de Google si existe
 if (!empty($_SESSION['access_token']['access_token'])) {
     $accessToken = $_SESSION['access_token']['access_token'];
@@ -59,6 +66,15 @@ session_destroy();
 session_start();
 session_regenerate_id(true);
 $_SESSION = [];
+
+// Con ITHub, la salida sigue a ITHub y vuelve a este login. La dirección de
+// vuelta tiene que estar registrada en ITHub tal cual (logout_uris).
+if ($porIthub) {
+    session_write_close();
+    header('Location: ' . ithub_url_salida('inventario', $ithubIdToken !== '' ? $ithubIdToken : null,
+        ithub_base_url('inventario') . $loginUrlAfterLogout));
+    exit;
+}
 
 // Redirigir a la URL ya construida (con subdomain si existe)
 header('Location: ' . $loginUrlAfterLogout);

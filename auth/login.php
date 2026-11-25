@@ -92,6 +92,29 @@ if (empty($_SESSION['company_id'])) {
     }
 }
 
+// ── 1.b) ITH entra con ITHub (core/security/ithub.php) ───────────────────────
+// Sólo la empresa ITH, y sólo con el cliente `inventario` configurado: las
+// empresas clientes siguen exactamente como antes. Para ITH esta pantalla no
+// tiene formulario: se va directo a la sesión única y, si ya estaba abierta,
+// se entra sin ver nada. Se muestra sólo cuando hay algo que explicar (un
+// error que volvió con ?err, la salida con ?bye, ?pass o ?manual=1), y ahí se
+// entra con un botón. Elegir ITH en el selector también va a ITHub.
+require_once __DIR__ . '/../core/security/ithub.php';
+$porIthub = false;
+if (!$must_choose_company) {
+    foreach ($companies as $c) {
+        if ((int)$c['id'] === (int)($_SESSION['company_id'] ?? 0)) {
+            $porIthub = ithub_empresa_es((string)($c['subdomain'] ?? ''));
+            break;
+        }
+    }
+}
+if ($porIthub && !isset($_POST['username'])
+    && empty($_GET['manual']) && empty($_GET['err']) && empty($_GET['bye']) && empty($_GET['pass'])
+) {
+    app_session_cerrar_y_redirigir('/auth/ithub_login.php');
+}
+
 // ── 2) Conexión tenant ────────────────────────────────────────────────────────
 $conn = null;
 $tenantDbError = '';
@@ -156,7 +179,7 @@ $companyId        = (int)($_SESSION['company_id'] ?? 0);
 
 // ── Generar URL de autorización Google ───────────────────────────────────────
 $googleAuthUrl = null;
-if ($googleConfigured && !$must_choose_company) {
+if ($googleConfigured && !$must_choose_company && !$porIthub) {
     try {
         $gClient = new Google_Client();
         $gClient->setClientId($googleClientId);
@@ -180,7 +203,7 @@ if ($googleConfigured && !$must_choose_company) {
 
 // ── Generar URL de autorización Microsoft ─────────────────────────────────────
 $msAuthUrl = null;
-if ($msConfigured && !$must_choose_company) {
+if ($msConfigured && !$must_choose_company && !$porIthub) {
     try {
         // State: tm:{random32}:{company_id}
         $mRand = bin2hex(random_bytes(16));
@@ -218,7 +241,11 @@ $show_local = !$ssoConfigured || (!empty($_GET['local']) && !$localDisabled);
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['username'], $_POST['password'])
 ) {
-    if ($localDisabled) {
+    if ($porIthub) {
+        // ITH entra sólo con ITHub: el acceso y el rol los decide ITHub, y un
+        // formulario de contraseña sería una puerta que lo saltea.
+        $error_msg = 'En esta empresa se ingresa con ITHub.';
+    } elseif ($localDisabled) {
         $error_msg = 'El acceso con usuario y contraseña está deshabilitado para esta empresa. Ingresá con Google o Microsoft.';
     } elseif ($must_choose_company && empty($_POST['company_id'])) {
         $error_msg = 'Seleccioná una empresa para continuar.';
@@ -368,6 +395,15 @@ require __DIR__ . '/../includes/layout/head.php';
             </select>
           </div>
         </form>
+
+      <?php elseif ($porIthub): ?>
+        <!-- ── ITH: sesión única de ITHub ── -->
+        <a class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" href="/auth/ithub_login.php">
+          <i class="bi bi-box-arrow-in-right"></i> Ingresar con ITHub
+        </a>
+        <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
+          Sesión única de Intellihelp: si ya entraste a ITHub, no te pide nada más.
+        </p>
 
       <?php elseif ($ssoConfigured && !$show_local): ?>
         <!-- ── SSO configurado: SOLO botones de proveedor ── -->

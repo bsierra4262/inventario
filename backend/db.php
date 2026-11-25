@@ -107,6 +107,31 @@ if (!empty($_SESSION['user_id'])) {
 }
 
 // ============================================================
+// Guard: la sesión única de ITHub sigue abierta
+//
+// Para ITH (core/security/ithub.php): cuando la sesión se cierra en ITHub, o
+// le quitan el inventario a la persona, ITHub avisa por detrás a
+// auth/ithub_logout.php, que anota el `sid`. Acá se corta la sesión abierta
+// con ese sid, en el primer pedido después del aviso. Las empresas clientes no
+// tienen `ithub_cliente` y no pasan por acá.
+// ============================================================
+if (!empty($_SESSION['user_id']) && ($_SESSION['ithub_cliente'] ?? '') === 'inventario'
+    && !empty($_SESSION['ithub_sid'])
+) {
+    require_once ROOT_PATH . '/core/security/ithub.php';
+    if (ithub_sid_cerrado('inventario', (string)$_SESSION['ithub_sid'])) {
+        log_event((string)($_SESSION['user_email'] ?? $_SESSION['user_id']), 'LOGOUT',
+            'Cierre desde ITHub (sesión única)', 'auth');
+        $_cid = (int)($_SESSION['company_id'] ?? 0);
+        $_SESSION = [];
+        if (session_status() === PHP_SESSION_ACTIVE) { session_destroy(); }
+        require_once ROOT_PATH . '/core/tenants/tenant_url_helper.php';
+        header('Location: ' . tenant_login_url($_cid, ['err' => 'Tu sesión de ITHub se cerró. Volvé a ingresar.']));
+        exit();
+    }
+}
+
+// ============================================================
 // Guard: cambio de contraseña obligatorio (solo check de sesión)
 // ============================================================
 $_excluded_from_force = ['login.php', 'select_empresa.php', 'change_password.php', 'logout.php'];

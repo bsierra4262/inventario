@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/cloud_icons.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/db/master_connection.php';
+require_once __DIR__ . '/../core/security/ithub.php';
 
 superadmin_require_login();
 csrf_start();
@@ -160,6 +161,18 @@ require __DIR__ . '/../includes/layout/head.php';
   <?php require __DIR__ . '/../includes/layout/topbar.php'; ?>
 
   <main class="ih-app__main ih-anim-fade">
+
+    <?php if (ithub_habilitado('superadmin')): ?>
+      <div class="ih-alert ih-alert--info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>
+          <strong>El panel se ingresa con ITHub.</strong>
+          Quien tenga &laquo;Inventario &middot; SuperAdmin&raquo; habilitado en ITHub entra con el
+          rol que tiene ah&iacute; y se crea solo en esta lista la primera vez. Un cambio de rol
+          hecho ac&aacute; se pisa en el pr&oacute;ximo ingreso.
+        </div>
+      </div>
+    <?php endif; ?>
 
     <?php if ($ok): ?>
       <div class="ih-alert ih-alert--success"><i class="bi bi-check-circle-fill"></i><div><?= $ok ?></div></div>

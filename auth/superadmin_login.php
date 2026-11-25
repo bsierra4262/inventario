@@ -7,6 +7,7 @@ require_once __DIR__ . '/../core/db/master_connection.php';
 require_once __DIR__ . '/../core/security/csrf.php';
 require_once __DIR__ . '/../core/security/session_role.php';
 require_once __DIR__ . '/../core/security/session_guard.php';
+require_once __DIR__ . '/../core/security/ithub.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 app_session_start(); // sesión con cookie HttpOnly + SameSite
@@ -16,6 +17,19 @@ csrf_start();
 if (!empty($_SESSION[SESSION_SUPERADMIN_FLAG]) && $_SESSION[SESSION_SUPERADMIN_FLAG] === true) {
     header('Location: /dashboard/dashboard_resumen.php');
     exit;
+}
+
+// Con ITHub (cliente `inventario-superadmin`, core/security/ithub.php) el
+// panel no tiene pantalla de acceso propia: se va directo a la sesión única y,
+// si ya estaba abierta, se entra sin ver nada. La pantalla se muestra sólo
+// cuando hay algo que explicar (un error del callback, la salida o
+// ?manual=1), y ahí se entra con un botón. El Google propio del panel queda
+// sin uso mientras ITHub esté configurado.
+$porIthub = ithub_habilitado('superadmin');
+if ($porIthub && $_SERVER['REQUEST_METHOD'] !== 'POST' && empty($_SESSION['sa_login_error'])
+    && empty($_GET['manual']) && empty($_GET['bye']) && empty($_GET['sso_configured'])
+) {
+    app_session_cerrar_y_redirigir('/auth/ithub_login.php?portal=superadmin');
 }
 
 $isFirstRun     = false;
@@ -114,8 +128,8 @@ try {
     }
 } catch (Throwable) {}
 
-$googleConfigured = ($googleClientId !== '' && $googleClientSecret !== '');
-$msConfigured     = ($msClientId     !== '' && $msClientSecret     !== '');
+$googleConfigured = !$porIthub && ($googleClientId !== '' && $googleClientSecret !== '');
+$msConfigured     = !$porIthub && ($msClientId     !== '' && $msClientSecret     !== '');
 $ssoConfigured    = $googleConfigured || $msConfigured;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -173,7 +187,11 @@ if (!empty($_SESSION['sa_login_error'])) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 6) Login local (usuario/contraseña) — solo disponible cuando NO hay SSO
 // ─────────────────────────────────────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']) && $porIthub) {
+    // Con ITHub el panel no acepta contraseña: sería una puerta que lo saltea.
+    csrf_validate();
+    $err = 'El panel se ingresa con ITHub.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
     csrf_validate();
     $user = trim($_POST['username'] ?? '');
     $pass = (string)($_POST['password'] ?? '');
@@ -237,7 +255,7 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       <?php endif; ?>
 
-      <?php if ($isFirstRun): ?>
+      <?php if ($isFirstRun && !$porIthub): ?>
         <div class="ih-alert ih-alert--warning">
           <i class="bi bi-shield-lock-fill"></i>
           <div>
@@ -274,7 +292,15 @@ require __DIR__ . '/../includes/layout/head.php';
         </div>
       <?php endif; ?>
 
-      <?php if ($ssoConfigured): ?>
+      <?php if ($porIthub): ?>
+        <!-- ITHub: sesión única de Intellihelp -->
+        <a class="ih-btn ih-btn--primary ih-btn--lg ih-btn--block" href="/auth/ithub_login.php?portal=superadmin">
+          <i class="bi bi-box-arrow-in-right"></i> Ingresar con ITHub
+        </a>
+        <p class="ih-text-xs ih-text-muted ih-text-center ih-mt-4">
+          Sesión única de Intellihelp: si ya entraste a ITHub, no te pide nada más.
+        </p>
+      <?php elseif ($ssoConfigured): ?>
         <!-- SSO configurado: solo acceso con botones corporativos -->
         <div class="ih-flex ih-flex-col ih-gap-3">
           <?php if ($googleConfigured && $googleAuthUrl): ?>

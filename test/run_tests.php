@@ -2627,6 +2627,38 @@ chequear('Todos los campos de formulario tienen un ejemplo o una explicación',
     $cuantosSin . ' sin ejemplo en: ' . implode(', ', array_keys($sinAyuda))
     . ' — correr `php test/ayudas.php` para ver cuáles');
 // ───────────────────────────────────────────────────────────────────────────
+grupo('ITHUB · ingreso con la sesión única');
+//
+// Sólo la empresa ITH y el panel SuperAdmin pasan a ITHub; las empresas
+// clientes siguen con su login. Los casos con firma viven en test/ithub.php.
+require RAIZ . '/test/ithub.php';
+
+$__login = leer('auth/login.php');
+chequear('login.php manda a ITHub sólo si la empresa elegida es la de ITHub',
+    str_contains($__login, 'ithub_empresa_es(') && str_contains($__login, "app_session_cerrar_y_redirigir('/auth/ithub_login.php')"));
+chequear('Para ITH, login.php no arma Google ni Microsoft ni acepta contraseña',
+    str_contains($__login, '!$must_choose_company && !$porIthub') && str_contains($__login, 'En esta empresa se ingresa con ITHub.'));
+chequear('El panel manda a ITHub con su propio cliente',
+    str_contains(leer('auth/superadmin_login.php'), "ithub_habilitado('superadmin')"));
+chequear('El callback de Google no deja entrar a ITH con Google o Microsoft',
+    str_contains(leer('auth/superadmin_callback.php'), 'ithub_empresa_es($sub)'));
+chequear('Conectar Drive exige la misma cuenta de la sesión',
+    str_contains(leer('auth/superadmin_callback.php'), '$gEmail !== $sesionEmail'));
+chequear('Las dos salidas siguen a ITHub',
+    str_contains(leer('auth/logout.php'), "ithub_url_salida('inventario'")
+ && str_contains(leer('auth/superadmin_logout.php'), "ithub_url_salida('superadmin'"));
+chequear('El inventario y el panel cortan la sesión que ITHub avisó cerrada',
+    str_contains(leer('backend/db.php'), "ithub_sid_cerrado('inventario'")
+ && str_contains(leer('core/security/session_role.php'), "ithub_sid_cerrado('superadmin'"));
+chequear('Los avisos de cierre validan la firma de su cliente',
+    str_contains(leer('auth/ithub_logout.php'), "ithub_atender_aviso_cierre('inventario')")
+ && str_contains(leer('auth/superadmin_ithub_logout.php'), "ithub_atender_aviso_cierre('superadmin')"));
+chequear('La tabla de sesiones cerradas es una migración de la master',
+    str_contains(leer('core/db/migraciones.php'), 'ithub_sesiones_cerradas'));
+foreach (['auth/ithub_callback.php' => 'app_session_rotar', 'auth/superadmin_ithub_callback.php' => 'superadmin_login('] as $__f => $__fn) {
+    chequear("{$__f} rota la sesión al autenticar", str_contains(leer($__f), $__fn));
+}
+// ───────────────────────────────────────────────────────────────────────────
 grupo('REQUIRES');
 //
 // Una función que se llama y no está cargada es un fatal, y un fatal a mitad de
